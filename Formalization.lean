@@ -8,13 +8,18 @@ import Formalization.SzemerediRegularity
 import Formalization.CauchyDavenport
 import Formalization.GilmerUnionClosed
 import Formalization.KelleyMeka
+import Formalization.BrieskornManifolds
+import Formalization.BrieskornSU2CharacterVariety
+import Formalization.OrbifoldSpectralZeta
+import Formalization.PicardFuchsMirrorMonodromy
+import Formalization.UniversalMonodromyWeightFiltration
 
 /-!
 # Lean Theorems 3: Advanced Formalization Suite
 
 This library provides formalizations, certified proofs, and foundational scaffolds of landmark
 theorems across expander graphs, spectral combinatorics, additive combinatorics, arithmetic geometry,
-discrete Fourier analysis, and regularity methods in the Lean 4 / Mathlib ecosystem.
+discrete Fourier analysis, differential topology, gauge theory, mirror symmetry, and mixed Hodge theory in the Lean 4 / Mathlib ecosystem.
 
 ## Module Index
 
@@ -52,4 +57,19 @@ discrete Fourier analysis, and regularity methods in the Lean 4 / Mathlib ecosys
 
 6. **Extremal Combinatorics & Information Theory**:
    - `Formalization.GilmerUnionClosed`: Justin Gilmer's (2022) landmark entropy bound on Frankl's union-closed sets conjecture ($p_u \ge \frac{3-\sqrt{5}}{2}$), binary entropy fixed point $H(2 c_0 - c_0^2) = H(c_0)$, and certified concrete families (power sets, chains, singletons).
+
+7. **Differential Topology & Singularity Links**:
+   - `Formalization.BrieskornManifolds`: Brieskorn polynomial links $\Sigma(a)$, Brieskorn–Hirzebruch graph sphere criterion (1966), 28 Milnor–Kervaire exotic 7-spheres generating $\Theta_7 \cong \mathbb{Z}/28\mathbb{Z}$, and Milnor fiber signature formula for Casson invariants.
+
+8. **Gauge Theory & 3-Manifold Invariants**:
+   - `Formalization.BrieskornSU2CharacterVariety`: Irreducible $SU(2)$ character varieties of Brieskorn homology 3-spheres $\Sigma(p,q,r)$ with $h \mapsto -I$, Diophantine spherical triangle angle inequalities, certified representation counts, Casson invariant identification $\lambda_{SU(2)} = \frac{1}{2}\#\mathcal{R}^*$, and Fricke–Vogt trace hypersurface identities.
+
+9. **Spectral Geometry & Automorphic Forms**:
+   - `Formalization.OrbifoldSpectralZeta`: Hyperbolic 2-orbifolds $\mathcal{O}(p,q,\infty)$, Gauss–Bonnet orbifold area $\operatorname{Area} = 2\pi(1 - 1/p - 1/q)$, Eisenstein scattering determinant $\phi(s)\phi(1-s) = 1$, critical line unitarity $\|\phi(1/2+ir)\|^2 = 1$, residue product formula, and Selberg trace formula.
+
+10. **Mirror Symmetry & Differential Equations**:
+    - `Formalization.PicardFuchsMirrorMonodromy`: Order-4 hypergeometric Picard–Fuchs differential operator $\mathcal{L}_4 = (1-z)\theta^4 - z(e_1\theta^3 + e_2\theta^2 + e_3\theta + e_4)$, Calabi–Yau self-duality sum $\sum \alpha_i = 2$, unipotent cusp local monodromy $N = T_0 - I_4$ in $\mathrm{Sp}_4(\mathbb{Z})$ ($N^2 = 0$, Type II), infinitesimal and finite symplectic invariance (Griffiths transversality), classical Yukawa couplings, and multi-instanton BPS expansions.
+
+11. **Mixed Hodge Theory & Degenerations**:
+    - `Formalization.UniversalMonodromyWeightFiltration`: Deligne's universal canonical subspace formula $W_l(N, k) = \bigcup_{j=0}^k (\ker(N^{j+1}) \cap \operatorname{im}(N^{j - l + k}))$, shift theorem $N(W_l) \subseteq W_{l-2}$, monotonicity $W_{l-1} \subseteq W_l$, explicit weight filtrations on $\mathbb{Z}^4$ (2-step Type II and 4-step Type III MUM), and Hodge–Riemann symplectic polarizations $Q_N(v, w) = \langle v, N w \rangle_J$ with strict positivity on primitive generators.
 -/
