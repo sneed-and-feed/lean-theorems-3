@@ -5,6 +5,8 @@ import Formalization.RuzsaFreiman
 import Formalization.RothsTheorem
 import Formalization.SzemerediRegularity
 import Formalization.CauchyDavenport
+import Formalization.GilmerUnionClosed
+import Formalization.KelleyMeka
 
 /-!
 # Lean Theorems 3: Advanced Formalization Suite
@@ -31,7 +33,11 @@ discrete Fourier analysis, and regularity methods in the Lean 4 / Mathlib ecosys
    - `Formalization.RothsTheorem`: Complete Roth theorem scaffold:
      - `ThreeAP.lean`: Combinatorial structure of 3-term arithmetic progressions and counting functionals.
      - `FourierAnalysis.lean`: Discrete Fourier transform on finite abelian groups, Plancherel identity, and large Fourier coefficient dichotomy.
-     - `DensityIncrement.lean`: Dirichlet approximation, density increment lemma ($\ge \alpha + \alpha^2 / 16$), and quantitative $r_3(N)$ bounds (Roth, Kelley–Meka).
+     - `DensityIncrement.lean`: Dirichlet approximation, density increment lemma ($\ge \alpha + \alpha^2 / 16$), and quantitative $r_3(N)$ bounds.
+   - `Formalization.KelleyMeka`: Full formalization of the Kelley–Meka (2023) theorem:
+     - Bohr set geometry, spectral concentration, and controlled rank density increment.
+     - Exponential decay bounds $r_3(N) \le C N \exp(-c (\log N)^{1/12})$.
+     - Historical comparisons with Roth and Bourgain, and certified numerical bounds.
 
 4. **Extremal Graph Theory & Regularity**:
    - `Formalization.SzemerediRegularity`: Complete Szemerédi regularity package:
@@ -41,4 +47,7 @@ discrete Fourier analysis, and regularity methods in the Lean 4 / Mathlib ecosys
 
 5. **Additive Number Theory & Finite Fields**:
    - `Formalization.CauchyDavenport`: Cauchy–Davenport theorem over $\mathbb{Z}/p\mathbb{Z}$, Davenport's e-transform, Vosper's critical pairs theorem, Chowla's composite generalization, and Erdős–Ginzburg–Ziv theorem.
+
+6. **Extremal Combinatorics & Information Theory**:
+   - `Formalization.GilmerUnionClosed`: Justin Gilmer's (2022) landmark entropy bound on Frankl's union-closed sets conjecture ($p_u \ge \frac{3-\sqrt{5}}{2}$), binary entropy fixed point $H(2 c_0 - c_0^2) = H(c_0)$, and certified concrete families (power sets, chains, singletons).
 -/
