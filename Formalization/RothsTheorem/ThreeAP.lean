@@ -71,31 +71,20 @@ def IsThreeAPFree (A : Finset G) : Prop :=
   ∀ x ∈ A, ∀ y ∈ A, ∀ z ∈ A, Is3AP x y z → x = y
 
 /-- Trivial 3-APs: $(x, x, x)$ is always a 3-AP. -/
-theorem is3AP_refl (x : G) : Is3AP x x x := by
-  dsimp [Is3AP]
-  rw [two_nsmul]
+theorem is3AP_refl (x : G) : Is3AP x x x := (two_nsmul x).symm
 
 /-- Reflection symmetry: $(x, y, z)$ is a 3-AP iff $(z, y, x)$ is a 3-AP. -/
 theorem is3AP_symm (x y z : G) : Is3AP x y z ↔ Is3AP z y x := by
-  dsimp [Is3AP]
-  rw [add_comm]
+  simp [Is3AP, add_comm]
 
 /-- Standard 3-AP parameterization: $(x, x+d, x+2d)$ is always a 3-AP. -/
 theorem is3AP_def_add (x d : G) : Is3AP x (x + d) (x + (2 : ℕ) • d) := by
-  dsimp [Is3AP]
-  rw [two_nsmul (x + d), two_nsmul d]
-  rw [add_assoc x, ← add_assoc d, add_comm d x, add_assoc x, ← add_assoc]
+  simp [Is3AP, two_nsmul, add_assoc, add_left_comm]
 
 /-- Characterization of 3-AP freeness via non-existence of non-trivial 3-APs. -/
 theorem isThreeAPFree_iff (A : Finset G) :
     IsThreeAPFree A ↔ ∀ x ∈ A, ∀ y ∈ A, ∀ z ∈ A, ¬ IsNonTrivial3AP x y z := by
-  dsimp [IsThreeAPFree, IsNonTrivial3AP]
-  constructor
-  · intro h x hx y hy z hz ⟨hap, hne⟩
-    exact hne (h x hx y hy z hz hap)
-  · intro h x hx y hy z hz hap
-    by_contra hne
-    exact h x hx y hy z hz ⟨hap, hne⟩
+  simp [IsThreeAPFree, IsNonTrivial3AP, not_and]
 
 /-- Indicator function $\mathbf{1}_A : G \to \mathbb{R}$. -/
 def indicator (A : Finset G) : G → ℝ :=
@@ -107,83 +96,45 @@ theorem indicator_apply (A : Finset G) (x : G) :
 
 /-- Indicator is always non-negative. -/
 theorem indicator_nonneg (A : Finset G) (x : G) : 0 ≤ indicator A x := by
-  dsimp [indicator]
-  split_ifs <;> positivity
+  dsimp [indicator]; split_ifs <;> positivity
 
 /-- Indicator is bounded by 1. -/
 theorem indicator_le_one (A : Finset G) (x : G) : indicator A x ≤ 1 := by
-  dsimp [indicator]
-  split_ifs
-  · exact le_rfl
-  · exact zero_le_one
+  dsimp [indicator]; split_ifs <;> norm_num
 
 /-- Indicator takes value 1 on elements of $A$. -/
 theorem indicator_of_mem (A : Finset G) {x : G} (hx : x ∈ A) : indicator A x = 1 := by
-  dsimp [indicator]
-  simp [hx]
+  simp [indicator, hx]
 
 /-- Indicator takes value 0 outside of $A$. -/
 theorem indicator_of_not_mem (A : Finset G) {x : G} (hx : x ∉ A) : indicator A x = 0 := by
-  dsimp [indicator]
-  simp [hx]
+  simp [indicator, hx]
 
 /-- Indicator is idempotent under multiplication. -/
 theorem indicator_mul_self (A : Finset G) (x : G) : indicator A x * indicator A x = indicator A x := by
-  dsimp [indicator]
-  split_ifs <;> ring
+  dsimp [indicator]; split_ifs <;> ring
 
 /-- Product of indicators is indicator of intersection. -/
 theorem indicator_mul_indicator (A B : Finset G) (x : G) :
     indicator A x * indicator B x = indicator (A ∩ B) x := by
-  dsimp [indicator]
-  by_cases hA : x ∈ A
-  · by_cases hB : x ∈ B
-    · simp [hA, hB]
-    · simp [hA, hB]
-  · by_cases hB : x ∈ B
-    · simp [hA, hB]
-    · simp [hA, hB]
+  dsimp [indicator]; split_ifs <;> simp_all
 
 variable [Fintype G]
 
 /-- Sum of indicator equals cardinality of the finset. -/
 theorem sum_indicator (A : Finset G) : ∑ x : G, indicator A x = (A.card : ℝ) := by
-  dsimp [indicator]
-  have : (∑ x : G, (if x ∈ A then (1 : ℝ) else 0)) = ∑ x ∈ A, (1 : ℝ) := by
-    rw [Finset.sum_ite]
-    simp
-  rw [this]
-  simp
+  simp [indicator]
 
 /-- For 3-AP free set $A$, off-diagonal 3-AP product terms vanish. -/
 theorem ap3_term_of_free (A : Finset G) (hfree : IsThreeAPFree A) (x d : G) :
     indicator A x * indicator A (x + d) * indicator A (x + (2 : ℕ) • d) =
       if d = 0 then indicator A x else 0 := by
-  split_ifs with hd
-  · subst hd
-    simp only [add_zero, nsmul_zero]
-    dsimp [indicator]
-    split_ifs <;> ring
-  · by_contra h
-    have h_prod : indicator A x * indicator A (x + d) * indicator A (x + (2 : ℕ) • d) ≠ 0 := h
-    have hx : x ∈ A := by
-      by_contra hx'
-      rw [indicator_of_not_mem A hx', zero_mul, zero_mul] at h_prod
-      exact h_prod rfl
-    have hxd : x + d ∈ A := by
-      by_contra hxd'
-      rw [indicator_of_not_mem A hxd', mul_zero, zero_mul] at h_prod
-      exact h_prod rfl
-    have hx2d : x + (2 : ℕ) • d ∈ A := by
-      by_contra hx2d'
-      rw [indicator_of_not_mem A hx2d', mul_zero] at h_prod
-      exact h_prod rfl
-    have hap : Is3AP x (x + d) (x + (2 : ℕ) • d) := is3AP_def_add x d
-    have heq : x = x + d := hfree x hx (x + d) hxd (x + (2 : ℕ) • d) hx2d hap
-    have hd0 : d = 0 := by
-      apply add_left_cancel (a := x)
-      rw [← heq, add_zero]
-    exact hd hd0
+  by_cases hd : d = 0
+  · subst hd; simp only [add_zero, nsmul_zero]; dsimp [indicator]; split_ifs <;> ring
+  · dsimp [indicator]
+    split_ifs with hx hxd hx2d
+    · exact (hd (add_left_cancel (a := x) (by simpa using (hfree x hx (x + d) hxd (x + (2 : ℕ) • d) hx2d (is3AP_def_add x d)).symm))).elim
+    all_goals ring
 
 /-- The multilinear 3-AP counting functional $\Lambda(f_1, f_2, f_3) = \frac{1}{|G|^2} \sum_{x, d} f_1(x) f_2(x+d) f_3(x+2d)$. -/
 noncomputable def ap3Count (f1 f2 f3 : G → ℝ) : ℝ :=
@@ -195,16 +146,9 @@ theorem ap3Count_nonneg {f1 f2 f3 : G → ℝ}
     (h1 : ∀ x, 0 ≤ f1 x) (h2 : ∀ x, 0 ≤ f2 x) (h3 : ∀ x, 0 ≤ f3 x) :
     0 ≤ ap3Count f1 f2 f3 := by
   dsimp [ap3Count]
-  apply mul_nonneg
-  · positivity
-  · apply Finset.sum_nonneg
-    intro x _
-    apply Finset.sum_nonneg
-    intro d _
-    have h1x : 0 ≤ f1 x := h1 x
-    have h2x : 0 ≤ f2 (x + d) := h2 (x + d)
-    have h3x : 0 ≤ f3 (x + (2 : ℕ) • d) := h3 (x + (2 : ℕ) • d)
-    positivity
+  apply mul_nonneg (by positivity)
+  exact Finset.sum_nonneg fun x _ => Finset.sum_nonneg fun d _ =>
+    mul_nonneg (mul_nonneg (h1 x) (h2 _)) (h3 _)
 
 /-- Non-negativity of 3-AP count on indicators. -/
 theorem ap3Count_indicator_nonneg (A : Finset G) :
@@ -216,18 +160,9 @@ theorem ap3Count_of_free (A : Finset G) (hfree : IsThreeAPFree A) :
     ap3Count (indicator A) (indicator A) (indicator A) =
       (A.card : ℝ) / ((Fintype.card G : ℝ) ^ 2) := by
   dsimp [ap3Count]
-  have h_inner : ∀ x : G, (∑ d : G, indicator A x * indicator A (x + d) * indicator A (x + (2 : ℕ) • d)) = indicator A x := by
-    intro x
-    have h_terms : (∑ d : G, indicator A x * indicator A (x + d) * indicator A (x + (2 : ℕ) • d)) =
-        ∑ d : G, (if d = 0 then indicator A x else 0) := by
-      apply Finset.sum_congr rfl
-      intro d _
-      exact ap3_term_of_free A hfree x d
-    rw [h_terms]
-    rw [Finset.sum_ite_eq']
-    simp
-  simp_rw [h_inner]
-  rw [sum_indicator]
+  have h_inner x : (∑ d : G, indicator A x * indicator A (x + d) * indicator A (x + (2 : ℕ) • d)) = indicator A x := by
+    simp [ap3_term_of_free A hfree x, Finset.sum_ite_eq']
+  simp_rw [h_inner, sum_indicator]
   ring
 
 end RothsTheorem

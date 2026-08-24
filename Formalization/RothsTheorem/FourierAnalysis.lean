@@ -91,21 +91,13 @@ theorem toFun_add (χ : AddChar G) (x y : G) : χ (x + y) = χ x * χ y := χ.ma
 theorem toFun_normSq (χ : AddChar G) (x : G) : Complex.normSq (χ x) = 1 := χ.norm_one' x
 
 theorem toFun_ne_zero (χ : AddChar G) (x : G) : χ x ≠ 0 := by
-  intro hz
-  have h := χ.norm_one' x
-  rw [hz, Complex.normSq.map_zero] at h
-  norm_num at h
+  intro hz; simpa [hz] using χ.norm_one' x
 
-theorem toFun_star (χ : AddChar G) (x : G) : starRingEnd ℂ (χ x) = (χ x)⁻¹ := by
-  have h_norm : (Complex.normSq (χ x) : ℂ) = 1 := by
-    rw [χ.norm_one' x, Complex.ofReal_one]
-  rw [Complex.normSq_eq_conj_mul_self] at h_norm
-  exact eq_inv_of_mul_eq_one_left h_norm
+theorem toFun_star (χ : AddChar G) (x : G) : starRingEnd ℂ (χ x) = (χ x)⁻¹ :=
+  eq_inv_of_mul_eq_one_left (by rw [← Complex.normSq_eq_conj_mul_self, χ.norm_one' x, Complex.ofReal_one])
 
-theorem toFun_neg (χ : AddChar G) (x : G) : χ (-x) = (χ x)⁻¹ := by
-  have h : χ (x + -x) = χ x * χ (-x) := χ.map_add' x (-x)
-  rw [add_neg_cancel, χ.map_zero'] at h
-  exact eq_inv_of_mul_eq_one_right h.symm
+theorem toFun_neg (χ : AddChar G) (x : G) : χ (-x) = (χ x)⁻¹ :=
+  eq_inv_of_mul_eq_one_right (by rw [← χ.map_add', add_neg_cancel, χ.map_zero'])
 
 theorem toFun_star_eq_neg (χ : AddChar G) (x : G) : starRingEnd ℂ (χ x) = χ (-x) := by
   rw [toFun_star, toFun_neg]
@@ -123,12 +115,9 @@ theorem trivialChar_apply (x : G) : trivialChar G x = 1 := rfl
 /-- Inversion (conjugation) of an additive character: $\chi^{-1}(x) = \overline{\chi(x)} = \chi(-x)$. -/
 def invChar (χ : AddChar G) : AddChar G where
   toFun x := starRingEnd ℂ (χ x)
-  map_zero' := by
-    rw [toFun_zero, RingHom.map_one]
-  map_add' x y := by
-    rw [toFun_add, RingHom.map_mul]
-  norm_one' x := by
-    rw [Complex.normSq_conj, toFun_normSq]
+  map_zero' := by simp [toFun_zero]
+  map_add' x y := by simp [toFun_add]
+  norm_one' x := by simp [Complex.normSq_conj, toFun_normSq]
 
 @[simp]
 theorem invChar_apply (χ : AddChar G) (x : G) : invChar χ x = starRingEnd ℂ (χ x) := rfl
@@ -136,13 +125,9 @@ theorem invChar_apply (χ : AddChar G) (x : G) : invChar χ x = starRingEnd ℂ 
 /-- Product of two additive characters: $(\chi \cdot \psi)(x) = \chi(x) \psi(x)$. -/
 def mulChar (χ ψ : AddChar G) : AddChar G where
   toFun x := χ x * ψ x
-  map_zero' := by
-    rw [toFun_zero, toFun_zero, mul_one]
-  map_add' x y := by
-    rw [toFun_add, toFun_add]
-    ring
-  norm_one' x := by
-    rw [Complex.normSq.map_mul, toFun_normSq, toFun_normSq, mul_one]
+  map_zero' := by simp [toFun_zero]
+  map_add' x y := by simp [toFun_add, mul_mul_mul_comm]
+  norm_one' x := by simp [Complex.normSq.map_mul, toFun_normSq]
 
 @[simp]
 theorem mulChar_apply (χ ψ : AddChar G) (x : G) : mulChar χ ψ x = χ x * ψ x := rfl
@@ -163,27 +148,17 @@ def fourierTransform (f : G → ℂ) (χ : AddChar G) : ℂ :=
 /-- Linearity: Fourier transform of a sum is the sum of Fourier transforms. -/
 theorem fourierTransform_add (f g : G → ℂ) (χ : AddChar G) :
     fourierTransform (f + g) χ = fourierTransform f χ + fourierTransform g χ := by
-  dsimp [fourierTransform]
-  rw [← Finset.sum_add_distrib]
-  apply Finset.sum_congr rfl
-  intro x _
-  ring
+  simp [fourierTransform, add_mul, Finset.sum_add_distrib]
 
 /-- Fourier transform at the trivial character is the total sum $\sum_{x \in G} f(x)$. -/
 theorem fourierTransform_trivial (f : G → ℂ) :
     fourierTransform f (trivialChar G) = ∑ x : G, f x := by
-  dsimp [fourierTransform, trivialChar]
-  simp
+  simp [fourierTransform]
 
 /-- Fourier transform of the indicator function of $A$ at $\chi_0$ is $|A|$. -/
 theorem fourierTransform_indicator_trivial (A : Finset G) :
     fourierTransform (fun x => if x ∈ A then (1 : ℂ) else 0) (trivialChar G) = (A.card : ℂ) := by
-  rw [fourierTransform_trivial]
-  have : (∑ x : G, (if x ∈ A then (1 : ℂ) else 0)) = ∑ x ∈ A, (1 : ℂ) := by
-    rw [Finset.sum_ite]
-    simp
-  rw [this]
-  simp
+  simp [fourierTransform_trivial]
 
 /-- The total $L^2$ Fourier energy of $f$. -/
 def fourierEnergy (f : G → ℂ) (chars : Finset (AddChar G)) : ℝ :=

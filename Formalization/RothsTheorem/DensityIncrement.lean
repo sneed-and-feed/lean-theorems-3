@@ -92,27 +92,18 @@ set_option linter.unusedVariables false
 theorem progression_card (P : Progression) :
     P.elements.card = P.length := by
   dsimp [Progression.elements]
-  rw [Finset.card_image_of_injective]
-  · exact Finset.card_range P.length
-  · intro x y h
-    simp only at h
-    have h_step : P.step ≠ 0 := ne_of_gt P.step_pos
-    have h_add : (x : ℤ) * P.step = (y : ℤ) * P.step := by linarith
-    have h_eq : (x : ℤ) = (y : ℤ) := mul_right_cancel₀ h_step h_add
-    exact Nat.cast_inj.mp h_eq
+  rw [Finset.card_image_of_injective _ (fun x y h => Nat.cast_inj.mp (mul_right_cancel₀ (ne_of_gt P.step_pos) (add_left_cancel h)))]
+  exact Finset.card_range P.length
 
 /-- Progression membership by index. -/
 theorem progression_mem (P : Progression) (k : ℕ) (hk : k < P.length) :
-    P.start + (k : ℤ) * P.step ∈ P.elements := by
-  dsimp [Progression.elements]
-  rw [Finset.mem_image]
-  exact ⟨k, Finset.mem_range.mpr hk, rfl⟩
+    P.start + (k : ℤ) * P.step ∈ P.elements :=
+  Finset.mem_image_of_mem _ (Finset.mem_range.mpr hk)
 
 /-- The start of a progression belongs to its elements if length > 0. -/
 theorem progression_start_mem (P : Progression) (hL : 0 < P.length) :
     P.start ∈ P.elements := by
-  have := progression_mem P 0 hL
-  simpa using this
+  simpa using progression_mem P 0 hL
 
 /-- Preservation of 3-APs under affine progression map $k \mapsto a + k d$. -/
 theorem progression_is3AP (P : Progression) (k1 k2 k3 : ℤ) :
@@ -121,15 +112,10 @@ theorem progression_is3AP (P : Progression) (k1 k2 k3 : ℤ) :
   have h_step : P.step ≠ 0 := ne_of_gt P.step_pos
   constructor
   · intro h
-    have h1 : (k1 + k3) * P.step = (2 * k2) * P.step := by
-      calc (k1 + k3) * P.step = ((P.start + k1 * P.step) + (P.start + k3 * P.step)) - 2 * P.start := by ring
-      _ = 2 * (P.start + k2 * P.step) - 2 * P.start := by rw [h]
-      _ = (2 * k2) * P.step := by ring
+    have h1 : (k1 + k3) * P.step = (2 * k2) * P.step := by linear_combination h
     exact mul_right_cancel₀ h_step h1
   · intro h
-    calc (P.start + k1 * P.step) + (P.start + k3 * P.step) = 2 * P.start + (k1 + k3) * P.step := by ring
-    _ = 2 * P.start + (2 * k2) * P.step := by rw [h]
-    _ = 2 * (P.start + k2 * P.step) := by ring
+    linear_combination h * P.step
 
 /-- Relative density of a subset $A \subseteq \mathbb{Z}$ inside a progression $P$. -/
 noncomputable def relativeDensity (A : Finset ℤ) (P : Progression) : ℝ :=
@@ -138,18 +124,14 @@ noncomputable def relativeDensity (A : Finset ℤ) (P : Progression) : ℝ :=
 /-- Relative density is non-negative. -/
 theorem relativeDensity_nonneg (A : Finset ℤ) (P : Progression) :
     0 ≤ relativeDensity A P := by
-  dsimp [relativeDensity]
-  positivity
+  dsimp [relativeDensity]; positivity
 
 /-- Relative density is at most 1. -/
 theorem relativeDensity_le_one (A : Finset ℤ) (P : Progression) (hL : 0 < P.length) :
     relativeDensity A P ≤ 1 := by
   dsimp [relativeDensity]
-  have h_card : ((A ∩ P.elements).card : ℝ) ≤ (P.elements.card : ℝ) := by
-    exact_mod_cast Finset.card_le_card (Finset.inter_subset_right)
-  rw [progression_card P] at h_card
-  have hP_nonneg : 0 ≤ (P.length : ℝ) := by positivity
-  exact div_le_one_of_le₀ h_card hP_nonneg
+  rw [div_le_one (by positivity)]
+  exact_mod_cast (progression_card P ▸ Finset.card_le_card Finset.inter_subset_right)
 
 /-- The integer interval $[0, N-1]$ as a Finset of $\mathbb{Z}$. -/
 def intRange (N : ℕ) : Finset ℤ :=
@@ -157,17 +139,11 @@ def intRange (N : ℕ) : Finset ℤ :=
 
 /-- Cardinality of intRange N is N. -/
 theorem intRange_card (N : ℕ) : (intRange N).card = N := by
-  dsimp [intRange]
-  rw [Finset.card_image_of_injective]
-  · exact Finset.card_range N
-  · intro x y h
-    exact Nat.cast_inj.mp h
+  simp [intRange, Finset.card_image_of_injective _ Nat.cast_injective]
 
 /-- Membership in intRange N. -/
-theorem intRange_mem (N : ℕ) (k : ℕ) (hk : k < N) : (k : ℤ) ∈ intRange N := by
-  dsimp [intRange]
-  rw [Finset.mem_image]
-  exact ⟨k, Finset.mem_range.mpr hk, rfl⟩
+theorem intRange_mem (N : ℕ) (k : ℕ) (hk : k < N) : (k : ℤ) ∈ intRange N :=
+  Finset.mem_image_of_mem _ (Finset.mem_range.mpr hk)
 
 /--
 **Density Boost Accumulation**:
@@ -179,15 +155,11 @@ theorem density_boost_bound (α₀ : ℝ) (hα₀ : 0 < α₀) (α : ℕ → ℝ
     ∀ k : ℕ, α k ≥ α₀ + (k : ℝ) * ((α₀ ^ 2) / 16) := by
   intro k
   induction k with
-  | zero =>
-    simp [h0]
+  | zero => simp [h0]
   | succ n ih =>
-    have h_next := h_step n
-    calc α (n + 1) ≥ α n + (α₀ ^ 2) / 16 := h_next
-    _ ≥ (α₀ + (n : ℝ) * ((α₀ ^ 2) / 16)) + (α₀ ^ 2) / 16 := by linarith
-    _ = α₀ + ((n + 1 : ℕ) : ℝ) * ((α₀ ^ 2) / 16) := by
-      push_cast
-      ring
+    have := h_step n
+    push_cast at *
+    linarith
 
 /--
 **Iteration Step Upper Bound**:
@@ -198,8 +170,8 @@ theorem iteration_step_bound (α₀ : ℝ) (hα₀ : 0 < α₀) (α : ℕ → �
     (h_step : ∀ k, α (k + 1) ≥ α k + (α₀ ^ 2) / 16)
     (h_le_one : ∀ k, α k ≤ 1) (k : ℕ) :
     (k : ℝ) * ((α₀ ^ 2) / 16) ≤ 1 := by
-  have h_k := density_boost_bound α₀ hα₀ α h0 h_step k
-  have h_le := h_le_one k
+  have := density_boost_bound α₀ hα₀ α h0 h_step k
+  have := h_le_one k
   linarith
 
 /--

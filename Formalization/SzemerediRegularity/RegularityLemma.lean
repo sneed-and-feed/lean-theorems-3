@@ -90,9 +90,9 @@ namespace SzemerediRegularity
 /-- Convert a Mathlib `Finpartition (univ : Finset V)` into a `GraphPartition V`. -/
 def _root_.Finpartition.toGraphPartition (P : Finpartition (Finset.univ : Finset V)) : GraphPartition V where
   parts := P.parts
-  disjoint := fun A hA B hB hne => P.disjoint hA hB hne
+  disjoint := fun A hA B hB => P.disjoint hA hB
   cover := P.biUnion_parts
-  nonempty_parts := fun A hA => P.nonempty_of_mem_parts hA
+  nonempty_parts := fun A => P.nonempty_of_mem_parts
 
 @[simp]
 theorem toGraphPartition_parts (P : Finpartition (Finset.univ : Finset V)) :
@@ -129,9 +129,8 @@ theorem szemeredi_regularity_mathlib_bridge (G : SimpleGraph V) [DecidableRel G.
       P.IsEquipartition ∧
       l ≤ P.parts.card ∧
       P.parts.card ≤ SzemerediRegularity.bound ε l ∧
-      P.IsUniform G ε := by
-  have hl_card : l ≤ Fintype.card V := hl
-  exact _root_.szemeredi_regularity G hε hl_card
+      P.IsUniform G ε :=
+  _root_.szemeredi_regularity G hε hl
 
 /--
 **The Triangle Counting Lemma**:
@@ -182,9 +181,8 @@ theorem triangle_removal_mathlib_bridge (G : SimpleGraph V) [DecidableRel G.Adj]
       G' ≤ G ∧
       ((#G.edgeFinset - #G'.edgeFinset : ℝ) < δ * ((Fintype.card V : ℝ) ^ 2)) ∧
       G'.CliqueFree 3 := by
-  have hl := SimpleGraph.triangle_removal (G := G) (ε := δ)
-  obtain ⟨G', hG'le, instG', hedge, hfree⟩ := hl hG
-  exact ⟨G', instG', hG'le, by exact mod_cast hedge, hfree⟩
+  obtain ⟨G', hG'le, instG', hedge, hfree⟩ := SimpleGraph.triangle_removal (G := G) (ε := δ) hG
+  exact ⟨G', instG', hG'le, mod_cast hedge, hfree⟩
 
 /--
 **Ruzsa–Szemerédi (6, 3)-Theorem & Roth's Theorem Deduction**:
@@ -198,4 +196,3 @@ axiom ruzsa_szemeredi_roth_deduction (δ : ℝ) (hδ : 0 < δ) :
       (A.card : ℝ) ≤ δ * (N : ℝ)
 
 end SzemerediRegularity
-
