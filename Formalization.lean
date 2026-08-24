@@ -1,5 +1,6 @@
 import Formalization.ExpanderMixing
 import Formalization.AlonBoppana
+import Formalization.DiscreteCheeger
 import Formalization.RuzsaFreiman
 import Formalization.RothsTheorem
 import Formalization.SzemerediRegularity
@@ -17,6 +18,7 @@ discrete Fourier analysis, and regularity methods in the Lean 4 / Mathlib ecosys
 1. **Spectral Graph Theory & Expanders**:
    - `Formalization.ExpanderMixing`: Expander Mixing Lemma (Alon–Chung eigenvalue bound connecting edge discrepancy to $\lambda(G)$).
    - `Formalization.AlonBoppana`: Alon–Boppana Spectral Bound for $d$-regular graphs ($\lambda_2 \ge 2\sqrt{d-1} - o(1)$) and Ramanujan graphs.
+   - `Formalization.DiscreteCheeger`: Discrete Cheeger Inequality ($\frac{d - \lambda_2}{2} \le h(G) \le \sqrt{2d(d - \lambda_2)}$), Ramanujan expansion bounds, and vertex expansion bounds.
 
 2. **Additive Combinatorics & Sumset Calculus**:
    - `Formalization.RuzsaFreiman`: Complete Ruzsa calculus and Freiman structural package:
