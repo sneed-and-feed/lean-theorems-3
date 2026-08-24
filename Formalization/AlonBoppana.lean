@@ -16,7 +16,7 @@ on the fundamental lower bound on the second largest eigenvalue of $d$-regular g
 
 ## Mathematical Overview
 
-Let $G = (V, E)$ be a finite, connected, $d$-regular simple graph on $n$ vertices with diameter $D = \operatorname{diam}(G)$.
+Let $G = (V, E)$ be a finite, connected, $d$-regular simple graph on $n$ vertices with diameter $D = \mathrm{diam}(G)$.
 Let $A \in M_{V \times V}(\mathbb{R})$ be its adjacency matrix:
 $$A(u, v) = \begin{cases} 1 & \text{if } u \sim v \\ 0 & \text{otherwise} \end{cases}$$
 
@@ -66,7 +66,7 @@ The formalization is structured into four modular, golfed submodules:
    - `radialTestVector`, `nilliTestVector`: Spherical shell test vectors.
    - `orthogonalLinearCombination`: Balanced orthogonal combination $f = (\sum f_2) f_1 - (\sum f_1) f_2$.
    - `rayleighQuotient_orthogonalCombination`: Variational ratio bound $\min(R(f_1), R(f_2)) \le R(f)$.
-   - `nilliSignedTestVector_ne_zero`: Non-triviality under separation $2r+1 \le \operatorname{dist}(x_0, y_0)$.
+   - `nilliSignedTestVector_ne_zero`: Non-triviality under separation $2r+1 \le \mathrm{dist}(x_0, y_0)$.
 4. `Formalization.AlonBoppana.SpectralBound`:
    - `secondEigenvalue`: Variational second eigenvalue $\lambda_2(G)$.
    - `alon_boppana_bound`: Non-asymptotic lower bound $\lambda_2 \ge 2\sqrt{d-1}(1 - 2/D) - 2/D$.

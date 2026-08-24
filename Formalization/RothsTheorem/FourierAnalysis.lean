@@ -21,7 +21,7 @@ of the 3-AP counting operator $\Lambda(f_1, f_2, f_3)$.
 ## Mathematical Overview
 
 Let $G$ be a finite abelian group of order $N = |G|$.
-The Pontryagin dual group $\widehat{G} = \operatorname{Hom}(G, \mathbb{C}^\times)$ consists of additive characters
+The Pontryagin dual group $\widehat{G} = \mathrm{Hom}(G, \mathbb{C}^\times)$ consists of additive characters
 $\chi : G \to S^1 \subseteq \mathbb{C}$. For cyclic groups $G = \mathbb{Z}/N\mathbb{Z}$, the characters are given by:
 $$\chi_r(x) = e\left(\frac{rx}{N}\right) = \exp\left(\frac{2\pi i r x}{N}\right), \quad r \in \mathbb{Z}/N\mathbb{Z}$$
 

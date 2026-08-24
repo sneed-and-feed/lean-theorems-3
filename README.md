@@ -28,8 +28,7 @@ This repository provides machine-checked formalizations, certified proofs, and f
   $$\left| e(S, T) - \frac{d |S| |T|}{n} \right| \le \lambda(G) \sqrt{|S| \left(1 - \frac{|S|}{n}\right) |T| \left(1 - \frac{|T|}{n}\right)} \le \lambda(G) \sqrt{|S| |T|}$$
 * **Formalization Highlights:**
   - Verified orthogonal decomposition $\mathbf{1}_S = \mathbf{1}_S^\parallel + \mathbf{1}_S^\perp$ where $\mathbf{1}_S^\parallel = \frac{|S|}{n} \mathbf{1}$ and $\mathbf{1}_S^\perp \in \mathbf{1}^\perp$ (`decompPerp_orthogonal`).
-  - Machine-verified exact variance norm formula:
-    $$\|\mathbf{1}_S^\perp\|^2 = |S| \left(1 - \frac{|S|}{n}\right) \quad (\text{`decompPerp_normSq`})$$
+  - Machine-verified exact variance norm formula $\|\mathbf{1}_S^\perp\|^2 = |S| \left(1 - \frac{|S|}{n}\right)$ (`decompPerp_normSq`).
   - Variational definition of spectral expansion parameter $\lambda(G)$ as the operator norm restricted to $\mathbf{1}^\perp$.
   - Formalization of the Hoffman–Alon bound on the independence number $\alpha(G) \le \frac{\lambda}{d + \lambda} n$ and the chromatic lower bound $\chi(G) \ge 1 + \frac{d}{\lambda}$.
 
@@ -59,7 +58,7 @@ This repository provides machine-checked formalizations, certified proofs, and f
   - [`Formalization/RuzsaFreiman/RuzsaDistance.lean`](Formalization/RuzsaFreiman/RuzsaDistance.lean): Ruzsa distance $d_R(A, B) = \log \frac{|A - B|}{\sqrt{|A| |B|}}$, symmetry $d_R(A, B) = d_R(B, A)$ via verified reflection bijection $|A - B| = |B - A|$, and the **Ruzsa Triangle Inequality**:
     $$|B| \cdot |A - C| \le |A - B| \cdot |B - C| \implies d_R(A, C) \le d_R(A, B) + d_R(B, C)$$
   - [`Formalization/RuzsaFreiman/PlunneckeRuzsa.lean`](Formalization/RuzsaFreiman/PlunneckeRuzsa.lean): The **Plünnecke–Ruzsa Inequality** $|k B - \ell B| \le K^{k + \ell} |A|$ whenever $|A + B| \le K |A|$, Petridis minimal magnification subsets, and sharp tripling bounds $|A + A + A| \le K^3 |A|$.
-  - [`Formalization/RuzsaFreiman/FreimanTheorem.lean`](Formalization/RuzsaFreiman/FreimanTheorem.lean): Multi-dimensional Generalized Arithmetic Progressions (GAPs), Freiman homomorphisms of order $k$, **Freiman's Theorem in $\mathbb{Z}$** ($A \subseteq P$ with $\operatorname{dim}(P) \le d(K), |P| \le C(K) |A|$), Bogolyubov's lemma on $2A - 2A$, and the **Polynomial Freiman–Ruzsa (PFR) Theorem in $\mathbb{F}_2^n$** (Gowers, Green, Manners, Tao 2023):
+  - [`Formalization/RuzsaFreiman/FreimanTheorem.lean`](Formalization/RuzsaFreiman/FreimanTheorem.lean): Multi-dimensional Generalized Arithmetic Progressions (GAPs), Freiman homomorphisms of order $k$, **Freiman's Theorem in $\mathbb{Z}$** ($A \subseteq P$ with $\dim(P) \le d(K), |P| \le C(K) |A|$), Bogolyubov's lemma on $2A - 2A$, and the **Polynomial Freiman–Ruzsa (PFR) Theorem in $\mathbb{F}_2^n$** (Gowers, Green, Manners, Tao 2023):
     $$A \subseteq \bigcup_{i=1}^{2 K^{12}} (x_i + H), \quad |H| \le |A|$$
 
 ---
@@ -68,7 +67,7 @@ This repository provides machine-checked formalizations, certified proofs, and f
 * **Root Module:** [`Formalization/RothsTheorem.lean`](Formalization/RothsTheorem.lean)
 * **Submodules:**
   - [`Formalization/RothsTheorem/ThreeAP.lean`](Formalization/RothsTheorem/ThreeAP.lean): 3-AP predicate $x + z = 2y$, progression-free sets `IsThreeAPFree`, the normalized counting functional $\Lambda(f_1, f_2, f_3) = \frac{1}{|G|^2} \sum_{x, d} f_1(x) f_2(x+d) f_3(x+2d)$, and trivial progression count $\Lambda(1_A, 1_A, 1_A) = |A| / |G|^2$.
-  - [`Formalization/RothsTheorem/FourierAnalysis.lean`](Formalization/RothsTheorem/FourierAnalysis.lean): Complex additive characters $\operatorname{AddChar}(G)$, discrete Fourier transform $\widehat{f}(\chi) = \sum_x f(x) \overline{\chi(x)}$, Plancherel identity $\sum_\chi |\widehat{f}(\chi)|^2 = |G| \sum_x |f(x)|^2$, Fourier inversion formula, the harmonic representation $\Lambda(f_1, f_2, f_3) = \frac{1}{|G|^3} \sum_\chi \widehat{f_1}(\chi) \widehat{f_2}(\chi^{-2}) \widehat{f_3}(\chi)$, and **Roth's Large Fourier Coefficient Dichotomy**:
+  - [`Formalization/RothsTheorem/FourierAnalysis.lean`](Formalization/RothsTheorem/FourierAnalysis.lean): Complex additive characters $\mathrm{AddChar}(G)$, discrete Fourier transform $\widehat{f}(\chi) = \sum_x f(x) \overline{\chi(x)}$, Plancherel identity $\sum_\chi |\widehat{f}(\chi)|^2 = |G| \sum_x |f(x)|^2$, Fourier inversion formula, the harmonic representation $\Lambda(f_1, f_2, f_3) = \frac{1}{|G|^3} \sum_\chi \widehat{f_1}(\chi) \widehat{f_2}(\chi^{-2}) \widehat{f_3}(\chi)$, and **Roth's Large Fourier Coefficient Dichotomy**:
     $$\exists \chi \ne 1, \quad |\widehat{\mathbf{1}_A}(\chi)| \ge \frac{\alpha^2}{2} |G|$$
   - [`Formalization/RothsTheorem/DensityIncrement.lean`](Formalization/RothsTheorem/DensityIncrement.lean): Arithmetic progression structure in $\mathbb{Z}$ with verified cardinality (`progression_card`), relative density $\frac{|A \cap P|}{|P|}$, Dirichlet approximation, the **Density Increment Lemma** ($\frac{|A \cap P|}{|P|} \ge \alpha + \alpha^2/16$), the quantitative Roth bound $r_3(N) \le C \frac{N}{\log \log N}$, and the Kelley–Meka (2023) near-polynomial bound $r_3(N) \le C N \exp(-c (\log N)^{1/12})$.
 
@@ -153,7 +152,7 @@ graph TD
     end
 
     EM & AB & RF_Root & RT_Root & SR_Root & CD --> F_Master
-    SR_RL -.->|Ruzsa-Szemerédi (6,3)| RT_Root
+    SR_RL -.->|"Ruzsa-Szemerédi (6,3) Theorem"| RT_Root
 ```
 
 ---

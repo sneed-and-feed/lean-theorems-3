@@ -34,7 +34,7 @@ Its size satisfies $|P| \le \prod_{i=1}^d N_i$, and $P$ is called **proper** if 
 For every $K \ge 1$, there exist constants $d(K) \in \mathbb{N}$ and $C(K) \in \mathbb{R}$ depending only on $K$ such that
 any finite set $A \subseteq \mathbb{Z}$ with $|A + A| \le K |A|$ is contained in a Generalized Arithmetic Progression $P$
 of dimension:
-$$\operatorname{dim}(P) \le d(K)$$
+$$\dim(P) \le d(K)$$
 and size:
 $$|P| \le C(K) |A|$$
 
