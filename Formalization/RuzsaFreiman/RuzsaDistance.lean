@@ -65,17 +65,7 @@ noncomputable def ruzsaDistance (A B : Finset G) : ℝ :=
 /-- Difference set has same size under reflection: $|A - B| = |B - A|$. -/
 theorem card_diffset_symm (A B : Finset G) :
     (A - B).card = (B - A).card := by
-  have h_inj : Function.Injective (fun x : G => -x) := neg_injective
-  have : B - A = (A - B).image (fun x => -x) := by
-    ext x
-    simp only [Finset.mem_sub, Finset.mem_image]
-    constructor
-    · rintro ⟨b, hb, a, ha, rfl⟩
-      refine ⟨a - b, ?_, by simp⟩
-      exact ⟨a, ha, b, hb, rfl⟩
-    · rintro ⟨y, ⟨a, ha, b, hb, rfl⟩, rfl⟩
-      exact ⟨b, hb, a, ha, by simp [neg_sub]⟩
-  rw [this, Finset.card_image_of_injective _ h_inj]
+  rw [← Finset.card_neg, neg_sub]
 
 /-- Symmetry of the Ruzsa distance: $d_R(A, B) = d_R(B, A)$. -/
 theorem ruzsaDistance_symm (A B : Finset G) :
@@ -97,66 +87,26 @@ theorem ruzsa_triangle_cardinality (A B C : Finset G) :
 /-- Strict positivity of the Ruzsa multiplicative ratio for non-empty sets. -/
 theorem ruzsaRatio_pos {A B : Finset G} (hA : A.Nonempty) (hB : B.Nonempty) :
     0 < ruzsaRatio A B := by
-  have h_sub : (A - B).Nonempty := by
-    obtain ⟨a, ha⟩ := hA
-    obtain ⟨b, hb⟩ := hB
-    exact ⟨a - b, Finset.mem_sub.mpr ⟨a, ha, b, hb, rfl⟩⟩
-  have h_card_pos : (0 : ℝ) < (A - B).card := Nat.cast_pos.mpr h_sub.card_pos
-  have hA_pos : (0 : ℝ) < A.card := Nat.cast_pos.mpr hA.card_pos
-  have hB_pos : (0 : ℝ) < B.card := Nat.cast_pos.mpr hB.card_pos
-  have h_sqrt_pos : 0 < Real.sqrt ((A.card : ℝ) * (B.card : ℝ)) :=
-    Real.sqrt_pos.mpr (mul_pos hA_pos hB_pos)
-  exact div_pos h_card_pos h_sqrt_pos
+  have : (A - B).Nonempty := hA.sub hB
+  dsimp [ruzsaRatio]
+  positivity
 
 /-- Multiplicative triangle inequality for the Ruzsa ratio. -/
 theorem ruzsaRatio_mul_le {A B C : Finset G}
     (hA : A.Nonempty) (hB : B.Nonempty) (hC : C.Nonempty) :
     ruzsaRatio A C ≤ ruzsaRatio A B * ruzsaRatio B C := by
   dsimp [ruzsaRatio]
-  have hA0 : (0 : ℝ) < A.card := Nat.cast_pos.mpr hA.card_pos
-  have hB0 : (0 : ℝ) < B.card := Nat.cast_pos.mpr hB.card_pos
-  have hC0 : (0 : ℝ) < C.card := Nat.cast_pos.mpr hC.card_pos
-  have h_card_ineq : B.card * (A - C).card ≤ (A - B).card * (B - C).card :=
-    ruzsa_triangle_cardinality A B C
-  have h_card_real : (B.card : ℝ) * ((A - C).card : ℝ) ≤ ((A - B).card : ℝ) * ((B - C).card : ℝ) := by
-    have := Nat.cast_le (α := ℝ).mpr h_card_ineq
-    push_cast at this
-    exact this
-  have h_sqrt_AB : Real.sqrt ((A.card : ℝ) * (B.card : ℝ)) = Real.sqrt (A.card : ℝ) * Real.sqrt (B.card : ℝ) :=
-    Real.sqrt_mul (Nat.cast_nonneg _) (B.card : ℝ)
-  have h_sqrt_BC : Real.sqrt ((B.card : ℝ) * (C.card : ℝ)) = Real.sqrt (B.card : ℝ) * Real.sqrt (C.card : ℝ) :=
-    Real.sqrt_mul (Nat.cast_nonneg _) (C.card : ℝ)
-  have h_sqrt_AC : Real.sqrt ((A.card : ℝ) * (C.card : ℝ)) = Real.sqrt (A.card : ℝ) * Real.sqrt (C.card : ℝ) :=
-    Real.sqrt_mul (Nat.cast_nonneg _) (C.card : ℝ)
-  have h_self : Real.sqrt (B.card : ℝ) * Real.sqrt (B.card : ℝ) = (B.card : ℝ) :=
-    Real.mul_self_sqrt (Nat.cast_nonneg _)
-  have h_denom_prod : Real.sqrt ((A.card : ℝ) * (B.card : ℝ)) * Real.sqrt ((B.card : ℝ) * (C.card : ℝ)) =
-      Real.sqrt ((A.card : ℝ) * (C.card : ℝ)) * (B.card : ℝ) := by
-    rw [h_sqrt_AB, h_sqrt_BC, h_sqrt_AC]
-    calc
-      Real.sqrt (A.card : ℝ) * Real.sqrt (B.card : ℝ) * (Real.sqrt (B.card : ℝ) * Real.sqrt (C.card : ℝ))
-        = Real.sqrt (A.card : ℝ) * (Real.sqrt (B.card : ℝ) * Real.sqrt (B.card : ℝ)) * Real.sqrt (C.card : ℝ) := by ring
-      _ = Real.sqrt (A.card : ℝ) * (B.card : ℝ) * Real.sqrt (C.card : ℝ) := by rw [h_self]
-      _ = (Real.sqrt (A.card : ℝ) * Real.sqrt (C.card : ℝ)) * (B.card : ℝ) := by ring
-  have h_denom_pos : 0 < Real.sqrt ((A.card : ℝ) * (C.card : ℝ)) * (B.card : ℝ) := by
-    have : 0 < Real.sqrt ((A.card : ℝ) * (C.card : ℝ)) := Real.sqrt_pos.mpr (mul_pos hA0 hC0)
-    exact mul_pos this hB0
-  have h_prod_div : ((A - B).card : ℝ) / Real.sqrt ((A.card : ℝ) * (B.card : ℝ)) *
-      (((B - C).card : ℝ) / Real.sqrt ((B.card : ℝ) * (C.card : ℝ))) =
-      (((A - B).card : ℝ) * ((B - C).card : ℝ)) / (Real.sqrt ((A.card : ℝ) * (C.card : ℝ)) * (B.card : ℝ)) := by
-    rw [div_mul_div_comm, h_denom_prod]
-  rw [h_prod_div]
-  have h_rew : ((A - C).card : ℝ) / Real.sqrt ((A.card : ℝ) * (C.card : ℝ)) =
-      ((B.card : ℝ) * ((A - C).card : ℝ)) / (Real.sqrt ((A.card : ℝ) * (C.card : ℝ)) * (B.card : ℝ)) := by
-    have hB_ne : (B.card : ℝ) ≠ 0 := ne_of_gt hB0
-    calc
-      ((A - C).card : ℝ) / Real.sqrt ((A.card : ℝ) * (C.card : ℝ))
-        = (((A - C).card : ℝ) * (B.card : ℝ)) / (Real.sqrt ((A.card : ℝ) * (C.card : ℝ)) * (B.card : ℝ)) := by
-          rw [mul_div_mul_right _ _ hB_ne]
-      _ = ((B.card : ℝ) * ((A - C).card : ℝ)) / (Real.sqrt ((A.card : ℝ) * (C.card : ℝ)) * (B.card : ℝ)) := by
-          rw [mul_comm ((A - C).card : ℝ)]
-  rw [h_rew]
-  exact div_le_div_of_nonneg_right h_card_real (le_of_lt h_denom_pos)
+  have h_card : (B.card : ℝ) * (A - C).card ≤ (A - B).card * (B - C).card := by
+    exact_mod_cast ruzsa_triangle_cardinality A B C
+  have h_sqrt (X Y : Finset G) : Real.sqrt ((X.card : ℝ) * (Y.card : ℝ)) = Real.sqrt X.card * Real.sqrt Y.card :=
+    Real.sqrt_mul (Nat.cast_nonneg _) _
+  have hB_self : Real.sqrt B.card * Real.sqrt B.card = B.card := Real.mul_self_sqrt (Nat.cast_nonneg _)
+  have h_denom : Real.sqrt A.card * Real.sqrt B.card * (Real.sqrt B.card * Real.sqrt C.card) =
+      (B.card : ℝ) * (Real.sqrt A.card * Real.sqrt C.card) := by
+    linear_combination Real.sqrt A.card * Real.sqrt C.card * hB_self
+  rw [div_mul_div_comm, h_sqrt A B, h_sqrt B C, h_sqrt A C, h_denom,
+    ← mul_div_mul_left _ _ (ne_of_gt (by positivity : (0 : ℝ) < B.card))]
+  exact div_le_div_of_nonneg_right h_card (by positivity)
 
 /--
 **Ruzsa Triangle Inequality (Metric Form)**:
@@ -167,14 +117,8 @@ theorem ruzsa_triangle_inequality {A B C : Finset G}
     (hA : A.Nonempty) (hB : B.Nonempty) (hC : C.Nonempty) :
     ruzsaDistance A C ≤ ruzsaDistance A B + ruzsaDistance B C := by
   dsimp [ruzsaDistance]
-  have h_pos_AC : 0 < ruzsaRatio A C := ruzsaRatio_pos hA hC
-  have h_pos_AB : 0 < ruzsaRatio A B := ruzsaRatio_pos hA hB
-  have h_pos_BC : 0 < ruzsaRatio B C := ruzsaRatio_pos hB hC
-  have h_log_add : Real.log (ruzsaRatio A B) + Real.log (ruzsaRatio B C) =
-      Real.log (ruzsaRatio A B * ruzsaRatio B C) := by
-    rw [Real.log_mul (ne_of_gt h_pos_AB) (ne_of_gt h_pos_BC)]
-  rw [h_log_add]
-  exact Real.log_le_log h_pos_AC (ruzsaRatio_mul_le hA hB hC)
+  rw [← Real.log_mul (ne_of_gt (ruzsaRatio_pos hA hB)) (ne_of_gt (ruzsaRatio_pos hB hC))]
+  exact Real.log_le_log (ruzsaRatio_pos hA hC) (ruzsaRatio_mul_le hA hB hC)
 
 /--
 **Difference Set Doubling Bound**:
@@ -195,27 +139,9 @@ $|A - A| \le K^2 |A|$.
 theorem diffset_bound_of_doubling {A : Finset G} (hA : A.Nonempty) {K : ℝ}
     (hK : ((A + A).card : ℝ) ≤ K * (A.card : ℝ)) :
     ((A - A).card : ℝ) ≤ K ^ 2 * (A.card : ℝ) := by
-  have h_pos : (0 : ℝ) < A.card := Nat.cast_pos.mpr hA.card_pos
-  have h_ineq : (A - A).card * A.card ≤ (A + A).card * (A + A).card := by
-    have h := Finset.ruzsa_triangle_inequality_sub_add_add A A A
-    exact h
-  have h_real : ((A - A).card : ℝ) * (A.card : ℝ) ≤ ((A + A).card : ℝ) ^ 2 := by
-    have h_cast : (( (A - A).card * A.card : ℕ) : ℝ) ≤ (( (A + A).card * (A + A).card : ℕ) : ℝ) :=
-      Nat.cast_le.mpr h_ineq
-    push_cast at h_cast
-    rw [sq]
-    exact h_cast
-  have hK_nonneg : 0 ≤ K := by
-    have : (0 : ℝ) ≤ (A + A).card := Nat.cast_nonneg _
-    have := le_trans this hK
-    exact nonneg_of_mul_nonneg_left this h_pos
-  have h_sq : ((A + A).card : ℝ) ^ 2 ≤ (K * (A.card : ℝ)) ^ 2 := by
-    nlinarith
-  have h_comb : ((A - A).card : ℝ) * (A.card : ℝ) ≤ (K ^ 2 * (A.card : ℝ)) * (A.card : ℝ) := by
-    calc
-      ((A - A).card : ℝ) * (A.card : ℝ) ≤ ((A + A).card : ℝ) ^ 2 := h_real
-      _ ≤ (K * (A.card : ℝ)) ^ 2 := h_sq
-      _ = (K ^ 2 * (A.card : ℝ)) * (A.card : ℝ) := by ring
-  exact (mul_le_mul_iff_of_pos_right h_pos).mp h_comb
+  have h_pos : (0 : ℝ) < A.card := by positivity
+  have h_ineq : ((A - A).card : ℝ) * A.card ≤ ((A + A).card : ℝ) * (A + A).card := by
+    exact_mod_cast Finset.ruzsa_triangle_inequality_sub_add_add A A A
+  exact (mul_le_mul_iff_of_pos_right h_pos).mp (by nlinarith)
 
 end RuzsaFreiman

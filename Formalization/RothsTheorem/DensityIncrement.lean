@@ -101,13 +101,106 @@ theorem progression_card (P : Progression) :
     have h_eq : (x : ℤ) = (y : ℤ) := mul_right_cancel₀ h_step h_add
     exact Nat.cast_inj.mp h_eq
 
+/-- Progression membership by index. -/
+theorem progression_mem (P : Progression) (k : ℕ) (hk : k < P.length) :
+    P.start + (k : ℤ) * P.step ∈ P.elements := by
+  dsimp [Progression.elements]
+  rw [Finset.mem_image]
+  exact ⟨k, Finset.mem_range.mpr hk, rfl⟩
+
+/-- The start of a progression belongs to its elements if length > 0. -/
+theorem progression_start_mem (P : Progression) (hL : 0 < P.length) :
+    P.start ∈ P.elements := by
+  have := progression_mem P 0 hL
+  simpa using this
+
+/-- Preservation of 3-APs under affine progression map $k \mapsto a + k d$. -/
+theorem progression_is3AP (P : Progression) (k1 k2 k3 : ℤ) :
+    (P.start + k1 * P.step) + (P.start + k3 * P.step) = 2 * (P.start + k2 * P.step) ↔
+      k1 + k3 = 2 * k2 := by
+  have h_step : P.step ≠ 0 := ne_of_gt P.step_pos
+  constructor
+  · intro h
+    have h1 : (k1 + k3) * P.step = (2 * k2) * P.step := by
+      calc (k1 + k3) * P.step = ((P.start + k1 * P.step) + (P.start + k3 * P.step)) - 2 * P.start := by ring
+      _ = 2 * (P.start + k2 * P.step) - 2 * P.start := by rw [h]
+      _ = (2 * k2) * P.step := by ring
+    exact mul_right_cancel₀ h_step h1
+  · intro h
+    calc (P.start + k1 * P.step) + (P.start + k3 * P.step) = 2 * P.start + (k1 + k3) * P.step := by ring
+    _ = 2 * P.start + (2 * k2) * P.step := by rw [h]
+    _ = 2 * (P.start + k2 * P.step) := by ring
+
 /-- Relative density of a subset $A \subseteq \mathbb{Z}$ inside a progression $P$. -/
 noncomputable def relativeDensity (A : Finset ℤ) (P : Progression) : ℝ :=
   ((A ∩ P.elements).card : ℝ) / (P.length : ℝ)
 
+/-- Relative density is non-negative. -/
+theorem relativeDensity_nonneg (A : Finset ℤ) (P : Progression) :
+    0 ≤ relativeDensity A P := by
+  dsimp [relativeDensity]
+  positivity
+
+/-- Relative density is at most 1. -/
+theorem relativeDensity_le_one (A : Finset ℤ) (P : Progression) (hL : 0 < P.length) :
+    relativeDensity A P ≤ 1 := by
+  dsimp [relativeDensity]
+  have h_card : ((A ∩ P.elements).card : ℝ) ≤ (P.elements.card : ℝ) := by
+    exact_mod_cast Finset.card_le_card (Finset.inter_subset_right)
+  rw [progression_card P] at h_card
+  have hP_nonneg : 0 ≤ (P.length : ℝ) := by positivity
+  exact div_le_one_of_le₀ h_card hP_nonneg
+
 /-- The integer interval $[0, N-1]$ as a Finset of $\mathbb{Z}$. -/
 def intRange (N : ℕ) : Finset ℤ :=
   (Finset.range N).image (fun (k : ℕ) => (k : ℤ))
+
+/-- Cardinality of intRange N is N. -/
+theorem intRange_card (N : ℕ) : (intRange N).card = N := by
+  dsimp [intRange]
+  rw [Finset.card_image_of_injective]
+  · exact Finset.card_range N
+  · intro x y h
+    exact Nat.cast_inj.mp h
+
+/-- Membership in intRange N. -/
+theorem intRange_mem (N : ℕ) (k : ℕ) (hk : k < N) : (k : ℤ) ∈ intRange N := by
+  dsimp [intRange]
+  rw [Finset.mem_image]
+  exact ⟨k, Finset.mem_range.mpr hk, rfl⟩
+
+/--
+**Density Boost Accumulation**:
+If density increases by at least $\alpha_0^2 / 16$ at each step, after $k$ steps
+the density has grown by at least $k \alpha_0^2 / 16$.
+-/
+theorem density_boost_bound (α₀ : ℝ) (hα₀ : 0 < α₀) (α : ℕ → ℝ) (h0 : α 0 = α₀)
+    (h_step : ∀ k, α (k + 1) ≥ α k + (α₀ ^ 2) / 16) :
+    ∀ k : ℕ, α k ≥ α₀ + (k : ℝ) * ((α₀ ^ 2) / 16) := by
+  intro k
+  induction k with
+  | zero =>
+    simp [h0]
+  | succ n ih =>
+    have h_next := h_step n
+    calc α (n + 1) ≥ α n + (α₀ ^ 2) / 16 := h_next
+    _ ≥ (α₀ + (n : ℝ) * ((α₀ ^ 2) / 16)) + (α₀ ^ 2) / 16 := by linarith
+    _ = α₀ + ((n + 1 : ℕ) : ℝ) * ((α₀ ^ 2) / 16) := by
+      push_cast
+      ring
+
+/--
+**Iteration Step Upper Bound**:
+Since density cannot exceed 1, the number of density increments $k$ satisfies
+$k \cdot (\alpha_0^2 / 16) \le 1$, meaning $k \le 16 / \alpha_0^2$.
+-/
+theorem iteration_step_bound (α₀ : ℝ) (hα₀ : 0 < α₀) (α : ℕ → ℝ) (h0 : α 0 = α₀)
+    (h_step : ∀ k, α (k + 1) ≥ α k + (α₀ ^ 2) / 16)
+    (h_le_one : ∀ k, α k ≤ 1) (k : ℕ) :
+    (k : ℝ) * ((α₀ ^ 2) / 16) ≤ 1 := by
+  have h_k := density_boost_bound α₀ hα₀ α h0 h_step k
+  have h_le := h_le_one k
+  linarith
 
 /--
 **The Density Increment Lemma (Roth 1953)**:

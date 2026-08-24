@@ -1,5 +1,15 @@
 import Formalization.SzemerediRegularity.PairDensity
 import Formalization.SzemerediRegularity.EnergyIncrement
+import Mathlib.Combinatorics.SimpleGraph.Basic
+import Mathlib.Combinatorics.SimpleGraph.Clique
+import Mathlib.Combinatorics.SimpleGraph.Density
+import Mathlib.Combinatorics.SimpleGraph.Regularity.Bound
+import Mathlib.Combinatorics.SimpleGraph.Regularity.Energy
+import Mathlib.Combinatorics.SimpleGraph.Regularity.Uniform
+import Mathlib.Combinatorics.SimpleGraph.Regularity.Lemma
+import Mathlib.Combinatorics.SimpleGraph.Triangle.Basic
+import Mathlib.Combinatorics.SimpleGraph.Triangle.Counting
+import Mathlib.Combinatorics.SimpleGraph.Triangle.Removal
 import Mathlib.Data.Real.Basic
 import Mathlib.Data.Finset.Basic
 import Mathlib.Data.Finset.Card
@@ -7,6 +17,7 @@ import Mathlib.Data.Fintype.Card
 import Mathlib.Tactic.Positivity
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Linarith
+import Mathlib.Tactic.GCongr
 
 open scoped BigOperators Finset
 open Classical
@@ -56,10 +67,12 @@ Ruzsa and Szemerédi used the Triangle Removal Lemma to prove:
 
 ## Formalization Structure
 
+- `Finpartition.toGraphPartition`: Bridge converting Mathlib's `Finpartition univ` into `GraphPartition V`.
 - `IsEpsilonRegularPartition`: Predicate stating that irregular pairs form at most $\varepsilon k^2$ fraction.
 - `szemeredi_regularity_lemma`: The full statement of Szemerédi's Regularity Lemma.
+- `szemeredi_regularity_bridge`: Bridge connecting to Mathlib's `SimpleGraph.szemeredi_regularity`.
 - `triangle_counting_lemma`: Lower bound $(1 - 2\varepsilon) d_{12} d_{23} d_{31} |V_1| |V_2| |V_3|$ on triangles.
-- `triangle_removal_lemma`: Ruzsa–Szemerédi Removal Lemma.
+- `triangle_removal_lemma`: Ruzsa–Szemerédi Removal Lemma bridged to Mathlib's `triangle_removal`.
 - `ruzsa_szemeredi_roth_deduction`: Graph-theoretic deduction of Roth's theorem.
 
 ## References
@@ -73,6 +86,17 @@ Ruzsa and Szemerédi used the Triangle Removal Lemma to prove:
 variable {V : Type*} [Fintype V] [DecidableEq V]
 
 namespace SzemerediRegularity
+
+/-- Convert a Mathlib `Finpartition (univ : Finset V)` into a `GraphPartition V`. -/
+def _root_.Finpartition.toGraphPartition (P : Finpartition (Finset.univ : Finset V)) : GraphPartition V where
+  parts := P.parts
+  disjoint := fun A hA B hB hne => P.disjoint hA hB hne
+  cover := P.biUnion_parts
+  nonempty_parts := fun A hA => P.nonempty_of_mem_parts hA
+
+@[simp]
+theorem toGraphPartition_parts (P : Finpartition (Finset.univ : Finset V)) :
+    P.toGraphPartition.parts = P.parts := rfl
 
 /-- An equipartition $\mathcal{P}$ is $\varepsilon$-regular if the number of irregular pairs is $\le \varepsilon k^2$. -/
 def IsEpsilonRegularPartition (G : SimpleGraph V) [DecidableRel G.Adj] (ε : ℝ) (P : GraphPartition V) : Prop :=
@@ -93,6 +117,21 @@ axiom szemeredi_regularity_lemma (ε : ℝ) (hε : 0 < ε) (m : ℕ) (hm : 1 ≤
           m ≤ P.parts.card ∧
           P.parts.card ≤ M ∧
           IsEpsilonRegularPartition G ε P
+
+/--
+**Mathlib Bridge for Szemerédi's Regularity Lemma**:
+Mathlib's `szemeredi_regularity` produces an equitable $\varepsilon$-uniform finpartition
+whose size is bounded by `SzemerediRegularity.bound ε l`.
+-/
+theorem szemeredi_regularity_mathlib_bridge (G : SimpleGraph V) [DecidableRel G.Adj]
+    (ε : ℝ) (hε : 0 < ε) (l : ℕ) (hl : l ≤ Fintype.card V) :
+    ∃ P : Finpartition (Finset.univ : Finset V),
+      P.IsEquipartition ∧
+      l ≤ P.parts.card ∧
+      P.parts.card ≤ SzemerediRegularity.bound ε l ∧
+      P.IsUniform G ε := by
+  have hl_card : l ≤ Fintype.card V := hl
+  exact _root_.szemeredi_regularity G hε hl_card
 
 /--
 **The Triangle Counting Lemma**:
@@ -132,6 +171,22 @@ axiom triangle_removal_lemma (δ : ℝ) (hδ : 0 < δ) :
           (∀ u v w, ¬ (G'.Adj u v ∧ G'.Adj v w ∧ G'.Adj w u))
 
 /--
+**Mathlib Bridge for Triangle Removal**:
+Mathlib's `SimpleGraph.triangle_removal` ensures that if the number of 3-cliques is strictly below
+`triangleRemovalBound δ * |V|^3`, there exists a subgraph `G' ≤ G` with `G'.CliqueFree 3` obtained
+by removing fewer than `δ * |V|^2` edges.
+-/
+theorem triangle_removal_mathlib_bridge (G : SimpleGraph V) [DecidableRel G.Adj] {δ : ℝ}
+    (hG : (#(G.cliqueFinset 3) : ℝ) < SimpleGraph.triangleRemovalBound δ * (Fintype.card V : ℝ) ^ 3) :
+    ∃ (G' : SimpleGraph V) (_ : DecidableRel G'.Adj),
+      G' ≤ G ∧
+      ((#G.edgeFinset - #G'.edgeFinset : ℝ) < δ * ((Fintype.card V : ℝ) ^ 2)) ∧
+      G'.CliqueFree 3 := by
+  have hl := SimpleGraph.triangle_removal (G := G) (ε := δ)
+  obtain ⟨G', hG'le, instG', hedge, hfree⟩ := hl hG
+  exact ⟨G', instG', hG'le, by exact mod_cast hedge, hfree⟩
+
+/--
 **Ruzsa–Szemerédi (6, 3)-Theorem & Roth's Theorem Deduction**:
 Roth's theorem on 3-term arithmetic progressions follows from the Triangle Removal Lemma
 applied to the 3-partite progression incidence graph.
@@ -143,3 +198,4 @@ axiom ruzsa_szemeredi_roth_deduction (δ : ℝ) (hδ : 0 < δ) :
       (A.card : ℝ) ≤ δ * (N : ℝ)
 
 end SzemerediRegularity
+

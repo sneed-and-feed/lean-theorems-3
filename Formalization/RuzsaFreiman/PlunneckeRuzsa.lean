@@ -68,18 +68,11 @@ variable {G : Type*} [DecidableEq G] [AddCommGroup G]
 
 /-- Translation of a finset by the zero singleton is the finset itself. -/
 theorem singleton_zero_add (A : Finset G) : {0} + A = A := by
-  rw [singleton_add_eq_image, show (fun b : G => 0 + b) = id by ext; simp, Finset.image_id]
+  rw [Finset.singleton_zero, zero_add]
 
 /-- Difference of a finset with the zero singleton is the finset itself. -/
 theorem sub_singleton_zero (A : Finset G) : A - {0} = A := by
-  ext x
-  simp only [Finset.mem_sub, Finset.mem_singleton]
-  constructor
-  · rintro ⟨a, ha, b, rfl, rfl⟩
-    rw [sub_zero]
-    exact ha
-  · intro hx
-    exact ⟨x, hx, 0, rfl, sub_zero x⟩
+  rw [Finset.singleton_zero, sub_zero]
 
 /-- 0-th iterated sumset is `{0}`. -/
 theorem iteratedSumset_zero (A : Finset G) : iteratedSumset 0 A = {0} := rfl
@@ -118,18 +111,11 @@ theorem plunnecke_petridis_lemma (A B : Finset G) (hA : A.Nonempty) (_hB : B.Non
     intro A'' hA''sub
     obtain rfl | hA''_nonempty := A''.eq_empty_or_nonempty
     · simp
-    have hA0 : (0 : ℚ≥0) < A'.card := Nat.cast_pos.2 hA'nonempty.card_pos
-    have hA0' : (0 : ℚ≥0) < A''.card := Nat.cast_pos.2 hA''_nonempty.card_pos
     have hA''mem : A'' ∈ A.powerset.erase ∅ :=
       Finset.mem_erase_of_ne_of_mem hA''_nonempty.ne_empty (Finset.mem_powerset.2 (hA''sub.trans hA'sub))
-    have h_min := hAmin A'' hA''mem
-    exact_mod_cast (div_le_div_iff₀ hA0 hA0').1 h_min
+    exact_mod_cast (div_le_div_iff₀ (by positivity) (by positivity)).1 (hAmin A'' hA''mem)
   have h_petridis := Finset.pluennecke_petridis_inequality_add X h_hyp
-  have h_eq1 : X + A' + B = A' + B + X := by
-    rw [add_comm X A', add_assoc, add_comm X B, ← add_assoc]
-  have h_eq2 : X + A' = A' + X := add_comm X A'
-  rw [h_eq1, h_eq2] at h_petridis
-  exact h_petridis
+  rwa [add_comm X A', add_assoc, add_comm X B, ← add_assoc] at h_petridis
 
 /--
 **The Plünnecke–Ruzsa Inequality (General Two-Set Form)**:
@@ -139,22 +125,17 @@ $$|k B - \ell B| \le K^{k + \ell} |A|$$
 theorem plunnecke_ruzsa_inequality {A B : Finset G} (hA : A.Nonempty) {K : ℝ}
     (hK : ((A + B).card : ℝ) ≤ K * (A.card : ℝ)) (k l : ℕ) :
     ((iteratedSumset k B - iteratedSumset l B).card : ℝ) ≤ K ^ (k + l) * (A.card : ℝ) := by
-  have h_nsmul : (iteratedSumset k B - iteratedSumset l B).card = ((k • B) - (l • B)).card := by
-    rw [iteratedSumset_eq_nsmul, iteratedSumset_eq_nsmul]
-  rw [h_nsmul]
+  simp only [iteratedSumset_eq_nsmul]
   have h_pr := Finset.pluennecke_ruzsa_inequality_nsmul_sub_nsmul_add hA B k l
   have h_cast : (((k • B - l • B).card : ℚ≥0) : ℝ) ≤
       (((((A + B).card : ℚ≥0) / (A.card : ℚ≥0)) ^ (k + l) * (A.card : ℚ≥0) : ℚ≥0) : ℝ) :=
     NNRat.cast_le.mpr h_pr
   push_cast at h_cast
-  have hA_pos : (0 : ℝ) < A.card := Nat.cast_pos.mpr hA.card_pos
-  have h_div_le : ((A + B).card : ℝ) / (A.card : ℝ) ≤ K := (div_le_iff₀ hA_pos).mpr hK
-  have h_div_nonneg : 0 ≤ ((A + B).card : ℝ) / (A.card : ℝ) := by positivity
-  have h_pow_le : (((A + B).card : ℝ) / (A.card : ℝ)) ^ (k + l) ≤ K ^ (k + l) :=
-    pow_le_pow_left₀ h_div_nonneg h_div_le (k + l)
-  have h_final : (((A + B).card : ℝ) / (A.card : ℝ)) ^ (k + l) * (A.card : ℝ) ≤
-      K ^ (k + l) * (A.card : ℝ) :=
-    mul_le_mul_of_nonneg_right h_pow_le (le_of_lt hA_pos)
+  have h_div_le : ((A + B).card : ℝ) / A.card ≤ K := (div_le_iff₀ (by positivity : (0 : ℝ) < A.card)).mpr hK
+  have h_pow_le : (((A + B).card : ℝ) / A.card) ^ (k + l) ≤ K ^ (k + l) :=
+    pow_le_pow_left₀ (by positivity) h_div_le (k + l)
+  have h_final : (((A + B).card : ℝ) / A.card) ^ (k + l) * A.card ≤ K ^ (k + l) * A.card :=
+    mul_le_mul_of_nonneg_right h_pow_le (by positivity)
   exact le_trans h_cast h_final
 
 /--
@@ -175,12 +156,7 @@ theorem plunnecke_tripling {A : Finset G} (hA : A.Nonempty) {K : ℝ}
     (hK : ((A + A).card : ℝ) ≤ K * (A.card : ℝ)) :
     ((A + A + A).card : ℝ) ≤ K ^ 3 * (A.card : ℝ) := by
   have h := plunnecke_ruzsa_self hA hK 3 0
-  have h_eq : iteratedSumset 3 A - iteratedSumset 0 A = A + A + A := by
-    rw [iteratedSumset_three, iteratedSumset_zero, sub_singleton_zero]
-  rw [h_eq] at h
-  have h30 : 3 + 0 = 3 := rfl
-  rw [h30] at h
-  exact h
+  rwa [iteratedSumset_three, iteratedSumset_zero, sub_singleton_zero] at h
 
 /--
 **Four-fold Difference Bound**:
@@ -190,10 +166,6 @@ theorem plunnecke_two_sub_two {A : Finset G} (hA : A.Nonempty) {K : ℝ}
     (hK : ((A + A).card : ℝ) ≤ K * (A.card : ℝ)) :
     (((A + A) - (A + A)).card : ℝ) ≤ K ^ 4 * (A.card : ℝ) := by
   have h := plunnecke_ruzsa_self hA hK 2 2
-  have h_two : iteratedSumset 2 A = A + A := iteratedSumset_two A
-  rw [h_two] at h
-  have h22 : 2 + 2 = 4 := rfl
-  rw [h22] at h
-  exact h
+  rwa [iteratedSumset_two, show 2 + 2 = 4 from rfl] at h
 
 end RuzsaFreiman

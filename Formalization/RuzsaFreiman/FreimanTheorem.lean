@@ -93,12 +93,7 @@ def gapElements {G : Type*} [DecidableEq G] [AddCommGroup G] (P : GAP G) : Finse
 theorem gapElements_card_le {G : Type*} [DecidableEq G] [AddCommGroup G] (P : GAP G) :
     (gapElements P).card ≤ ∏ i : Fin P.dim, P.lengths i := by
   dsimp [gapElements]
-  have h_le := Finset.card_image_le (f := fun (k : Fin P.dim → ℕ) => P.base + ∑ i : Fin P.dim, (k i) • (P.steps i))
-    (s := Fintype.piFinset (fun i : Fin P.dim => Finset.range (P.lengths i)))
-  have h_card := @Fintype.card_piFinset (Fin P.dim) (fun _ => ℕ) inferInstance inferInstance
-    (fun i => Finset.range (P.lengths i))
-  simp only [Finset.card_range] at h_card
-  rwa [h_card] at h_le
+  exact Finset.card_image_le.trans (by simp)
 
 /-- A GAP is proper if all linear combinations evaluate to distinct elements of $G$. -/
 def isProperGAP {G : Type*} [DecidableEq G] [AddCommGroup G] (P : GAP G) : Prop :=
@@ -112,23 +107,18 @@ def IsFreimanHomomorphism {G H : Type*} [AddCommGroup G] [AddCommGroup H]
 
 /-- Identity map is always a Freiman homomorphism of any order $k$. -/
 theorem freimanHomomorphism_id {G : Type*} [AddCommGroup G] (A : Finset G) (k : ℕ) :
-    IsFreimanHomomorphism A id k := by
-  intro xs ys _ _ h_sum
-  simp only [id_eq]
-  exact h_sum
+    IsFreimanHomomorphism A id k :=
+  fun _ _ _ _ => id
 
 /-- Composition of Freiman homomorphisms is a Freiman homomorphism. -/
 theorem freimanHomomorphism_comp {G H K : Type*} [AddCommGroup G] [AddCommGroup H] [AddCommGroup K] [DecidableEq H]
     (A : Finset G) (f : G → H) (g : H → K) (k : ℕ)
     (hf : IsFreimanHomomorphism A f k)
     (hg : IsFreimanHomomorphism (A.image f) g k) :
-    IsFreimanHomomorphism A (g ∘ f) k := by
-  intro xs ys hxs hys h_sum
-  have h_fxs : ∀ i, f (xs i) ∈ A.image f := fun i => Finset.mem_image_of_mem f (hxs i)
-  have h_fys : ∀ i, f (ys i) ∈ A.image f := fun i => Finset.mem_image_of_mem f (hys i)
-  have h_sum_f : ∑ i, f (xs i) = ∑ i, f (ys i) := hf xs ys hxs hys h_sum
-  have h_sum_gf := hg (fun i => f (xs i)) (fun i => f (ys i)) h_fxs h_fys h_sum_f
-  exact h_sum_gf
+    IsFreimanHomomorphism A (g ∘ f) k :=
+  fun xs ys hxs hys h =>
+    hg (f ∘ xs) (f ∘ ys) (fun i => Finset.mem_image_of_mem f (hxs i))
+      (fun i => Finset.mem_image_of_mem f (hys i)) (hf xs ys hxs hys h)
 
 /-- A map $\phi : A \to B$ is a Freiman isomorphism of order $k$ if it is a Freiman homomorphism with an inverse. -/
 def IsFreimanIsomorphism {G H : Type*} [AddCommGroup G] [AddCommGroup H] [DecidableEq H]
@@ -141,15 +131,12 @@ def IsFreimanIsomorphism {G H : Type*} [AddCommGroup G] [AddCommGroup H] [Decida
 theorem zero_mem_diffset_self {G : Type*} [DecidableEq G] [AddCommGroup G]
     {A : Finset G} (hA : A.Nonempty) : (0 : G) ∈ A - A := by
   obtain ⟨a, ha⟩ := hA
-  exact Finset.mem_sub.mpr ⟨a, ha, a, ha, sub_self a⟩
+  exact Finset.mem_sub.2 ⟨a, ha, a, ha, sub_self a⟩
 
 /-- Zero is in the Bogolyubov 4-sumset $(A + A) - (A + A)$ for any nonempty $A$. -/
 theorem zero_mem_bogolyubov {G : Type*} [DecidableEq G] [AddCommGroup G]
-    {A : Finset G} (hA : A.Nonempty) : (0 : G) ∈ ((A + A) - (A + A)) := by
-  have h2A : (A + A).Nonempty := by
-    obtain ⟨a, ha⟩ := hA
-    exact ⟨a + a, Finset.mem_add.mpr ⟨a, ha, a, ha, rfl⟩⟩
-  exact zero_mem_diffset_self h2A
+    {A : Finset G} (hA : A.Nonempty) : (0 : G) ∈ ((A + A) - (A + A)) :=
+  zero_mem_diffset_self (hA.add hA)
 
 /-- Nonemptiness of the Bogolyubov 4-sumset $(A + A) - (A + A)$ for nonempty $A$. -/
 theorem bogolyubov_set_nonempty {G : Type*} [DecidableEq G] [AddCommGroup G]

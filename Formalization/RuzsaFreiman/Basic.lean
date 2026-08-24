@@ -69,73 +69,39 @@ def differenceConstant (A : Finset G) : ℚ :=
 /-- Translation of a finset by a singleton is the image under the shift map. -/
 theorem add_singleton_eq_image (A : Finset G) (b : G) :
     A + {b} = A.image (fun a => a + b) := by
-  ext x
-  simp only [Finset.mem_add, Finset.mem_singleton, Finset.mem_image]
-  constructor
-  · rintro ⟨a, ha, b', rfl, rfl⟩
-    exact ⟨a, ha, rfl⟩
-  · rintro ⟨a, ha, rfl⟩
-    exact ⟨a, ha, b, rfl, rfl⟩
+  ext x; simp only [Finset.mem_add, Finset.mem_singleton, Finset.mem_image]; aesop
 
 /-- For any $b \in G$, the translation $A + \{b\}$ has cardinality $|A|$. -/
 theorem card_add_singleton (A : Finset G) (b : G) :
-    (A + {b}).card = A.card := by
-  rw [add_singleton_eq_image]
-  exact Finset.card_image_of_injective _ (fun x y h => add_right_cancel h)
+    (A + {b}).card = A.card :=
+  Finset.card_add_singleton A b
 
 /-- Left singleton sum is the image under left shift. -/
 theorem singleton_add_eq_image (a : G) (B : Finset G) :
     {a} + B = B.image (fun b => a + b) := by
-  ext x
-  simp only [Finset.mem_add, Finset.mem_singleton, Finset.mem_image]
-  constructor
-  · rintro ⟨a', rfl, b, hb, rfl⟩
-    exact ⟨b, hb, rfl⟩
-  · rintro ⟨b, hb, rfl⟩
-    exact ⟨a, rfl, b, hb, rfl⟩
+  ext x; simp only [Finset.mem_add, Finset.mem_singleton, Finset.mem_image]; aesop
 
 /-- For any $a \in G$, the translation $\{a\} + B$ has cardinality $|B|$. -/
 theorem card_singleton_add (a : G) (B : Finset G) :
-    ({a} + B).card = B.card := by
-  rw [singleton_add_eq_image]
-  exact Finset.card_image_of_injective _ (fun x y h => add_left_cancel h)
+    ({a} + B).card = B.card :=
+  Finset.card_singleton_add a B
 
 /-- Lower bound: $|A + B| \ge |A|$ for non-empty $B$. -/
 theorem card_le_card_add_left (A : Finset G) {B : Finset G} (hB : B.Nonempty) :
-    A.card ≤ (A + B).card := by
-  obtain ⟨b, hb⟩ := hB
-  have h_sub : A + {b} ⊆ A + B := by
-    rw [add_singleton_eq_image]
-    intro x hx
-    simp only [Finset.mem_image, Finset.mem_add] at hx ⊢
-    obtain ⟨a, ha, rfl⟩ := hx
-    exact ⟨a, ha, b, hb, rfl⟩
-  have h_card := Finset.card_le_card h_sub
-  rwa [card_add_singleton] at h_card
+    A.card ≤ (A + B).card :=
+  Finset.card_le_card_add_right hB
 
 /-- Lower bound: $|A + B| \ge |B|$ for non-empty $A$. -/
 theorem card_le_card_add_right {A : Finset G} (hA : A.Nonempty) (B : Finset G) :
-    B.card ≤ (A + B).card := by
-  obtain ⟨a, ha⟩ := hA
-  have h_sub : {a} + B ⊆ A + B := by
-    rw [singleton_add_eq_image]
-    intro x hx
-    simp only [Finset.mem_image, Finset.mem_add] at hx ⊢
-    obtain ⟨b, hb, rfl⟩ := hx
-    exact ⟨a, ha, b, hb, rfl⟩
-  have h_card := Finset.card_le_card h_sub
-  rwa [card_singleton_add] at h_card
+    B.card ≤ (A + B).card :=
+  Finset.card_le_card_add_left hA
 
 /-- Doubling constant is at least 1 for non-empty sets. -/
 theorem doublingConstant_ge_one {A : Finset G} (hA : A.Nonempty) :
     1 ≤ doublingConstant A := by
   dsimp [doublingConstant]
-  have h_le : A.card ≤ (A + A).card := card_le_card_add_left A hA
-  have hpos : (0 : ℚ) < (A.card : ℚ) := by
-    exact Nat.cast_pos.mpr hA.card_pos
-  rw [le_div_iff₀ hpos]
-  simp only [one_mul]
-  exact Nat.cast_le.mpr h_le
+  rw [one_le_div₀ (by positivity)]
+  exact_mod_cast Finset.card_le_card_add_right hA
 
 /-- Iterated sumset $k A = A + \dots + A$ ($k$ terms). -/
 def iteratedSumset (k : ℕ) (A : Finset G) : Finset G :=

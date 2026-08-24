@@ -47,6 +47,32 @@ The formalization is structured into three modular components:
 namespace RothsTheorem
 
 /--
+Equivalence between 3-AP freeness and no non-trivial 3-APs in cyclic groups $\mathbb{Z}/N\mathbb{Z}$.
+-/
+theorem zmod_ap3_free_iff (N : ℕ) [NeZero N] (A : Finset (ZMod N)) :
+    IsThreeAPFree A ↔ ∀ x ∈ A, ∀ y ∈ A, ∀ z ∈ A, x + z = (2 : ℕ) • y → x = y := by
+  dsimp [IsThreeAPFree, Is3AP]
+  rfl
+
+/--
+Normalized 3-AP count for progression-free sets in $\mathbb{Z}/N\mathbb{Z}$.
+-/
+theorem zmod_ap3Count_free (N : ℕ) [NeZero N] (A : Finset (ZMod N)) (hfree : IsThreeAPFree A) :
+    ap3Count (indicator A) (indicator A) (indicator A) =
+      (A.card : ℝ) / ((N : ℝ) ^ 2) := by
+  have h := ap3Count_of_free A hfree
+  rw [ZMod.card N] at h
+  exact h
+
+/--
+Equivalence between 3-AP freeness and the linear equation $x + z = 2y$ in $\mathbb{Z}$.
+-/
+theorem int_ap3_free_iff (A : Finset ℤ) :
+    IsThreeAPFree A ↔ ∀ x ∈ A, ∀ y ∈ A, ∀ z ∈ A, x + z = 2 * y → x = y := by
+  dsimp [IsThreeAPFree, Is3AP]
+  rfl
+
+/--
 **Roth's Theorem (Qualitative Finite Form)**:
 For every density $\delta > 0$, there exists an integer $N_0(\delta)$ such that for all $N \ge N_0(\delta)$,
 every subset $A \subseteq \{0, \dots, N-1\}$ with $|A| \ge \delta N$ contains a non-trivial 3-term
