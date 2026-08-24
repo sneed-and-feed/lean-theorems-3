@@ -100,63 +100,31 @@ variable {α : Type*} [DecidableEq α]
 
 /-- The frequency of any element is non-negative. -/
 theorem freq_nonneg (F : Finset (Finset α)) (u : α) : 0 ≤ freq F u := by
-  dsimp [freq]
-  positivity
+  dsimp [freq]; positivity
 
 /-- The frequency of any element is at most 1. -/
-theorem freq_le_one (F : Finset (Finset α)) (u : α) : freq F u ≤ 1 := by
-  dsimp [freq]
-  by_cases hF : F.card = 0
-  · simp [hF]
-  · have hcard : ((F.filter (fun S => u ∈ S)).card : ℝ) ≤ (F.card : ℝ) := by
-      exact_mod_cast Finset.card_filter_le F (fun S => u ∈ S)
-    have hFpos : 0 < (F.card : ℝ) := by
-      have : 0 < F.card := Nat.pos_of_ne_zero hF
-      positivity
-    rw [div_le_iff₀ hFpos]
-    linarith
+theorem freq_le_one (F : Finset (Finset α)) (u : α) : freq F u ≤ 1 :=
+  div_le_one_of_le₀ (Nat.cast_le.mpr (Finset.card_filter_le _ _)) (Nat.cast_nonneg _)
 
 /-- If `u` is not in the universe of `F`, its frequency is 0. -/
 theorem freq_eq_zero_of_not_mem_familyUnion (F : Finset (Finset α)) (u : α)
     (hu : u ∉ familyUnion F) : freq F u = 0 := by
-  dsimp [freq]
-  have h_empty : F.filter (fun S => u ∈ S) = ∅ := by
-    rw [Finset.filter_eq_empty_iff]
-    intro S hS huS
-    apply hu
-    simp only [familyUnion, Finset.mem_biUnion, id_eq]
-    exact ⟨S, hS, huS⟩
-  rw [h_empty, Finset.card_empty, Nat.cast_zero, zero_div]
+  have : F.filter (fun S => u ∈ S) = ∅ :=
+    Finset.filter_eq_empty_iff.mpr fun S hS huS => hu (Finset.mem_biUnion.mpr ⟨S, hS, huS⟩)
+  simp [freq, this]
 
 /-- If `u` is in the universe of `F`, its frequency is strictly positive. -/
 theorem freq_pos_of_mem_familyUnion (F : Finset (Finset α)) (u : α)
     (hu : u ∈ familyUnion F) : 0 < freq F u := by
-  dsimp [freq]
-  simp only [familyUnion, Finset.mem_biUnion, id_eq] at hu
-  rcases hu with ⟨S, hS, huS⟩
-  have h_nonempty : (F.filter (fun S => u ∈ S)).Nonempty := ⟨S, Finset.mem_filter.mpr ⟨hS, huS⟩⟩
-  have hF_nonempty : F.Nonempty := ⟨S, hS⟩
-  have hcard_pos : 0 < (F.filter (fun S => u ∈ S)).card := Finset.card_pos.mpr h_nonempty
-  have hF_pos : 0 < (F.card : ℝ) := by
-    have : 0 < F.card := Finset.card_pos.mpr hF_nonempty
-    positivity
-  have hcard_pos_real : 0 < ((F.filter (fun S => u ∈ S)).card : ℝ) := by
-    exact_mod_cast hcard_pos
-  exact div_pos hcard_pos_real hF_pos
+  rcases Finset.mem_biUnion.mp hu with ⟨S, hS, huS⟩
+  exact div_pos (Nat.cast_pos.mpr (Finset.card_pos.mpr ⟨S, Finset.mem_filter.mpr ⟨hS, huS⟩⟩))
+    (Nat.cast_pos.mpr (Finset.card_pos.mpr ⟨S, hS⟩))
 
 /-- If an element `u` belongs to every set in `F`, its frequency is 1 (provided `F` is nonempty). -/
 theorem freq_eq_one_of_forall_mem (F : Finset (Finset α)) (hF : F.Nonempty) (u : α)
     (hu : ∀ S ∈ F, u ∈ S) : freq F u = 1 := by
-  dsimp [freq]
-  have h_eq : F.filter (fun S => u ∈ S) = F := by
-    ext S
-    simp only [Finset.mem_filter]
-    exact ⟨fun h => h.1, fun h => ⟨h, hu S h⟩⟩
-  rw [h_eq]
-  have hFpos : (F.card : ℝ) ≠ 0 := by
-    have : 0 < F.card := Finset.card_pos.mpr hF
-    positivity
-  exact div_self hFpos
+  have : F.filter (fun S => u ∈ S) = F := Finset.filter_eq_self.mpr hu
+  simp [freq, this, hF.ne_empty]
 
 end FrequencyProperties
 
@@ -167,178 +135,110 @@ theorem sqrt_five_sq : (Real.sqrt 5) ^ 2 = 5 := Real.sq_sqrt (by norm_num)
 
 /-- $c_0^2 = \frac{7 - 3\sqrt{5}}{2}$. -/
 theorem gilmerConstant_sq : c₀ ^ 2 = (7 - 3 * Real.sqrt 5) / 2 := by
-  have h5 : (Real.sqrt 5) ^ 2 = 5 := sqrt_five_sq
-  calc c₀ ^ 2 = ((3 - Real.sqrt 5) / 2) ^ 2 := by rfl
-  _ = (9 - 6 * Real.sqrt 5 + (Real.sqrt 5) ^ 2) / 4 := by ring
-  _ = (9 - 6 * Real.sqrt 5 + 5) / 4 := by rw [h5]
-  _ = (7 - 3 * Real.sqrt 5) / 2 := by ring
+  dsimp [gilmerConstant]; nlinarith [sqrt_five_sq]
 
 /-- $c_0^2 - 3 c_0 + 1 = 0$. -/
 theorem gilmerConstant_quad : c₀ ^ 2 - 3 * c₀ + 1 = 0 := by
-  have hsq := gilmerConstant_sq
-  calc c₀ ^ 2 - 3 * c₀ + 1 = (7 - 3 * Real.sqrt 5) / 2 - 3 * ((3 - Real.sqrt 5) / 2) + 1 := by rw [hsq]; rfl
-  _ = 0 := by ring
+  rw [gilmerConstant_sq, gilmerConstant]; ring
 
 /-- At the Gilmer constant $c_0$, the union probability $2 c_0 - c_0^2$ equals $1 - c_0$. -/
 theorem union_prob_gilmer : union_prob c₀ = 1 - c₀ := by
-  dsimp [union_prob]
-  have hq := gilmerConstant_quad
-  linarith
+  dsimp [union_prob]; linarith [gilmerConstant_quad]
 
 /-- $2 < \sqrt{5}$. -/
-theorem two_lt_sqrt_five : 2 < Real.sqrt 5 := by
-  rw [← Real.sqrt_sq (by norm_num : (0 : ℝ) ≤ 2)]
-  apply Real.sqrt_lt_sqrt (by norm_num) (by norm_num)
+theorem two_lt_sqrt_five : (2 : ℝ) < Real.sqrt 5 :=
+  (Real.lt_sqrt (by norm_num)).mpr (by norm_num)
 
 /-- $\sqrt{5} < 3$. -/
-theorem sqrt_five_lt_three : Real.sqrt 5 < 3 := by
-  rw [← Real.sqrt_sq (by norm_num : (0 : ℝ) ≤ 3)]
-  apply Real.sqrt_lt_sqrt (by norm_num) (by norm_num)
+theorem sqrt_five_lt_three : Real.sqrt 5 < 3 :=
+  (Real.sqrt_lt' (by norm_num)).mpr (by norm_num)
 
 /-- The Gilmer constant is strictly positive: $c_0 > 0$. -/
 theorem gilmerConstant_pos : 0 < c₀ := by
-  dsimp [gilmerConstant]
-  have h := sqrt_five_lt_three
-  linarith
+  dsimp [gilmerConstant]; linarith [sqrt_five_lt_three]
 
 /-- The Gilmer constant is strictly less than 1/2: $c_0 < 1/2$. -/
 theorem gilmerConstant_lt_half : c₀ < 1 / 2 := by
-  dsimp [gilmerConstant]
-  have h := two_lt_sqrt_five
-  linarith
+  dsimp [gilmerConstant]; linarith [two_lt_sqrt_five]
 
 /-- The Gilmer constant is strictly less than 1: $c_0 < 1$. -/
 theorem gilmerConstant_lt_one : c₀ < 1 := by
-  have h := gilmerConstant_lt_half
-  linarith
+  linarith [gilmerConstant_lt_half]
 
 /-- Analytical lower bound: $c_0 > 0.38$. -/
 theorem gilmerConstant_gt_38_100 : (38 : ℝ) / 100 < c₀ := by
   dsimp [gilmerConstant]
-  have h_sq : Real.sqrt 5 < (56 : ℝ) / 25 := by
-    rw [← Real.sqrt_sq (by norm_num : (0 : ℝ) ≤ 56 / 25)]
-    apply Real.sqrt_lt_sqrt (by norm_num) (by norm_num)
+  have : Real.sqrt 5 < (56 : ℝ) / 25 := (Real.sqrt_lt' (by norm_num)).mpr (by norm_num)
   linarith
 
 /-- Analytical upper bound: $c_0 < 0.39$. -/
 theorem gilmerConstant_lt_39_100 : c₀ < (39 : ℝ) / 100 := by
   dsimp [gilmerConstant]
-  have h_sq : (111 : ℝ) / 50 < Real.sqrt 5 := by
-    rw [← Real.sqrt_sq (by norm_num : (0 : ℝ) ≤ 111 / 50)]
-    apply Real.sqrt_lt_sqrt (by norm_num) (by norm_num)
+  have : (111 : ℝ) / 50 < Real.sqrt 5 := (Real.lt_sqrt (by norm_num)).mpr (by norm_num)
   linarith
 
 /-- Tight numerical lower bound: $c_0 > 0.38196$. -/
 theorem gilmerConstant_gt_38196_100000 : (38196 : ℝ) / 100000 < c₀ := by
   dsimp [gilmerConstant]
-  have h_sq : Real.sqrt 5 < (223608 : ℝ) / 100000 := by
-    rw [← Real.sqrt_sq (by norm_num : (0 : ℝ) ≤ 223608 / 100000)]
-    apply Real.sqrt_lt_sqrt (by norm_num) (by norm_num)
+  have : Real.sqrt 5 < (223608 : ℝ) / 100000 := (Real.sqrt_lt' (by norm_num)).mpr (by norm_num)
   linarith
 
 /-- Tight numerical upper bound: $c_0 < 0.38197$. -/
 theorem gilmerConstant_lt_38197_100000 : c₀ < (38197 : ℝ) / 100000 := by
   dsimp [gilmerConstant]
-  have h_sq : (223606 : ℝ) / 100000 < Real.sqrt 5 := by
-    rw [← Real.sqrt_sq (by norm_num : (0 : ℝ) ≤ 223606 / 100000)]
-    apply Real.sqrt_lt_sqrt (by norm_num) (by norm_num)
+  have : (223606 : ℝ) / 100000 < Real.sqrt 5 := (Real.lt_sqrt (by norm_num)).mpr (by norm_num)
   linarith
 
 /-- For $p \in (0, 1)$, the union probability $2p - p^2$ is strictly positive. -/
 theorem union_prob_pos {p : ℝ} (h0 : 0 < p) (h1 : p < 1) : 0 < union_prob p := by
-  dsimp [union_prob]
-  nlinarith
+  dsimp [union_prob]; nlinarith
 
 /-- For $p \in (0, 1)$, the union probability $2p - p^2$ is strictly less than 1. -/
 theorem union_prob_lt_one {p : ℝ} (h0 : 0 < p) (h1 : p < 1) : union_prob p < 1 := by
-  dsimp [union_prob]
-  have : 1 - (2 * p - p ^ 2) = (1 - p) ^ 2 := by ring
-  have hp : 0 < (1 - p) ^ 2 := by positivity
-  linarith
+  dsimp [union_prob]; nlinarith
 
 /-- For $p \in (0, 1)$, the union probability is strictly greater than $p$. -/
 theorem union_prob_gt_self {p : ℝ} (h0 : 0 < p) (h1 : p < 1) : p < union_prob p := by
-  dsimp [union_prob]
-  have : (2 * p - p ^ 2) - p = p * (1 - p) := by ring
-  have hp : 0 < p * (1 - p) := by positivity
-  linarith
+  dsimp [union_prob]; nlinarith
 
 /-- For $p \in [0, c_0]$, $2p - p^2 \le 1 - p$. -/
 theorem union_prob_le_complement_of_le_gilmer {p : ℝ} (h0 : 0 ≤ p) (hp : p ≤ c₀) :
     union_prob p ≤ 1 - p := by
   dsimp [union_prob]
-  have h_diff : (1 - p) - (2 * p - p ^ 2) = (c₀ - p) * ((3 - c₀) - p) + (c₀ ^ 2 - 3 * c₀ + 1) := by ring
-  have hq := gilmerConstant_quad
-  rw [hq] at h_diff
-  have h_diff' : (1 - p) - (2 * p - p ^ 2) = (c₀ - p) * ((3 - c₀) - p) := by linarith [h_diff]
-  have h1 : 0 ≤ c₀ - p := by linarith
-  have h2 : 0 ≤ (3 - c₀) - p := by
-    have hc : c₀ < 1 := gilmerConstant_lt_one
-    linarith
-  have h_prod : 0 ≤ (c₀ - p) * ((3 - c₀) - p) := mul_nonneg h1 h2
-  linarith
+  have : 0 ≤ (c₀ - p) * (3 - c₀ - p) := mul_nonneg (by linarith) (by linarith [gilmerConstant_lt_half])
+  nlinarith [gilmerConstant_quad]
 
 end GilmerConstant
 
 section BinaryEntropy
 
 /-- Binary entropy at 0 is 0. -/
-theorem binaryEntropy_zero : binaryEntropy 0 = 0 := by
-  dsimp [binaryEntropy]
-  simp
+theorem binaryEntropy_zero : binaryEntropy 0 = 0 := by simp [binaryEntropy]
 
 /-- Binary entropy at 1 is 0. -/
-theorem binaryEntropy_one : binaryEntropy 1 = 0 := by
-  dsimp [binaryEntropy]
-  simp
+theorem binaryEntropy_one : binaryEntropy 1 = 0 := by simp [binaryEntropy]
 
 /-- Natural entropy at 0 is 0. -/
-theorem naturalEntropy_zero : naturalEntropy 0 = 0 := by
-  dsimp [naturalEntropy]
-  simp
+theorem naturalEntropy_zero : naturalEntropy 0 = 0 := by simp [naturalEntropy]
 
 /-- Natural entropy at 1 is 0. -/
-theorem naturalEntropy_one : naturalEntropy 1 = 0 := by
-  dsimp [naturalEntropy]
-  simp
+theorem naturalEntropy_one : naturalEntropy 1 = 0 := by simp [naturalEntropy]
 
 /-- Binary entropy is symmetric: $H(p) = H(1 - p)$ for $p \in (0, 1)$. -/
 theorem binaryEntropy_symm {p : ℝ} (h0 : 0 < p) (h1 : p < 1) :
     binaryEntropy p = binaryEntropy (1 - p) := by
-  dsimp [binaryEntropy]
-  have h_not_p : ¬(p ≤ 0 ∨ 1 ≤ p) := by
-    intro h
-    rcases h with hle | hge
-    · linarith
-    · linarith
-  have h_not_1p : ¬(1 - p ≤ 0 ∨ 1 ≤ 1 - p) := by
-    intro h
-    rcases h with hle | hge
-    · linarith
-    · linarith
-  simp only [h_not_p, h_not_1p, ↓reduceIte]
-  have h_sub : 1 - (1 - p) = p := by ring
-  rw [h_sub]
-  ring
+  have hp : ¬(p ≤ 0 ∨ 1 ≤ p) := not_or.mpr ⟨by linarith, by linarith⟩
+  have h1p : ¬(1 - p ≤ 0 ∨ 1 ≤ 1 - p) := not_or.mpr ⟨by linarith, by linarith⟩
+  simp only [binaryEntropy, hp, h1p, ↓reduceIte]
+  ring_nf
 
 /-- Natural entropy is symmetric: $H_e(p) = H_e(1 - p)$ for $p \in (0, 1)$. -/
 theorem naturalEntropy_symm {p : ℝ} (h0 : 0 < p) (h1 : p < 1) :
     naturalEntropy p = naturalEntropy (1 - p) := by
-  dsimp [naturalEntropy]
-  have h_not_p : ¬(p ≤ 0 ∨ 1 ≤ p) := by
-    intro h
-    rcases h with hle | hge
-    · linarith
-    · linarith
-  have h_not_1p : ¬(1 - p ≤ 0 ∨ 1 ≤ 1 - p) := by
-    intro h
-    rcases h with hle | hge
-    · linarith
-    · linarith
-  simp only [h_not_p, h_not_1p, ↓reduceIte]
-  have h_sub : 1 - (1 - p) = p := by ring
-  rw [h_sub]
-  ring
+  have hp : ¬(p ≤ 0 ∨ 1 ≤ p) := not_or.mpr ⟨by linarith, by linarith⟩
+  have h1p : ¬(1 - p ≤ 0 ∨ 1 ≤ 1 - p) := not_or.mpr ⟨by linarith, by linarith⟩
+  simp only [naturalEntropy, hp, h1p, ↓reduceIte]
+  ring_nf
 
 /-- Gilmer's golden ratio fixed-point theorem for binary entropy:
 At $p = c_0$, the entropy of the union of two independent Bernoulli($c_0$) variables
@@ -346,19 +246,13 @@ equals the entropy of a single Bernoulli($c_0$) variable:
 $$H(2 c_0 - c_0^2) = H(c_0)$$ -/
 theorem binaryEntropy_gilmer_fixed_point :
     binaryEntropy (union_prob c₀) = binaryEntropy c₀ := by
-  rw [union_prob_gilmer]
-  have h0 : 0 < c₀ := gilmerConstant_pos
-  have h1 : c₀ < 1 := gilmerConstant_lt_one
-  rw [← binaryEntropy_symm h0 h1]
+  rw [union_prob_gilmer, ← binaryEntropy_symm gilmerConstant_pos gilmerConstant_lt_one]
 
 /-- Gilmer's golden ratio fixed-point theorem for natural entropy:
 $$H_e(2 c_0 - c_0^2) = H_e(c_0)$$ -/
 theorem naturalEntropy_gilmer_fixed_point :
     naturalEntropy (union_prob c₀) = naturalEntropy c₀ := by
-  rw [union_prob_gilmer]
-  have h0 : 0 < c₀ := gilmerConstant_pos
-  have h1 : c₀ < 1 := gilmerConstant_lt_one
-  rw [← naturalEntropy_symm h0 h1]
+  rw [union_prob_gilmer, ← naturalEntropy_symm gilmerConstant_pos gilmerConstant_lt_one]
 
 end BinaryEntropy
 
@@ -373,94 +267,48 @@ def pairEmptySingleton (a : α) : Finset (Finset α) := {∅, {a}}
 def singletonFamily (a : α) : Finset (Finset α) := {{a}}
 
 /-- The card of $\{\emptyset, \{a\}\}$ is 2. -/
-theorem pairEmptySingleton_card (a : α) : (pairEmptySingleton a).card = 2 := by
-  dsimp [pairEmptySingleton]
-  have h_ne : (∅ : Finset α) ≠ {a} := by
-    intro h
-    have : a ∈ ({a} : Finset α) := Finset.mem_singleton_self a
-    rw [← h] at this
-    exact Finset.notMem_empty a this
-  rw [Finset.card_pair h_ne]
+theorem pairEmptySingleton_card (a : α) : (pairEmptySingleton a).card = 2 :=
+  Finset.card_pair (Finset.singleton_ne_empty a).symm
 
 /-- The family $\{\emptyset, \{a\}\}$ is union-closed. -/
 theorem pairEmptySingleton_isUnionClosed (a : α) :
     IsUnionClosed (pairEmptySingleton a) := by
   intro A hA B hB
-  dsimp [pairEmptySingleton] at hA hB ⊢
-  simp only [Finset.mem_insert, Finset.mem_singleton] at hA hB ⊢
-  rcases hA with rfl | rfl <;> rcases hB with rfl | rfl
-  · left; exact Finset.empty_union ∅
-  · right; exact Finset.empty_union {a}
-  · right; exact Finset.union_empty {a}
-  · right; exact Finset.union_idempotent {a}
+  simp only [pairEmptySingleton, Finset.mem_insert, Finset.mem_singleton] at hA hB ⊢
+  rcases hA with rfl | rfl <;> rcases hB with rfl | rfl <;> simp
 
 /-- The universe of $\{\emptyset, \{a\}\}$ is $\{a\}$. -/
 theorem pairEmptySingleton_familyUnion (a : α) :
     familyUnion (pairEmptySingleton a) = {a} := by
-  ext x
-  simp only [familyUnion, pairEmptySingleton, Finset.mem_biUnion, Finset.mem_insert,
-    Finset.mem_singleton, id_eq]
-  constructor
-  · rintro ⟨S, rfl | rfl, hx⟩
-    · exact False.elim (Finset.notMem_empty x hx)
-    · exact Finset.mem_singleton.mp hx
-  · intro hx
-    exact ⟨{a}, Or.inr rfl, Finset.mem_singleton.mpr hx⟩
+  simp [familyUnion, pairEmptySingleton]
 
 /-- The number of sets containing $a$ in $\{\emptyset, \{a\}\}$ is 1. -/
 theorem pairEmptySingleton_filter_card (a : α) :
     ((pairEmptySingleton a).filter (fun S => a ∈ S)).card = 1 := by
-  have h_eq : (pairEmptySingleton a).filter (fun S => a ∈ S) = {{a}} := by
-    ext S
-    simp only [pairEmptySingleton, Finset.mem_filter, Finset.mem_insert, Finset.mem_singleton]
-    constructor
-    · rintro ⟨rfl | rfl, haS⟩
-      · exact False.elim (Finset.notMem_empty a haS)
-      · rfl
-    · intro hS
-      subst hS
-      exact ⟨Or.inr rfl, Finset.mem_singleton_self a⟩
-  rw [h_eq, Finset.card_singleton]
+  simp [pairEmptySingleton, Finset.filter_insert, Finset.filter_singleton]
 
 /-- The frequency of $a$ in $\{\emptyset, \{a\}\}$ is exactly $1/2$. -/
 theorem pairEmptySingleton_freq (a : α) :
     freq (pairEmptySingleton a) a = 1 / 2 := by
-  dsimp [freq]
-  rw [pairEmptySingleton_filter_card, pairEmptySingleton_card]
-  norm_num
+  simp [freq, pairEmptySingleton_filter_card, pairEmptySingleton_card]
 
 /-- Certificate: $\{\emptyset, \{a\}\}$ satisfies Gilmer's constant bound $\ge c_0$. -/
 theorem pairEmptySingleton_satisfies_gilmer (a : α) :
-    ∃ u ∈ familyUnion (pairEmptySingleton a), c₀ ≤ freq (pairEmptySingleton a) u := by
-  use a
-  have ha_mem : a ∈ familyUnion (pairEmptySingleton a) := by
-    rw [pairEmptySingleton_familyUnion]
-    exact Finset.mem_singleton_self a
-  refine ⟨ha_mem, ?_⟩
-  rw [pairEmptySingleton_freq]
-  have hc : c₀ < 1 / 2 := gilmerConstant_lt_half
-  linarith
+    ∃ u ∈ familyUnion (pairEmptySingleton a), c₀ ≤ freq (pairEmptySingleton a) u :=
+  ⟨a, by simp [pairEmptySingleton_familyUnion], by rw [pairEmptySingleton_freq]; exact gilmerConstant_lt_half.le⟩
 
 /-- The singleton family $\{\{a\}\}$ is union-closed. -/
 theorem singletonFamily_isUnionClosed (a : α) :
     IsUnionClosed (singletonFamily a) := by
   intro A hA B hB
-  dsimp [singletonFamily] at hA hB ⊢
-  simp only [Finset.mem_singleton] at hA hB ⊢
+  simp only [singletonFamily, Finset.mem_singleton] at hA hB ⊢
   subst hA hB
   exact Finset.union_idempotent {a}
 
 /-- The frequency of $a$ in $\{\{a\}\}$ is 1. -/
 theorem singletonFamily_freq (a : α) :
     freq (singletonFamily a) a = 1 := by
-  dsimp [freq, singletonFamily]
-  have h_eq : ({{a}} : Finset (Finset α)).filter (fun S => a ∈ S) = {{a}} := by
-    ext S
-    simp only [Finset.mem_filter, Finset.mem_singleton]
-    constructor
-    · rintro ⟨rfl, _⟩; rfl
-    · rintro rfl; exact ⟨rfl, Finset.mem_singleton_self a⟩
-  rw [h_eq, Finset.card_singleton, Nat.cast_one, div_one]
+  simp [freq, singletonFamily, Finset.filter_singleton]
 
 /-- A family of sets is a chain if every pair is comparable under inclusion. -/
 def IsChainFamily (F : Finset (Finset α)) : Prop :=
@@ -471,28 +319,21 @@ theorem chainFamily_isUnionClosed (F : Finset (Finset α)) (hchain : IsChainFami
     IsUnionClosed F := by
   intro A hA B hB
   rcases hchain A hA B hB with hAB | hBA
-  · rw [Finset.union_eq_right.mpr hAB]
-    exact hB
-  · rw [Finset.union_eq_left.mpr hBA]
-    exact hA
+  · rwa [Finset.union_eq_right.mpr hAB]
+  · rwa [Finset.union_eq_left.mpr hBA]
 
 /-- Every powerset $\mathcal{P}(S)$ is union-closed. -/
 theorem powerset_isUnionClosed (S : Finset α) :
     IsUnionClosed (Finset.powerset S) := by
-  intro A hA B hB
-  rw [Finset.mem_powerset] at hA hB ⊢
-  exact Finset.union_subset hA hB
+  simp only [IsUnionClosed, Finset.mem_powerset]
+  exact fun _ hA _ hB => Finset.union_subset hA hB
 
 /-- The universe of $\mathcal{P}(S)$ is $S$ when $S$ is non-empty. -/
 theorem powerset_familyUnion (S : Finset α) :
     familyUnion (Finset.powerset S) = S := by
   ext x
   simp only [familyUnion, Finset.mem_biUnion, Finset.mem_powerset, id_eq]
-  constructor
-  · rintro ⟨A, hA, hx⟩
-    exact hA hx
-  · intro hx
-    exact ⟨{x}, Finset.singleton_subset_iff.mpr hx, Finset.mem_singleton_self x⟩
+  exact ⟨fun ⟨A, hA, hx⟩ => hA hx, fun hx => ⟨{x}, Finset.singleton_subset_iff.mpr hx, Finset.mem_singleton_self x⟩⟩
 
 /-- Bijection: Sets containing $u$ in $\mathcal{P}(S)$ correspond to $\mathcal{P}(S \setminus \{u\})$. -/
 theorem powerset_filter_mem_eq_image (S : Finset α) (u : α) (hu : u ∈ S) :
@@ -501,70 +342,44 @@ theorem powerset_filter_mem_eq_image (S : Finset α) (u : α) (hu : u ∈ S) :
   simp only [Finset.mem_filter, Finset.mem_powerset, Finset.mem_image]
   constructor
   · intro ⟨hA, huA⟩
-    refine ⟨A.erase u, ?_, Finset.insert_erase huA⟩
-    intro x hx
-    have hxS := hA (Finset.mem_of_mem_erase hx)
-    have hxne := Finset.ne_of_mem_erase hx
-    exact Finset.mem_erase.mpr ⟨hxne, hxS⟩
+    exact ⟨A.erase u, fun x hx => Finset.mem_erase.mpr ⟨Finset.ne_of_mem_erase hx, hA (Finset.mem_of_mem_erase hx)⟩,
+      Finset.insert_erase huA⟩
   · rintro ⟨B, hB, rfl⟩
-    constructor
-    · intro x hx
-      rcases Finset.mem_insert.mp hx with rfl | hx'
-      · exact hu
-      · exact Finset.mem_of_mem_erase (hB hx')
-    · exact Finset.mem_insert_self u B
+    exact ⟨Finset.insert_subset hu (hB.trans (Finset.erase_subset u S)), Finset.mem_insert_self u B⟩
 
 /-- The number of subsets of $S$ containing an element $u \in S$ is $2^{|S| - 1}$. -/
 theorem powerset_filter_mem_card (S : Finset α) (u : α) (hu : u ∈ S) :
     ((Finset.powerset S).filter (fun A => u ∈ A)).card = 2 ^ (S.card - 1) := by
-  rw [powerset_filter_mem_eq_image S u hu]
-  rw [Finset.card_image_of_injOn]
+  rw [powerset_filter_mem_eq_image S u hu, Finset.card_image_of_injOn]
   · rw [Finset.card_powerset, Finset.card_erase_of_mem hu]
   · intro A hA B hB heq
     rw [Finset.mem_coe, Finset.mem_powerset] at hA hB
-    have huA : u ∉ A := fun h => Finset.notMem_erase u S (hA h)
-    have huB : u ∉ B := fun h => Finset.notMem_erase u S (hB h)
-    have : (insert u A).erase u = (insert u B).erase u := by rw [heq]
-    rwa [Finset.erase_insert huA, Finset.erase_insert huB] at this
+    have := congr_arg (·.erase u) heq
+    rwa [Finset.erase_insert (fun h => Finset.notMem_erase u S (hA h)),
+      Finset.erase_insert (fun h => Finset.notMem_erase u S (hB h))] at this
 
 /-- In any powerset family $\mathcal{P}(S)$, the frequency of every $u \in S$ is exactly $1/2$. -/
 theorem powerset_freq (S : Finset α) (u : α) (hu : u ∈ S) :
     freq (Finset.powerset S) u = 1 / 2 := by
-  dsimp [freq]
-  rw [powerset_filter_mem_card S u hu, Finset.card_powerset]
-  have hS_pos : 0 < S.card := Finset.card_pos.mpr ⟨u, hu⟩
-  have h_exp : S.card = (S.card - 1) + 1 := (Nat.sub_add_cancel (Nat.succ_le_of_lt hS_pos)).symm
-  have h_cast1 : ((2 ^ (S.card - 1) : ℕ) : ℝ) = (2 : ℝ) ^ (S.card - 1) := by norm_cast
-  have h_cast2 : ((2 ^ S.card : ℕ) : ℝ) = (2 : ℝ) ^ S.card := by norm_cast
-  rw [h_cast1, h_cast2, h_exp, pow_add, pow_one]
-  have h_ne : (2 : ℝ) ^ (S.card - 1) ≠ 0 := by positivity
-  calc (2 : ℝ) ^ (S.card - 1) / ((2 : ℝ) ^ (S.card - 1) * 2) =
-      (1 * (2 : ℝ) ^ (S.card - 1)) / (2 * (2 : ℝ) ^ (S.card - 1)) := by ring
-  _ = 1 / 2 := mul_div_mul_right (1 : ℝ) (2 : ℝ) h_ne
+  have hS : S.card = S.card - 1 + 1 := by have := Finset.card_pos.mpr ⟨u, hu⟩; omega
+  have hpow : ((2 ^ S.card : ℕ) : ℝ) = ((2 ^ (S.card - 1) : ℕ) : ℝ) * 2 := by
+    rw [hS, pow_succ, Nat.cast_mul]; norm_num
+  have hne : ((2 ^ (S.card - 1) : ℕ) : ℝ) ≠ 0 := by positivity
+  rw [freq, powerset_filter_mem_card S u hu, Finset.card_powerset, hpow]
+  nth_rw 1 [← mul_one ((2 ^ (S.card - 1) : ℕ) : ℝ)]
+  exact mul_div_mul_left 1 2 hne
 
 /-- Powerset families satisfy Frankl's 1/2 conjecture. -/
 theorem powerset_satisfies_frankl (S : Finset α) (hS : S.Nonempty) :
     ∃ u ∈ familyUnion (Finset.powerset S), (1 : ℝ) / 2 ≤ freq (Finset.powerset S) u := by
   rcases hS with ⟨u, hu⟩
-  use u
-  have hu_union : u ∈ familyUnion (Finset.powerset S) := by
-    rw [powerset_familyUnion]
-    exact hu
-  refine ⟨hu_union, ?_⟩
-  rw [powerset_freq S u hu]
+  exact ⟨u, by rwa [powerset_familyUnion], by rw [powerset_freq S u hu]⟩
 
 /-- Powerset families satisfy Gilmer's constant bound $\ge c_0$. -/
 theorem powerset_satisfies_gilmer (S : Finset α) (hS : S.Nonempty) :
     ∃ u ∈ familyUnion (Finset.powerset S), c₀ ≤ freq (Finset.powerset S) u := by
   rcases hS with ⟨u, hu⟩
-  use u
-  have hu_union : u ∈ familyUnion (Finset.powerset S) := by
-    rw [powerset_familyUnion]
-    exact hu
-  refine ⟨hu_union, ?_⟩
-  rw [powerset_freq S u hu]
-  have hc : c₀ < 1 / 2 := gilmerConstant_lt_half
-  linarith
+  exact ⟨u, by rwa [powerset_familyUnion], by rw [powerset_freq S u hu]; exact gilmerConstant_lt_half.le⟩
 
 end ConcreteFamilies
 
@@ -593,9 +408,7 @@ theorem frankl_implies_gilmer (F : Finset (Finset α))
     (hfrankl : ∃ u ∈ familyUnion F, (1 : ℝ) / 2 ≤ freq F u) :
     ∃ u ∈ familyUnion F, c₀ ≤ freq F u := by
   rcases hfrankl with ⟨u, hu, h_freq⟩
-  refine ⟨u, hu, ?_⟩
-  have hc : c₀ < 1 / 2 := gilmerConstant_lt_half
-  linarith
+  exact ⟨u, hu, gilmerConstant_lt_half.le.trans h_freq⟩
 
 /-- Gilmer certificate for all two-element union-closed families. -/
 theorem gilmer_two_element_family (a : α) :
@@ -610,3 +423,4 @@ theorem gilmer_powerset_family (S : Finset α) (hS : S.Nonempty) :
 end GilmerTheorem
 
 end GilmerUnionClosed
+
