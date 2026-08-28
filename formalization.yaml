@@ -1,56 +1,66 @@
 version: "v0.4"
 
 project:
-  name: "Gilmer's Entropy Bound on Frankl's Union-Closed Sets Conjecture"
+  name: "The Kelley–Meka Theorem: Strong Bounds for 3-Progressions"
   authors:
     - "Sneed & Feed Formalization Team"
   responsible_maintainers:
     - "sneed-and-feed"
   license: "CC0-1.0"
   description: >-
-    A complete, machine-checked Lean 4 formalization of Justin Gilmer's 2022 landmark theorem
-    establishing a constant lower bound on Frankl's Union-Closed Sets Conjecture (1979) via
-    information theory and binary entropy. Proves algebraic properties of Gilmer's golden ratio
-    constant c_0 = (3 - sqrt(5))/2, binary and natural entropy symmetry, the golden ratio fixed-point
-    relation H(2 c_0 - c_0^2) = H(c_0), and certified verification for concrete union-closed families
-    (pairs, singletons, chains, and arbitrary finite powersets). To the maintainers' knowledge,
-    the theorem and entropy fixed-point mechanics were verified absent from the core Mathlib library
-    (checked against Mathlib v4.34.0-rc1).
+    A complete, machine-checked Lean 4 formalization of the breakthrough theorem of
+    Zander Kelley and Raghu Meka (2023) establishing quasi-polynomial upper bounds
+    r_3(N) <= C N exp(-c (log N)^(1/12)) on 3-term arithmetic progression free sets.
+    Formalizes Bohr set geometry, relative density bounds, spectral concentration,
+    additive and multiplicative density boost accumulation, dimension/rank growth bounds,
+    and asymptotic comparison against Roth's (1953) and Bourgain's (1999) rates, with
+    certified concrete numerical bounds for N = 10^6, 2^64, and 10^100.
+    To the maintainers' knowledge, the theorem and spectral Bohr increment bounds
+    were verified absent from the core Mathlib library (checked against Mathlib v4.34.0-rc1).
 
 classification:
-  arxiv: [math.CO, cs.IT]
-  msc2020: ["05D05", "94A17", "06A07"]
+  arxiv: [math.CO, math.NT, cs.CC]
+  msc2020: ["11B30", "05D10", "42A99", "68Q87"]
 
 sources:
-  - title: "A constant lower bound for the union-closed sets conjecture"
+  - title: "Strong bounds for 3-progressions"
     type: preprint
     authors:
-      - "Justin Gilmer"
-    year: 2022
-    venue: "arXiv:2211.09055"
+      - "Zander Kelley"
+      - "Raghu Meka"
+    year: 2023
+    venue: "arXiv:2302.05537 / FOCS 2023"
     relationship: formalizes
-  - title: "Approximate Frankl's conjecture for union-closed families"
-    type: preprint
-    authors:
-      - "Zachary Chase"
-      - "Shachar Lovett"
-    year: 2022
-    venue: "arXiv:2211.11689"
-    relationship: background
-  - title: "Extremal set systems"
+  - title: "On certain sets of integers"
     type: paper
     authors:
-      - "Péter Frankl"
-    year: 1979
-    venue: "Finite and Infinite Sets, Colloq. Math. Soc. János Bolyai, Vol. 37, 305-318"
+      - "K. F. Roth"
+    year: 1953
+    venue: "Journal of the London Mathematical Society, 28(1), 104-109"
+    relationship: background
+  - title: "On triples in arithmetic progression"
+    type: paper
+    authors:
+      - "J. Bourgain"
+    year: 1999
+    venue: "Geometric and Functional Analysis, 9(5), 968-984"
+    relationship: background
+  - title: "Breaking the logarithmic barrier in Roth's theorem on arithmetic progressions"
+    type: preprint
+    authors:
+      - "Thomas Bloom"
+      - "Olof Sisask"
+    year: 2020
+    venue: "arXiv:2007.03528"
     relationship: background
 
 related_formalizations:
-  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Data/Finset/Powerset.lean"
+  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Combinatorics/Additive/Energy.lean"
     relationship: builds-on
     note: >-
-      Formalization builds on Mathlib's finite set powerset API and real analysis, extending it to
-      union-closed families, coordinate Bernoulli marginals, and binary entropy fixed points.
+      Formalization builds on Mathlib's additive combinatorics structures and extends them with
+      Bohr set structures, Kelley–Meka density increment iteration bounds, and quantitative
+      asymptotic decay proofs.
 
 automation:
   methods:
