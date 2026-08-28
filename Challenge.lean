@@ -1,179 +1,324 @@
-import Mathlib.Data.Real.Basic
 import Mathlib.Data.Matrix.Basic
-import Mathlib.Data.Fintype.Card
-import Mathlib.Data.Fintype.BigOperators
-import Mathlib.Data.Finset.Card
+import Mathlib.Data.Rat.Defs
 import Mathlib.Data.Finset.Basic
-import Mathlib.Combinatorics.SimpleGraph.Basic
-import Mathlib.Combinatorics.SimpleGraph.DegreeSum
-import Mathlib.Algebra.Order.BigOperators.Ring.Finset
-import Mathlib.Analysis.SpecialFunctions.Pow.Real
-import Mathlib.Analysis.SpecialFunctions.Sqrt
-import Mathlib.Tactic.Linarith
+import Mathlib.Algebra.BigOperators.Intervals
+import Mathlib.Algebra.BigOperators.Fin
 import Mathlib.Tactic.Ring
-import Mathlib.Tactic.Positivity
+import Mathlib.Tactic.Linarith
+import Mathlib.Tactic.NormNum
+import Mathlib.Tactic.FinCases
+import Mathlib.Tactic.FieldSimp
 
-open scoped BigOperators Matrix Finset
-open Classical
+open scoped Matrix BigOperators
+open Matrix
 
 set_option linter.unusedSectionVars false
+set_option linter.unusedVariables false
 
-/-!
-# Tanner's Vertex Expansion Bound for Regular Graphs
+namespace PicardFuchsMirrorMonodromy
 
-This module formalizes **Tanner's Vertex Expansion Bound** (R. Michael Tanner, 1984),
-a fundamental theorem in spectral graph theory and coding theory establishing a quantitative
-lower bound on the vertex expansion (neighborhood size $|N(S)|$) of subsets in a $d$-regular graph
-in terms of the spectral expansion parameter $\lambda = \lambda(G) = \max_{i \ge 2} |\lambda_i|$.
+def J : Matrix (Fin 4) (Fin 4) ℤ :=
+  ![![ 0,  0,  1,  0],
+    ![ 0,  0,  0,  1],
+    ![-1,  0,  0,  0],
+    ![ 0, -1,  0,  0]]
 
-## Mathematical Overview
+def Omega6 : Matrix (Fin 4) (Fin 4) ℤ :=
+  ![![ 0,  0,  0,  1],
+    ![ 0,  0,  6,  0],
+    ![ 0, -6,  0,  0],
+    ![-1,  0,  0,  0]]
 
-Let $G = (V, E)$ be a $d$-regular graph on $n = |V|$ vertices.
-For any subset $S \subseteq V$, its open neighborhood is:
-$$N(S) = \{ v \in V \mid \exists u \in S, \{u, v\} \in E \}$$
+def T0 : Matrix (Fin 4) (Fin 4) ℤ :=
+  ![![ 1, -1,  0,  0],
+    ![ 0,  1,  0,  0],
+    ![ 0,  0,  1,  0],
+    ![ 0,  0,  1,  1]]
 
-### 1. Tanner's Vertex Expansion Theorem
-For any non-empty subset $S \subseteq V$ ($0 < |S|$):
-$$|N(S)| \ge \frac{d^2 |S|}{\frac{d^2 - \lambda^2}{n} |S| + \lambda^2}$$
+def N : Matrix (Fin 4) (Fin 4) ℤ :=
+  ![![ 0, -1,  0,  0],
+    ![ 0,  0,  0,  0],
+    ![ 0,  0,  0,  0],
+    ![ 0,  0,  1,  0]]
 
-Equivalently, the vertex expansion ratio satisfies:
-$$\frac{|N(S)|}{|S|} \ge \frac{d^2}{(d^2 - \lambda^2) \frac{|S|}{n} + \lambda^2}$$
+theorem N_unipotent_index_2 : N * N = 0 := sorry
 
-### 2. Key Corollaries & Limiting Regimes
+namespace ModularFamilyS6
 
-1. **Small-Set Expansion**: If $|S| \le \alpha n$, then:
-   $$|N(S)| \ge \frac{d^2}{\alpha (d^2 - \lambda^2) + \lambda^2} |S|$$
+def T0 : Matrix (Fin 4) (Fin 4) ℤ :=
+  ![![ 1,  0,  0,  1],
+    ![ 0,  1, -1,  0],
+    ![ 0,  0,  1,  0],
+    ![ 0,  0,  0,  1]]
 
-2. **Ramanujan Graphs**: For graphs satisfying the optimal Ramanujan bound $\lambda \le 2\sqrt{d-1}$:
-   $$|N(S)| \ge \frac{d^2 |S|}{\frac{(d-2)^2}{n} |S| + 4(d-1)}$$
+def N : Matrix (Fin 4) (Fin 4) ℤ :=
+  ![![ 0,  0,  0,  1],
+    ![ 0,  0, -1,  0],
+    ![ 0,  0,  0,  0],
+    ![ 0,  0,  0,  0]]
 
-3. **Subsets of Size $\le n/2$**: For any non-empty $S$ with $|S| \le n/2$:
-   $$|N(S)| \ge \frac{2 d^2}{d^2 + \lambda^2} |S|$$
+def gamma : Fin 4 → ℤ := ![1, 0, 0, 0]
+def u : Fin 4 → ℤ := ![0, 1, 0, 0]
+def w : Fin 4 → ℤ := ![0, 0, 1, 0]
+def delta : Fin 4 → ℤ := ![0, 0, 0, 1]
 
-## References
+theorem N_act_gamma : N *ᵥ gamma = 0 := sorry
+theorem N_act_u : N *ᵥ u = 0 := sorry
+theorem N_act_w : N *ᵥ w = -u := sorry
+theorem N_act_delta : N *ᵥ delta = gamma := sorry
 
-- Tanner, R. M. (1984). *Explicit construction of concentrators from generalized $N$-gons*.
-  SIAM Journal on Algebraic and Discrete Methods, 5(3), 287–293.
-- Alon, N., & Spencer, J. (2016). *The Probabilistic Method* (4th ed.). Wiley.
-- Hoory, S., Linial, N., & Wigderson, A. (2006). *Expander graphs and their applications*.
-  Bulletin of the American Mathematical Society, 43(4), 439–561.
--/
+end ModularFamilyS6
 
-variable {V : Type*} [Fintype V] [DecidableEq V]
+def gamma : Fin 4 → ℤ := ModularFamilyS6.gamma
+def u : Fin 4 → ℤ := ModularFamilyS6.u
+def w : Fin 4 → ℤ := ModularFamilyS6.w
+def delta : Fin 4 → ℤ := ModularFamilyS6.delta
 
-namespace TannerExpansion
+theorem S6_N_act_gamma : ModularFamilyS6.N *ᵥ ModularFamilyS6.gamma = 0 := sorry
+theorem S6_N_act_u : ModularFamilyS6.N *ᵥ ModularFamilyS6.u = 0 := sorry
+theorem S6_N_act_w : ModularFamilyS6.N *ᵥ ModularFamilyS6.w = -ModularFamilyS6.u := sorry
+theorem S6_N_act_delta : ModularFamilyS6.N *ᵥ ModularFamilyS6.delta = ModularFamilyS6.gamma := sorry
 
-/-- The $0$-$1$ adjacency matrix of a simple graph $G$ over $\mathbb{R}$. -/
-def adjacencyMatrix (G : SimpleGraph V) [DecidableRel G.Adj] : Matrix V V ℝ :=
-  fun u v => if G.Adj u v then 1 else 0
+def N_MUM : Matrix (Fin 4) (Fin 4) ℤ :=
+  ![![ 0, 1, 0, 0 ],
+    ![ 0, 0, 1, 0 ],
+    ![ 0, 0, 0, 1 ],
+    ![ 0, 0, 0, 0 ]]
 
-/-- Predicate stating that a simple graph is $d$-regular. -/
-def isRegularOfDegree (G : SimpleGraph V) (d : ℕ) [DecidableRel G.Adj] : Prop :=
-  ∀ v : V, G.degree v = d
+def symplecticPairing (v w : Fin 4 → ℤ) : ℤ :=
+  v 0 * w 2 + v 1 * w 3 - v 2 * w 0 - v 3 * w 1
 
-/-- Standard Euclidean inner product on $\mathbb{R}^V$. -/
-def innerProduct (u v : V → ℝ) : ℝ :=
-  ∑ x : V, u x * v x
+theorem symplecticPairing_skew (v w : Fin 4 → ℤ) :
+    symplecticPairing v w = -symplecticPairing w v := sorry
 
-/-- The squared Euclidean norm $\|v\|^2 = \langle v, v \rangle$. -/
-def normSq (v : V → ℝ) : ℝ :=
-  innerProduct v v
+theorem mulVec_N (v : Fin 4 → ℤ) :
+    N *ᵥ v = ![-v 1, 0, 0, v 2] := sorry
 
-/-- A vector $v \in \mathbb{R}^V$ is orthogonal to $\mathbf{1}$ if its coordinate sum is zero. -/
-def isOrthogonalToOnes (v : V → ℝ) : Prop :=
-  ∑ x : V, v x = 0
+theorem symplecticPairing_N_invariant (v w : Fin 4 → ℤ) :
+    symplecticPairing (N *ᵥ v) w + symplecticPairing v (N *ᵥ w) = 0 := sorry
 
-/-- The spectral expansion parameter $\lambda(G) = \max_{i \ge 2} |\lambda_i|$ of a regular graph $G$. -/
-noncomputable def spectralExpansionParameter (G : SimpleGraph V) [DecidableRel G.Adj] : ℝ :=
-  sSup { |innerProduct u (fun x => ∑ y : V, adjacencyMatrix G x y * v y)| /
-         (Real.sqrt (normSq u) * Real.sqrt (normSq v)) |
-         (u : V → ℝ) (v : V → ℝ) (_ : u ≠ 0) (_ : v ≠ 0)
-         (_ : isOrthogonalToOnes u) (_ : isOrthogonalToOnes v) }
+def symplecticPairingOmega6 (v w : Fin 4 → ℤ) : ℤ :=
+  v 0 * w 3 + 6 * v 1 * w 2 - 6 * v 2 * w 1 - v 3 * w 0
 
-/-- The open neighborhood of a vertex set $S \subseteq V$: $N(S) = \bigcup_{u \in S} N(u)$. -/
-def neighborhood (G : SimpleGraph V) [DecidableRel G.Adj] (S : Finset V) : Finset V :=
-  Finset.biUnion S (fun u => G.neighborFinset u)
+theorem symplecticPairingOmega6_skew (v w : Fin 4 → ℤ) :
+    symplecticPairingOmega6 v w = -symplecticPairingOmega6 w v := sorry
 
-/--
-**Tanner's Vertex Expansion Theorem** (R. M. Tanner, 1984):
-For any $d$-regular graph $G$ on $n$ vertices ($n \ne 0$, $d > 0$) and any non-empty subset $S \subseteq V$,
-the size of the open neighborhood $N(S)$ satisfies:
-$$|N(S)| \ge \frac{d^2 |S|}{\frac{d^2 - \lambda^2}{n} |S| + \lambda^2}$$
-where $\lambda = \lambda(G) = \text{spectralExpansionParameter } G$.
--/
-theorem tanner_vertex_expansion_bound (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
-    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (hd : 0 < d)
-    (S : Finset V) (hS : 0 < S.card) :
-    ((d : ℝ) ^ 2 * (S.card : ℝ)) /
-      (((d : ℝ) ^ 2 - (spectralExpansionParameter G) ^ 2) / (Fintype.card V : ℝ) * (S.card : ℝ) + (spectralExpansionParameter G) ^ 2) ≤
-    ((neighborhood G S).card : ℝ) := by
-  sorry
+theorem mulVec_S6_N (v : Fin 4 → ℤ) :
+    ModularFamilyS6.N *ᵥ v = ![v 3, -v 2, 0, 0] := sorry
 
-/--
-**Tanner's Expansion Ratio Bound**:
-For any non-empty subset $S \subseteq V$, the vertex expansion ratio $|N(S)| / |S|$ satisfies:
-$$\frac{|N(S)|}{|S|} \ge \frac{d^2}{(d^2 - \lambda^2)\frac{|S|}{n} + \lambda^2}$$
--/
-theorem tanner_expansion_ratio_bound (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
-    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (hd : 0 < d)
-    (S : Finset V) (hS : 0 < S.card) :
-    ((d : ℝ) ^ 2) /
-      (((d : ℝ) ^ 2 - (spectralExpansionParameter G) ^ 2) * ((S.card : ℝ) / (Fintype.card V : ℝ)) + (spectralExpansionParameter G) ^ 2) ≤
-    ((neighborhood G S).card : ℝ) / (S.card : ℝ) := by
-  sorry
+theorem symplecticPairingOmega6_N_invariant (v w : Fin 4 → ℤ) :
+    symplecticPairingOmega6 (ModularFamilyS6.N *ᵥ v) w +
+    symplecticPairingOmega6 v (ModularFamilyS6.N *ᵥ w) = 0 := sorry
 
-/--
-**Small Set Expansion via Tanner's Bound**:
-If $S \subseteq V$ is non-empty with relative volume $|S|/n \le \alpha$ where $0 < \alpha$,
-then $|N(S)| \ge \frac{d^2}{\alpha (d^2 - \lambda^2) + \lambda^2} |S|$.
--/
-theorem tanner_small_set_expansion (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
-    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (hd : 0 < d)
-    (S : Finset V) (hS : 0 < S.card) {α : ℝ} (hα : (S.card : ℝ) / (Fintype.card V : ℝ) ≤ α)
-    (hα_pos : 0 < α) :
-    ((d : ℝ) ^ 2 / (α * ((d : ℝ) ^ 2 - (spectralExpansionParameter G) ^ 2) + (spectralExpansionParameter G) ^ 2)) * (S.card : ℝ) ≤
-    ((neighborhood G S).card : ℝ) := by
-  sorry
+end PicardFuchsMirrorMonodromy
 
-/--
-**Tanner's Expansion Bound for Ramanujan Graphs**:
-For a Ramanujan graph where $\lambda(G) \le 2\sqrt{d-1}$ ($d \ge 2$), any non-empty subset $S \subseteq V$ satisfies:
-$$|N(S)| \ge \frac{d^2 |S|}{\frac{d^2 - 4(d-1)}{n}|S| + 4(d-1)}$$
--/
-theorem tanner_ramanujan_expansion (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
-    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (hd : 2 ≤ d)
-    (hRam : spectralExpansionParameter G ≤ 2 * Real.sqrt ((d : ℝ) - 1))
-    (S : Finset V) (hS : 0 < S.card) :
-    ((d : ℝ) ^ 2 * (S.card : ℝ)) /
-      ((((d : ℝ) ^ 2 - 4 * ((d : ℝ) - 1)) / (Fintype.card V : ℝ)) * (S.card : ℝ) + 4 * ((d : ℝ) - 1)) ≤
-    ((neighborhood G S).card : ℝ) := by
-  sorry
+namespace UniversalMonodromyWeightFiltration
 
-/--
-**Tanner Vertex Expansion for Bounded Subsets ($|S| \le n/2$)**:
-For any non-empty subset $S \subseteq V$ containing at most half the vertices ($|S| \le n/2$),
-$$|N(S)| \ge \frac{2 d^2}{d^2 + \lambda^2} |S|$$
--/
-theorem tanner_half_set_expansion (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
-    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (hd : 0 < d)
-    (S : Finset V) (hS : 0 < S.card)
-    (hhalf : (S.card : ℝ) ≤ (Fintype.card V : ℝ) / 2) :
-    ((2 * (d : ℝ) ^ 2) / ((d : ℝ) ^ 2 + (spectralExpansionParameter G) ^ 2)) * (S.card : ℝ) ≤
-    ((neighborhood G S).card : ℝ) := by
-  sorry
+open Matrix PicardFuchsMirrorMonodromy
 
-/--
-**Vertex Expansion Difference Bound (Relation to Cheeger Constant)**:
-For any non-empty subset $S \subseteq V$ with $|S| \le n/2$,
-the vertex expansion margin $|N(S)| - |S|$ satisfies:
-$$|N(S)| - |S| \ge \frac{d^2 - \lambda^2}{d^2 + \lambda^2} |S|$$
--/
-theorem tanner_vertex_margin_bound (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
-    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (hd : 0 < d)
-    (S : Finset V) (hS : 0 < S.card)
-    (hhalf : (S.card : ℝ) ≤ (Fintype.card V : ℝ) / 2) :
-    (((d : ℝ) ^ 2 - (spectralExpansionParameter G) ^ 2) / ((d : ℝ) ^ 2 + (spectralExpansionParameter G) ^ 2)) * (S.card : ℝ) ≤
-    ((neighborhood G S).card : ℝ) - (S.card : ℝ) := by
-  sorry
+/-! ### 1. General Matrix Operator Algebra & Deligne-Schmid Weight Filtration -/
 
-end TannerExpansion
+def kerMat {n : ℕ} {R : Type*} [CommRing R] (M : Matrix (Fin n) (Fin n) R) : Set (Fin n → R) :=
+  {v | M *ᵥ v = 0}
+
+def imMat {n : ℕ} {R : Type*} [CommRing R] (M : Matrix (Fin n) (Fin n) R) : Set (Fin n → R) :=
+  {v | ∃ u, M *ᵥ u = v}
+
+def imPower {n : ℕ} {R : Type*} [CommRing R] (N : Matrix (Fin n) (Fin n) R) (m : ℤ) : Set (Fin n → R) :=
+  if m ≤ 0 then Set.univ else imMat (N ^ m.toNat)
+
+def kerPower {n : ℕ} {R : Type*} [CommRing R] (N : Matrix (Fin n) (Fin n) R) (m : ℕ) : Set (Fin n → R) :=
+  kerMat (N ^ m)
+
+def DeligneSummand {n : ℕ} {R : Type*} [CommRing R]
+    (N : Matrix (Fin n) (Fin n) R) (k : ℕ) (l : ℕ) (j : ℕ) : Set (Fin n → R) :=
+  kerPower N (j + 1) ∩ imPower N ((j : ℤ) - (l : ℤ) + (k : ℤ))
+
+def DeligneWeightSpace {n : ℕ} {R : Type*} [CommRing R]
+    (N : Matrix (Fin n) (Fin n) R) (k : ℕ) (l : ℕ) : Set (Fin n → R) :=
+  {v | ∃ j : ℕ, j ≤ k ∧ v ∈ DeligneSummand N k l j}
+
+theorem zero_mem_kerPower {n : ℕ} {R : Type*} [CommRing R] (N : Matrix (Fin n) (Fin n) R) (m : ℕ) :
+    (0 : Fin n → R) ∈ kerPower N m := sorry
+
+theorem zero_mem_imPower {n : ℕ} {R : Type*} [CommRing R] (N : Matrix (Fin n) (Fin n) R) (m : ℤ) :
+    (0 : Fin n → R) ∈ imPower N m := sorry
+
+theorem zero_mem_DeligneSummand {n : ℕ} {R : Type*} [CommRing R]
+    (N : Matrix (Fin n) (Fin n) R) (k : ℕ) (l : ℕ) (j : ℕ) :
+    (0 : Fin n → R) ∈ DeligneSummand N k l j := sorry
+
+theorem zero_mem_DeligneWeightSpace {n : ℕ} {R : Type*} [CommRing R]
+    (N : Matrix (Fin n) (Fin n) R) (k : ℕ) (l : ℕ) :
+    (0 : Fin n → R) ∈ DeligneWeightSpace N k l := sorry
+
+theorem imPower_anti {n : ℕ} {R : Type*} [CommRing R] (N : Matrix (Fin n) (Fin n) R)
+    (m1 m2 : ℤ) (h : m1 ≤ m2) :
+    imPower N m2 ⊆ imPower N m1 := sorry
+
+theorem DeligneSummand_subset_succ {n : ℕ} {R : Type*} [CommRing R]
+    (N : Matrix (Fin n) (Fin n) R) (k : ℕ) (l : ℕ) (j : ℕ) :
+    DeligneSummand N k l j ⊆ DeligneSummand N k (l + 1) j := sorry
+
+theorem DeligneWeightSpace_subset_succ {n : ℕ} {R : Type*} [CommRing R]
+    (N : Matrix (Fin n) (Fin n) R) (k : ℕ) (l : ℕ) :
+    DeligneWeightSpace N k l ⊆ DeligneWeightSpace N k (l + 1) := sorry
+
+theorem DeligneWeightSpace_mono {n : ℕ} {R : Type*} [CommRing R]
+    (N : Matrix (Fin n) (Fin n) R) (k : ℕ) :
+    ∀ {l1 l2 : ℕ}, l1 ≤ l2 → DeligneWeightSpace N k l1 ⊆ DeligneWeightSpace N k l2 := sorry
+
+theorem N_mulVec_mem_kerPower_pred {n : ℕ} {R : Type*} [CommRing R]
+    (N : Matrix (Fin n) (Fin n) R) (j : ℕ) (v : Fin n → R)
+    (hv : v ∈ kerPower N (j + 1)) :
+    N *ᵥ v ∈ kerPower N j := sorry
+
+theorem N_mulVec_mem_imPower_succ {n : ℕ} {R : Type*} [CommRing R]
+    (N : Matrix (Fin n) (Fin n) R) (m : ℤ) (v : Fin n → R)
+    (hv : v ∈ imPower N m) :
+    N *ᵥ v ∈ imPower N (m + 1) := sorry
+
+theorem DeligneWeightSpace_top {n : ℕ} {R : Type*} [CommRing R]
+    (N : Matrix (Fin n) (Fin n) R) (k : ℕ) (hk : N ^ (k + 1) = 0) (l : ℕ) (hl : 2 * k ≤ l) :
+    DeligneWeightSpace N k l = Set.univ := sorry
+
+theorem DeligneWeightSpace_shift {n : ℕ} {R : Type*} [CommRing R]
+    (N : Matrix (Fin n) (Fin n) R) (k : ℕ) (l : ℕ) (v : Fin n → R)
+    (hv : v ∈ DeligneWeightSpace N k l) :
+    N *ᵥ v ∈ DeligneWeightSpace N k (l - 2) := sorry
+
+/-! ### 2. Explicit Computation on $\mathbb{Z}^4$ for $(3,4,\infty)$ Modular Monodromy -/
+
+def W0_34 : Set (Fin 4 → ℤ) := {0}
+def W1_34 : Set (Fin 4 → ℤ) := imMat PicardFuchsMirrorMonodromy.N
+def W2_34 : Set (Fin 4 → ℤ) := Set.univ
+
+theorem W0_sub_W1 : W0_34 ⊆ W1_34 := sorry
+theorem W1_sub_W2 : W1_34 ⊆ W2_34 := sorry
+
+theorem weight_filtration_chain_34 : W0_34 ⊆ W1_34 ∧ W1_34 ⊆ W2_34 := sorry
+
+theorem N_act_W1_in_W0 (v : Fin 4 → ℤ) (hv : v ∈ W1_34) :
+    PicardFuchsMirrorMonodromy.N *ᵥ v ∈ W0_34 := sorry
+
+theorem N_act_W2_in_W1 (v : Fin 4 → ℤ) (_hv : v ∈ W2_34) :
+    PicardFuchsMirrorMonodromy.N *ᵥ v ∈ W1_34 := sorry
+
+theorem N_act_W2_in_W0 (v : Fin 4 → ℤ) (hv : v ∈ W2_34) :
+    PicardFuchsMirrorMonodromy.N *ᵥ (PicardFuchsMirrorMonodromy.N *ᵥ v) ∈ W0_34 := sorry
+
+theorem N_act_gamma : PicardFuchsMirrorMonodromy.N *ᵥ PicardFuchsMirrorMonodromy.gamma = 0 := sorry
+
+theorem N_act_u :
+    PicardFuchsMirrorMonodromy.N *ᵥ PicardFuchsMirrorMonodromy.u =
+    -PicardFuchsMirrorMonodromy.gamma := sorry
+
+theorem N_act_w :
+    PicardFuchsMirrorMonodromy.N *ᵥ PicardFuchsMirrorMonodromy.w =
+    PicardFuchsMirrorMonodromy.delta := sorry
+
+theorem N_act_delta : PicardFuchsMirrorMonodromy.N *ᵥ PicardFuchsMirrorMonodromy.delta = 0 := sorry
+
+theorem S6_N_act_gamma : ModularFamilyS6.N *ᵥ PicardFuchsMirrorMonodromy.gamma = 0 := sorry
+theorem S6_N_act_u : ModularFamilyS6.N *ᵥ PicardFuchsMirrorMonodromy.u = 0 := sorry
+theorem S6_N_act_w :
+    ModularFamilyS6.N *ᵥ PicardFuchsMirrorMonodromy.w = -PicardFuchsMirrorMonodromy.u := sorry
+theorem S6_N_act_delta :
+    ModularFamilyS6.N *ᵥ PicardFuchsMirrorMonodromy.delta = PicardFuchsMirrorMonodromy.gamma := sorry
+
+/-! ### 3. Explicit Computation for Type III MUM Monodromy -/
+
+def W_MUM_0 : Set (Fin 4 → ℤ) := {0}
+def W_MUM_1 : Set (Fin 4 → ℤ) := {v | v 1 = 0 ∧ v 2 = 0 ∧ v 3 = 0}
+def W_MUM_2 : Set (Fin 4 → ℤ) := {v | v 2 = 0 ∧ v 3 = 0}
+def W_MUM_3 : Set (Fin 4 → ℤ) := {v | v 3 = 0}
+def W_MUM_4 : Set (Fin 4 → ℤ) := Set.univ
+
+theorem W_MUM_chain_0_1 : W_MUM_0 ⊆ W_MUM_1 := sorry
+theorem W_MUM_chain_1_2 : W_MUM_1 ⊆ W_MUM_2 := sorry
+theorem W_MUM_chain_2_3 : W_MUM_2 ⊆ W_MUM_3 := sorry
+theorem W_MUM_chain_3_4 : W_MUM_3 ⊆ W_MUM_4 := sorry
+
+theorem W_MUM_complete_chain :
+    W_MUM_0 ⊆ W_MUM_1 ∧ W_MUM_1 ⊆ W_MUM_2 ∧ W_MUM_2 ⊆ W_MUM_3 ∧ W_MUM_3 ⊆ W_MUM_4 := sorry
+
+theorem mulVec_N_MUM (v : Fin 4 → ℤ) :
+    PicardFuchsMirrorMonodromy.N_MUM *ᵥ v = ![v 1, v 2, v 3, 0] := sorry
+
+theorem N_MUM_act_W0 (v : Fin 4 → ℤ) (hv : v ∈ W_MUM_0) :
+    PicardFuchsMirrorMonodromy.N_MUM *ᵥ v ∈ W_MUM_0 := sorry
+
+theorem N_MUM_act_W1 (v : Fin 4 → ℤ) (hv : v ∈ W_MUM_1) :
+    PicardFuchsMirrorMonodromy.N_MUM *ᵥ v ∈ W_MUM_0 := sorry
+
+theorem N_MUM_act_W2 (v : Fin 4 → ℤ) (hv : v ∈ W_MUM_2) :
+    PicardFuchsMirrorMonodromy.N_MUM *ᵥ v ∈ W_MUM_1 := sorry
+
+theorem N_MUM_act_W3 (v : Fin 4 → ℤ) (hv : v ∈ W_MUM_3) :
+    PicardFuchsMirrorMonodromy.N_MUM *ᵥ v ∈ W_MUM_2 := sorry
+
+theorem N_MUM_act_W4 (v : Fin 4 → ℤ) (_hv : v ∈ W_MUM_4) :
+    PicardFuchsMirrorMonodromy.N_MUM *ᵥ v ∈ W_MUM_3 := sorry
+
+theorem N_MUM_shift_2_0 (v : Fin 4 → ℤ) (hv : v ∈ W_MUM_2) :
+    PicardFuchsMirrorMonodromy.N_MUM *ᵥ (PicardFuchsMirrorMonodromy.N_MUM *ᵥ v) ∈ W_MUM_0 := sorry
+
+theorem N_MUM_shift_3_1 (v : Fin 4 → ℤ) (hv : v ∈ W_MUM_3) :
+    PicardFuchsMirrorMonodromy.N_MUM *ᵥ (PicardFuchsMirrorMonodromy.N_MUM *ᵥ v) ∈ W_MUM_1 := sorry
+
+theorem N_MUM_shift_4_2 (v : Fin 4 → ℤ) (hv : v ∈ W_MUM_4) :
+    PicardFuchsMirrorMonodromy.N_MUM *ᵥ (PicardFuchsMirrorMonodromy.N_MUM *ᵥ v) ∈ W_MUM_2 := sorry
+
+/-! ### 4. Hodge-Riemann Symplectic Polarization & Infinitesimal Isometry -/
+
+theorem J_N_plus_NT_J_zero :
+    PicardFuchsMirrorMonodromy.J * PicardFuchsMirrorMonodromy.N +
+    PicardFuchsMirrorMonodromy.Nᵀ * PicardFuchsMirrorMonodromy.J = 0 := sorry
+
+theorem NT_J_plus_J_N_zero :
+    PicardFuchsMirrorMonodromy.Nᵀ * PicardFuchsMirrorMonodromy.J +
+    PicardFuchsMirrorMonodromy.J * PicardFuchsMirrorMonodromy.N = 0 := sorry
+
+def Q_N (v w : Fin 4 → ℤ) : ℤ :=
+  PicardFuchsMirrorMonodromy.symplecticPairing v (PicardFuchsMirrorMonodromy.N *ᵥ w)
+
+theorem Q_N_symm (v w : Fin 4 → ℤ) : Q_N v w = Q_N w v := sorry
+
+theorem Q_N_u_w :
+    Q_N PicardFuchsMirrorMonodromy.u PicardFuchsMirrorMonodromy.w = 1 := sorry
+
+theorem Q_N_w_u :
+    Q_N PicardFuchsMirrorMonodromy.w PicardFuchsMirrorMonodromy.u = 1 := sorry
+
+theorem Q_N_u_u :
+    Q_N PicardFuchsMirrorMonodromy.u PicardFuchsMirrorMonodromy.u = 0 := sorry
+
+theorem Q_N_w_w :
+    Q_N PicardFuchsMirrorMonodromy.w PicardFuchsMirrorMonodromy.w = 0 := sorry
+
+theorem Q_N_u_add_w_eval :
+    Q_N (PicardFuchsMirrorMonodromy.u + PicardFuchsMirrorMonodromy.w)
+        (PicardFuchsMirrorMonodromy.u + PicardFuchsMirrorMonodromy.w) = 2 := sorry
+
+theorem Q_N_u_add_w_strictly_positive :
+    0 < Q_N (PicardFuchsMirrorMonodromy.u + PicardFuchsMirrorMonodromy.w)
+            (PicardFuchsMirrorMonodromy.u + PicardFuchsMirrorMonodromy.w) := sorry
+
+def Q_N_S6 (v w : Fin 4 → ℤ) : ℤ :=
+  symplecticPairingOmega6 v (ModularFamilyS6.N *ᵥ w)
+
+theorem Q_N_S6_symm (v w : Fin 4 → ℤ) : Q_N_S6 v w = Q_N_S6 w v := sorry
+
+theorem Q_N_S6_w_pos :
+    Q_N_S6 w w = 6 := sorry
+
+theorem Q_N_S6_w_strictly_positive :
+    0 < Q_N_S6 w w := sorry
+
+theorem Q_N_S6_delta_eval :
+    Q_N_S6 delta delta = -1 := sorry
+
+theorem Q_N_S6_delta_nondegenerate :
+    Q_N_S6 delta delta ≠ 0 := sorry
+
+end UniversalMonodromyWeightFiltration
