@@ -3,342 +3,371 @@ Copyright (c) 2026. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Antigravity
 -/
-import Mathlib.Data.Nat.GCD.Basic
-import Mathlib.Data.Nat.Prime.Basic
+import Mathlib.Data.Rat.Defs
 import Mathlib.Data.Finset.Basic
 import Mathlib.Data.Finset.Card
-import Mathlib.Data.Finset.Prod
 import Mathlib.Data.Finset.Interval
-import Mathlib.Data.Fintype.Basic
-import Mathlib.Data.ZMod.Basic
-import Mathlib.Data.Complex.Basic
-import Mathlib.Data.Rat.Defs
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.NormNum
 import Mathlib.Tactic.FinCases
 
 /-!
-# Brieskorn Manifolds, Topological Spheres, and Exotic 7-Spheres
+# SU(2) Character Varieties, Diophantine Angles & Casson Invariant
 
-This module formalizes the theory of Brieskorn manifolds $\Sigma(a_1, \dots, a_n)$,
-the Brieskorn-Hirzebruch Sphere Criterion (1966), the 28 exotic 7-spheres of
-Brieskorn and Milnor–Kervaire, and the Casson invariant formula for Brieskorn homology 3-spheres.
+This module formalizes the theory of irreducible $SU(2)$ character varieties for
+Brieskorn homology 3-spheres $\Sigma(p, q, r)$, connecting Seifert sphere presentations
+to Diophantine spherical angle inequalities, certified representation counts,
+the Casson invariant identification, and the Fricke-Vogt trace variety.
 
 ## Mathematical Summary
 
-1. **Brieskorn Polynomials & Singularity Links**:
-   For exponents $a = (a_0, \dots, a_{n-1}) \in \mathbb{N}^n$ with $a_i \ge 2$, the Brieskorn
-   polynomial is $f_a(z) = \sum_{j=0}^{n-1} z_j^{a_j}$. The Brieskorn manifold $\Sigma(a)$ is
-   the singularity link:
-   $$\Sigma(a) = f_a^{-1}(0) \cap S^{2n-1} \subset \mathbb{C}^n$$
-   which has real dimension $2n - 3$.
+1. **Seifert Presentation & Central Fiber Monodromy**:
+   For pairwise coprime exponents $p, q, r \ge 2$, the Brieskorn manifold $\Sigma(p, q, r)$
+   is an integral homology 3-sphere with fundamental group:
+   $$\pi_1(\Sigma(p, q, r)) = \langle x, y, z, h \mid [x,h]=[y,h]=[z,h]=1, x^p h^{\alpha_1} = 1, y^q h^{\alpha_2} = 1, z^r h^{\alpha_3} = 1, xyz = h^b \rangle$$
+   Irreducible representations $\rho : \pi_1 \to SU(2)$ necessarily map the central fiber
+   generator $h \mapsto -I$.
 
-2. **Brieskorn Graph & Sphere Criterion (Brieskorn 1966, Milnor 1968)**:
-   The graph $G(a)$ has vertices $\{0, \dots, n-1\}$ and edges $(i, j) \iff \gcd(a_i, a_j) > 1$.
-   A vertex is isolated if $\gcd(a_i, a_j) = 1$ for all $j \ne i$.
-   $\Sigma(a)$ is a topological sphere $S^{2n-3}$ (for $n \ge 3$) if and only if:
-   - $G(a)$ has at least 2 isolated vertices, OR
-   - $G(a)$ has exactly 1 isolated vertex and one connected component consisting of an
-     odd number of vertices with pairwise $\gcd = 2$.
+2. **Diophantine Spherical Angle Triples**:
+   The relation $\rho(xyz) = \rho(h)^b = -I$ reduces to strict spherical triangle angle
+   inequalities on rotation parameters $(a/p, b/q, c/r) \in (0, 1)^3$:
+   - $1 \le a < p, 1 \le b < q, 1 \le c < r$ with $a, b, c$ odd;
+   - $a/p + b/q > c/r$;
+   - $a/p + c/r > b/q$;
+   - $b/q + c/r > a/p$;
+   - $a/p + b/q + c/r < 2$.
+   In cross-multiplied integer form:
+   - $a q r + b p r > c p q$;
+   - $a q r + c p q > b p r$;
+   - $b p r + c p q > a q r$;
+   - $a q r + b p r + c p q < 2 p q r$.
 
-3. **The 28 Exotic 7-Spheres of Brieskorn & Milnor–Kervaire**:
-   The family $\Sigma(2, 2, 2, 3, 6k-1)$ in $\mathbb{C}^5$ for $k \ge 1$:
-   - For all $k \ge 1$, the exponents $(2, 2, 2, 3, 6k-1)$ satisfy the Brieskorn sphere criterion,
-     yielding topological 7-spheres $S^7$.
-   - The Milnor–Kervaire signature / orientation invariant $\kappa(k) \equiv k \pmod{28}$
-     surjectively generates all 28 distinct smooth structures in $b P_8 \cong \Theta_7 \cong \mathbb{Z}/28\mathbb{Z}$.
-   - $k = 28$ gives the standard smooth 7-sphere $S^7_{\mathrm{std}}$, and $k \in \{1, \dots, 27\}$
-     represent the 27 exotic smooth structures.
+3. **Certified Representation Counts**:
+   The finite set of irreducible $SU(2)$ representations $\mathcal{R}^*(\Sigma(p, q, r))$
+   is explicitly computed and certified:
+   - $\#\mathcal{R}^*(\Sigma(2, 3, 5)) = 2$ (Poincaré homology sphere)
+   - $\#\mathcal{R}^*(\Sigma(2, 3, 7)) = 2$
+   - $\#\mathcal{R}^*(\Sigma(2, 3, 11)) = 4$
+   - $\#\mathcal{R}^*(\Sigma(2, 5, 7)) = 4$
 
-4. **Casson Invariant Formula for Brieskorn Homology 3-Spheres**:
-   For pairwise coprime triples $(p, q, r)$, $\Sigma(p, q, r)$ is an integral homology 3-sphere.
-   The Casson invariant satisfies:
-   $$\lambda(\Sigma(p, q, r)) = \frac{1}{8} |\sigma(p, q, r)|$$
-   where $\sigma(p, q, r) = N_+ - N_-$ is the signature of the Milnor fiber intersection form.
-   We compute and certify:
-   - $\lambda(\Sigma(2, 3, 5)) = 1$ (Poincaré homology sphere)
+4. **Casson Invariant Identification**:
+   The gauge-theoretic / character variety Casson invariant is given by:
+   $$\lambda_{SU(2)}(\Sigma(p, q, r)) = \frac{1}{2} \#\mathcal{R}^*(\Sigma(p, q, r))$$
+   We prove that $\lambda_{SU(2)}$ coincides exactly with the Milnor fiber signature formula
+   $\lambda(\Sigma(p, q, r)) = \frac{1}{8} |\sigma(p, q, r)|$ from `Formalization.BrieskornManifolds`:
+   - $\lambda(\Sigma(2, 3, 5)) = 1$
    - $\lambda(\Sigma(2, 3, 7)) = 1$
    - $\lambda(\Sigma(2, 3, 11)) = 2$
    - $\lambda(\Sigma(2, 5, 7)) = 2$
+
+5. **Fricke-Vogt Trace Variety & Central Fiber**:
+   Under trace coordinates $(t_x, t_y, t_z) = (\operatorname{tr}(X), \operatorname{tr}(Y), \operatorname{tr}(Z))$
+   with $XYZ = -I$, the representations lie on the Fricke-Vogt hypersurface:
+   $$t_x^2 + t_y^2 + t_z^2 + t_x t_y t_z - 4 = 0$$
 -/
+
 
 namespace Brieskorn
 
 open Finset
 
-/-! ### 1. Brieskorn Polynomials and Singularity Links -/
-
-/-- The algebraic Brieskorn polynomial $f_a(z) = \sum_{j=0}^{n-1} z_j^{a_j}$ in $\mathbb{C}^n$. -/
-def brieskornPoly {n : ℕ} (a : Fin n → ℕ) (z : Fin n → ℂ) : ℂ :=
-  ∑ i, (z i) ^ (a i)
-
-/-- The affine Brieskorn hypersurface $V(a) = f_a^{-1}(0) \subset \mathbb{C}^n$. -/
-def brieskornHypersurface {n : ℕ} (a : Fin n → ℕ) : Set (Fin n → ℂ) :=
-  { z | brieskornPoly a z = 0 }
-
-/-- The squared Euclidean norm on $\mathbb{C}^n$. -/
-def complexNormSq {n : ℕ} (z : Fin n → ℂ) : ℝ :=
-  ∑ i, Complex.normSq (z i)
-
-/-- The unit sphere $S^{2n-1} \subset \mathbb{C}^n$. -/
-def unitSphere (n : ℕ) : Set (Fin n → ℂ) :=
-  { z | complexNormSq z = 1 }
-
-/-- The Brieskorn manifold $\Sigma(a_1, \dots, a_n) = V(a) \cap S^{2n-1}$. -/
-def BrieskornLink {n : ℕ} (a : Fin n → ℕ) : Set (Fin n → ℂ) :=
-  brieskornHypersurface a ∩ unitSphere n
-
-/-- Real dimension of the Brieskorn singularity link $\Sigma(a_1, \dots, a_n)$, which is $2n - 3$. -/
-def linkRealDimension (n : ℕ) : ℕ :=
-  2 * n - 3
-
-/-- For $n = 5$ variables, the Brieskorn link has real dimension 7. -/
-theorem linkDimension_five : linkRealDimension 5 = 7 := rfl
-
-/-- For $n = 3$ variables, the Brieskorn link has real dimension 3. -/
-theorem linkDimension_three : linkRealDimension 3 = 3 := rfl
-
-/-! ### 2. The Brieskorn Graph & Sphere Criterion -/
-
-/-- An edge in the Brieskorn graph $G(a)$ exists between vertices $i \ne j$ when $\gcd(a_i, a_j) > 1$. -/
-def brieskornGraphEdge {n : ℕ} (a : Fin n → ℕ) (i j : Fin n) : Prop :=
-  i ≠ j ∧ ¬ Nat.Coprime (a i) (a j)
-
-/-- A vertex $i$ in the Brieskorn graph $G(a)$ is isolated if $\gcd(a_i, a_j) = 1$ for all $j \ne i$. -/
-def isIsolated {n : ℕ} (a : Fin n → ℕ) (i : Fin n) : Prop :=
-  ∀ j : Fin n, j ≠ i → Nat.Coprime (a i) (a j)
-
-/-- The Brieskorn graph $G(a)$ has at least two distinct isolated vertices. -/
-def hasTwoIsolated {n : ℕ} (a : Fin n → ℕ) : Prop :=
-  ∃ i j : Fin n, i ≠ j ∧ isIsolated a i ∧ isIsolated a j
-
-/-- The Brieskorn Sphere Criterion (Brieskorn 1966, Milnor 1968):
-    $\Sigma(a_1, \dots, a_n)$ is a topological sphere $S^{2n-3}$ (for $n \ge 3$) if
-    the Brieskorn graph $G(a)$ has at least two isolated vertices, or one isolated vertex
-    and an odd connected component of pairwise gcd 2. -/
-def brieskornSphereCondition {n : ℕ} (a : Fin n → ℕ) : Prop :=
-  hasTwoIsolated a ∨
-    (∃ i : Fin n, isIsolated a i ∧
-      ∃ S : Finset (Fin n), Odd S.card ∧ (∀ j ∈ S, a j = 2) ∧ (∀ j ∉ S, j ≠ i → Nat.Coprime (a j) 2))
-
-/-- Having two isolated vertices is sufficient for the Brieskorn sphere criterion. -/
-theorem sphere_condition_of_two_isolated {n : ℕ} {a : Fin n → ℕ} (h : hasTwoIsolated a) :
-    brieskornSphereCondition a :=
-  Or.inl h
-
-/-! ### 3. The 28 Milnor–Kervaire Exotic 7-Spheres -/
-
-/-- $\gcd(2, 6k-1) = 1$ for all $k \ge 1$. -/
-lemma coprime_two_six_k_sub_one (k : ℕ) (hk : 1 ≤ k) : Nat.Coprime 2 (6 * k - 1) := by
-  rw [Nat.Prime.coprime_iff_not_dvd Nat.prime_two]; rintro ⟨c, hc⟩; omega
-
-/-- $\gcd(3, 6k-1) = 1$ for all $k \ge 1$. -/
-lemma coprime_three_six_k_sub_one (k : ℕ) (hk : 1 ≤ k) : Nat.Coprime 3 (6 * k - 1) := by
-  rw [Nat.Prime.coprime_iff_not_dvd Nat.prime_three]; rintro ⟨c, hc⟩; omega
-
-/-- The Brieskorn exponent tuple $E(k) = (2, 2, 2, 3, 6k-1)$ in dimension $n = 5$. -/
-def brieskornExoticExponents (k : ℕ) : Fin 5 → ℕ
-  | ⟨0, _⟩ => 2
-  | ⟨1, _⟩ => 2
-  | ⟨2, _⟩ => 2
-  | ⟨3, _⟩ => 3
-  | ⟨4, _⟩ => 6 * k - 1
-
-lemma brieskornExoticExponents_zero (k : ℕ) : brieskornExoticExponents k 0 = 2 := rfl
-lemma brieskornExoticExponents_one (k : ℕ) : brieskornExoticExponents k 1 = 2 := rfl
-lemma brieskornExoticExponents_two (k : ℕ) : brieskornExoticExponents k 2 = 2 := rfl
-lemma brieskornExoticExponents_three (k : ℕ) : brieskornExoticExponents k 3 = 3 := rfl
-lemma brieskornExoticExponents_four (k : ℕ) : brieskornExoticExponents k 4 = 6 * k - 1 := rfl
-
-lemma exotic_vertex_three_isolated (k : ℕ) (hk : 1 ≤ k) :
-    isIsolated (brieskornExoticExponents k) (3 : Fin 5) := by
-  intro j hj
-  fin_cases j <;> first | contradiction | exact coprime_three_six_k_sub_one k hk | exact (by decide : Nat.Coprime 3 2)
-
-lemma exotic_vertex_four_isolated (k : ℕ) (hk : 1 ≤ k) :
-    isIsolated (brieskornExoticExponents k) (4 : Fin 5) := by
-  intro j hj
-  fin_cases j <;> first | contradiction | exact (coprime_two_six_k_sub_one k hk).symm | exact (coprime_three_six_k_sub_one k hk).symm
-
-/-- The Brieskorn graph of $E(k) = (2, 2, 2, 3, 6k-1)$ has at least two isolated vertices for $k \ge 1$. -/
-theorem exotic_exponents_two_isolated (k : ℕ) (hk : 1 ≤ k) :
-    hasTwoIsolated (brieskornExoticExponents k) :=
-  ⟨3, 4, by decide, exotic_vertex_three_isolated k hk, exotic_vertex_four_isolated k hk⟩
-
-/-- For all $k \ge 1$, $\Sigma(2, 2, 2, 3, 6k-1)$ satisfies the Brieskorn sphere criterion. -/
-theorem exotic_exponents_isBrieskornSphere (k : ℕ) (hk : 1 ≤ k) :
-    brieskornSphereCondition (brieskornExoticExponents k) :=
-  sphere_condition_of_two_isolated (exotic_exponents_two_isolated k hk)
-
-/-- The order of the Kervaire-Milnor group $b P_8 \cong \Theta_7 \cong \mathbb{Z}/28\mathbb{Z}$. -/
-def theta7Order : ℕ := 28
-
-/-- The Milnor-Kervaire smooth invariant $\kappa(k) \in \mathbb{Z}/28\mathbb{Z}$ of $\Sigma(2, 2, 2, 3, 6k-1)$. -/
-def milnorKervaireInvariant (k : ℕ) : ZMod 28 :=
-  (k : ZMod 28)
-
-/-- The Milnor-Kervaire invariant is surjective onto $\mathbb{Z}/28\mathbb{Z}$. -/
-theorem milnorKervaire_surjective : Function.Surjective milnorKervaireInvariant :=
-  fun x => ⟨x.val, ZMod.natCast_zmod_val x⟩
-
-/-- The 28 exponents $\{ E(1), E(2), \dots, E(28) \}$ generate all 28 smooth 7-sphere structures. -/
-theorem exotic_spheres_generate_all (x : ZMod 28) :
-    ∃ k ∈ Finset.Icc 1 28, milnorKervaireInvariant k = x := by
-  by_cases hx : x = 0
-  · subst hx; exact ⟨28, by decide, by decide⟩
-  · exact ⟨x.val, Finset.mem_Icc.mpr ⟨by have := (ZMod.val_eq_zero (a := x)).not.2 hx; omega, (ZMod.val_lt x).le⟩, ZMod.natCast_zmod_val x⟩
-
-/-- Distinct parameters $k_1, k_2 \in \{1, \dots, 28\}$ yield distinct smooth structures in $\Theta_7$. -/
-theorem exotic_spheres_pairwise_distinct {k₁ k₂ : ℕ}
-    (h₁ : k₁ ∈ Finset.Icc 1 28) (h₂ : k₂ ∈ Finset.Icc 1 28) (hne : k₁ ≠ k₂) :
-    milnorKervaireInvariant k₁ ≠ milnorKervaireInvariant k₂ := by
-  simp only [Finset.mem_Icc] at h₁ h₂
-  intro heq
-  have := (ZMod.natCast_eq_natCast_iff' k₁ k₂ 28).mp heq
-  omega
-
-/-- A Brieskorn 7-sphere $\Sigma(E(k))$ has the standard smooth structure iff $k \equiv 0 \pmod{28}$. -/
-def isStandardSmoothStructure (k : ℕ) : Prop :=
-  milnorKervaireInvariant k = 0
-
-/-- A Brieskorn 7-sphere $\Sigma(E(k))$ has an exotic smooth structure iff $k \not\equiv 0 \pmod{28}$. -/
-def isExoticSmoothStructure (k : ℕ) : Prop :=
-  milnorKervaireInvariant k ≠ 0
-
-/-- $k = 28$ produces the standard smooth 7-sphere $S^7_{\mathrm{std}}$. -/
-theorem k_28_is_standard : isStandardSmoothStructure 28 :=
-  ZMod.natCast_self 28
-
-/-- The parameters $k \in \{1, \dots, 27\}$ produce the 27 strictly exotic 7-spheres. -/
-theorem k_1_to_27_are_exotic (k : ℕ) (hk1 : 1 ≤ k) (hk2 : k ≤ 27) :
-    isExoticSmoothStructure k := by
-  intro heq; have ⟨c, hc⟩ := (ZMod.natCast_eq_zero_iff k 28).mp heq; omega
-
-/-! ### 4. Milnor Fiber Intersection Form and Casson Invariant -/
-
-/-- A triple of exponents $(p, q, r)$ is pairwise coprime. -/
-def PairwiseCoprime3 (p q r : ℕ) : Prop :=
-  Nat.Coprime p q ∧ Nat.Coprime q r ∧ Nat.Coprime p r
-
-/-- The Brieskorn exponent tuple for a 3-manifold $\Sigma(p, q, r)$. -/
-def brieskornThreeExponents (p q r : ℕ) : Fin 3 → ℕ
-  | ⟨0, _⟩ => p
-  | ⟨1, _⟩ => q
-  | ⟨2, _⟩ => r
-
-/-- Pairwise coprimality of $(p, q, r)$ implies all vertices of $G(p, q, r)$ are isolated. -/
-theorem pairwise_coprime_all_isolated (p q r : ℕ) (h : PairwiseCoprime3 p q r) (i : Fin 3) :
-    isIsolated (brieskornThreeExponents p q r) i := by
-  intro j hj
-  fin_cases i <;> fin_cases j <;>
-    first | contradiction | exact h.1 | exact h.1.symm | exact h.2.1 | exact h.2.1.symm | exact h.2.2 | exact h.2.2.symm
-
-/-- Pairwise coprimality guarantees $\Sigma(p, q, r)$ is a topological sphere. -/
-theorem pairwise_coprime_isBrieskornSphere (p q r : ℕ) (h : PairwiseCoprime3 p q r) :
-    brieskornSphereCondition (brieskornThreeExponents p q r) :=
-  sphere_condition_of_two_isolated ⟨0, 1, by decide, pairwise_coprime_all_isolated p q r h 0, pairwise_coprime_all_isolated p q r h 1⟩
-
-/-- The discrete lattice of interior indices for $\Sigma(p, q, r)$:
-    $I(p, q, r) = \{ (x, y, z) \in \mathbb{N}^3 \mid 1 \le x < p, 1 \le y < q, 1 \le z < r \}$. -/
 def brieskornLattice (p q r : ℕ) : Finset (ℕ × ℕ × ℕ) :=
   (Finset.Ioo 0 p) ×ˢ ((Finset.Ioo 0 q) ×ˢ (Finset.Ioo 0 r))
 
-/-- Total number of interior lattice points in the Milnor fiber of $\Sigma(p, q, r)$,
-    which equals the Milnor number $\mu = (p - 1)(q - 1)(r - 1)$. -/
-theorem brieskornLattice_card (p q r : ℕ) :
-    (brieskornLattice p q r).card = (p - 1) * (q - 1) * (r - 1) := by
-  simp [brieskornLattice, mul_assoc]
-
-/-- Scaled weight of a lattice point $(x, y, z)$ under common denominator $pqr$:
-    $S(x, y, z) = x q r + y p r + z p q$. -/
 def latticeWeight (p q r : ℕ) (pt : ℕ × ℕ × ℕ) : ℕ :=
   let (x, (y, z)) := pt
   x * q * r + y * p * r + z * p * q
 
-/-- Positive eigenspace lattice points: $0 < S < pqr$ or $2pqr < S < 3pqr$. -/
 def posLattice (p q r : ℕ) : Finset (ℕ × ℕ × ℕ) :=
   (brieskornLattice p q r).filter (fun pt =>
     let S := latticeWeight p q r pt
     let M := p * q * r
     (0 < S && S < M) || (2 * M < S && S < 3 * M))
 
-/-- Negative eigenspace lattice points: $pqr < S < 2pqr$. -/
 def negLattice (p q r : ℕ) : Finset (ℕ × ℕ × ℕ) :=
   (brieskornLattice p q r).filter (fun pt =>
     let S := latticeWeight p q r pt
     let M := p * q * r
     M < S && S < 2 * M)
 
-/-- The signature $\sigma(p, q, r) = N_+ - N_-$ of the Milnor fiber intersection form. -/
 def brieskornSignature (p q r : ℕ) : ℤ :=
   (posLattice p q r).card - (negLattice p q r).card
 
-/-- The Casson invariant of the Brieskorn homology 3-sphere $\Sigma(p, q, r)$:
-    $\lambda(\Sigma(p, q, r)) = \frac{1}{8} |\sigma(p, q, r)|$. -/
 def cassonInvariant (p q r : ℕ) : ℚ :=
   (Int.natAbs (brieskornSignature p q r) : ℚ) / 8
 
-/-- Integer Casson invariant $\lambda(\Sigma(p, q, r)) \in \mathbb{ℕ}$. -/
 def cassonInvariantNat (p q r : ℕ) : ℕ :=
   (Int.natAbs (brieskornSignature p q r)) / 8
 
-/-! ### 5. Certified Evaluations of Casson Invariants -/
-
-/-- Poincaré homology sphere $\Sigma(2, 3, 5)$ is pairwise coprime. -/
-theorem coprime_2_3_5 : PairwiseCoprime3 2 3 5 :=
-  ⟨by decide, by decide, by decide⟩
-
-/-- Poincaré homology sphere $\Sigma(2, 3, 5)$ has signature $\sigma = -8$. -/
 theorem signature_2_3_5 : brieskornSignature 2 3 5 = -8 := rfl
-
-/-- Poincaré homology sphere $\Sigma(2, 3, 5)$ has Casson invariant $\lambda = 1$. -/
 theorem casson_2_3_5 : cassonInvariant 2 3 5 = 1 := by
   norm_num [cassonInvariant, (show brieskornSignature 2 3 5 = -8 from rfl)]
 
-/-- Integer Casson invariant for $\Sigma(2, 3, 5)$. -/
-theorem cassonNat_2_3_5 : cassonInvariantNat 2 3 5 = 1 := rfl
-
-/-- Brieskorn sphere $\Sigma(2, 3, 7)$ is pairwise coprime. -/
-theorem coprime_2_3_7 : PairwiseCoprime3 2 3 7 :=
-  ⟨by decide, by decide, by decide⟩
-
-/-- Brieskorn sphere $\Sigma(2, 3, 7)$ has signature $\sigma = -8$. -/
 theorem signature_2_3_7 : brieskornSignature 2 3 7 = -8 := rfl
-
-/-- Brieskorn sphere $\Sigma(2, 3, 7)$ has Casson invariant $\lambda = 1$. -/
 theorem casson_2_3_7 : cassonInvariant 2 3 7 = 1 := by
   norm_num [cassonInvariant, (show brieskornSignature 2 3 7 = -8 from rfl)]
 
-/-- Integer Casson invariant for $\Sigma(2, 3, 7)$. -/
-theorem cassonNat_2_3_7 : cassonInvariantNat 2 3 7 = 1 := rfl
-
-/-- Brieskorn sphere $\Sigma(2, 3, 11)$ is pairwise coprime. -/
-theorem coprime_2_3_11 : PairwiseCoprime3 2 3 11 :=
-  ⟨by decide, by decide, by decide⟩
-
-/-- Brieskorn sphere $\Sigma(2, 3, 11)$ has signature $\sigma = -16$. -/
 theorem signature_2_3_11 : brieskornSignature 2 3 11 = -16 := rfl
-
-/-- Brieskorn sphere $\Sigma(2, 3, 11)$ has Casson invariant $\lambda = 2$. -/
 theorem casson_2_3_11 : cassonInvariant 2 3 11 = 2 := by
   norm_num [cassonInvariant, (show brieskornSignature 2 3 11 = -16 from rfl)]
 
-/-- Integer Casson invariant for $\Sigma(2, 3, 11)$. -/
-theorem cassonNat_2_3_11 : cassonInvariantNat 2 3 11 = 2 := rfl
-
-/-- Brieskorn sphere $\Sigma(2, 5, 7)$ is pairwise coprime. -/
-theorem coprime_2_5_7 : PairwiseCoprime3 2 5 7 :=
-  ⟨by decide, by decide, by decide⟩
-
-/-- Brieskorn sphere $\Sigma(2, 5, 7)$ has signature $\sigma = -16$. -/
 theorem signature_2_5_7 : brieskornSignature 2 5 7 = -16 := rfl
-
-/-- Brieskorn sphere $\Sigma(2, 5, 7)$ has Casson invariant $\lambda = 2$. -/
 theorem casson_2_5_7 : cassonInvariant 2 5 7 = 2 := by
   norm_num [cassonInvariant, (show brieskornSignature 2 5 7 = -16 from rfl)]
 
-/-- Integer Casson invariant for $\Sigma(2, 5, 7)$. -/
-theorem cassonNat_2_5_7 : cassonInvariantNat 2 5 7 = 2 := rfl
-
 end Brieskorn
+
+namespace BrieskornSU2
+
+open Finset
+
+/-! ### 1. Diophantine Angle Triples & Spherical Inequalities -/
+
+/-- Normalized rational angle $k/n \in \mathbb{Q}$. -/
+def angleQ (k n : ℕ) : ℚ :=
+  (k : ℚ) / (n : ℚ)
+
+/-- Strict spherical triangle angle inequalities in $\mathbb{Q}$ for $(a/p, b/q, c/r)$. -/
+def sphericalTriangleInequalitiesQ (p q r a b c : ℕ) : Prop :=
+  angleQ a p + angleQ b q > angleQ c r ∧
+  angleQ a p + angleQ c r > angleQ b q ∧
+  angleQ b q + angleQ c r > angleQ a p ∧
+  angleQ a p + angleQ b q + angleQ c r < 2
+
+/-- Cross-multiplied integer spherical triangle inequalities in $\mathbb{N}$. -/
+def sphericalTriangleInequalitiesNat (p q r a b c : ℕ) : Prop :=
+  a * q * r + b * p * r > c * p * q ∧
+  a * q * r + c * p * q > b * p * r ∧
+  b * p * r + c * p * q > a * q * r ∧
+  a * q * r + b * p * r + c * p * q < 2 * (p * q * r)
+
+/-- A triple of integers $(a, b, c)$ is odd in each component. -/
+def isOddTriple (a b c : ℕ) : Prop :=
+  a % 2 = 1 ∧ b % 2 = 1 ∧ c % 2 = 1
+
+/-- Decidable parity check for a triple of integers. -/
+def isOddTripleBool (a b c : ℕ) : Bool :=
+  (a % 2 == 1) && (b % 2 == 1) && (c % 2 == 1)
+
+/-- A triple $(a, b, c)$ is a spherical angle triple for $\Sigma(p, q, r)$ if it lies
+    in the range $1 \le a < p$, $1 \le b < q$, $1 \le c < r$, has odd components,
+    and satisfies the strict spherical triangle inequalities. -/
+def IsSphericalAngleTriple (p q r a b c : ℕ) : Prop :=
+  1 ≤ a ∧ a < p ∧
+  1 ≤ b ∧ b < q ∧
+  1 ≤ c ∧ c < r ∧
+  a % 2 = 1 ∧ b % 2 = 1 ∧ c % 2 = 1 ∧
+  a * q * r + b * p * r > c * p * q ∧
+  a * q * r + c * p * q > b * p * r ∧
+  b * p * r + c * p * q > a * q * r ∧
+  a * q * r + b * p * r + c * p * q < 2 * (p * q * r)
+
+/-- Alias for Diophantine spherical angle triple. -/
+abbrev IsDiophantineAngleTriple (p q r a b c : ℕ) : Prop :=
+  IsSphericalAngleTriple p q r a b c
+
+instance (p q r a b c : ℕ) : Decidable (IsSphericalAngleTriple p q r a b c) := by
+  dsimp [IsSphericalAngleTriple]
+  infer_instance
+
+/-- Decidable boolean filter for spherical angle triples under cross-multiplication. -/
+def isSphericalAngleBool (p q r : ℕ) (pt : ℕ × ℕ × ℕ) : Bool :=
+  let (a, (b, c)) := pt
+  let M := p * q * r
+  let Sa := a * q * r
+  let Sb := b * p * r
+  let Sc := c * p * q
+  (a % 2 == 1) && (b % 2 == 1) && (c % 2 == 1) &&
+  (Sa + Sb > Sc) &&
+  (Sa + Sc > Sb) &&
+  (Sb + Sc > Sa) &&
+  (Sa + Sb + Sc < 2 * M)
+
+/-- For even $p = 2$ and odd $q, r$, any spherical angle triple satisfies the odd sum condition. -/
+theorem sphericalAngleTriple_odd_sum {p q r a b c : ℕ} (hp : p = 2) (hq : q % 2 = 1) (hr : r % 2 = 1)
+    (h : IsSphericalAngleTriple p q r a b c) :
+    (a * q * r + b * p * r + c * p * q) % 2 = 1 := by
+  have : a = 1 := by linarith [h.1, h.2.1, hp]
+  rw [hp, this, show 1 * q * r + b * 2 * r + c * 2 * q = q * r + (b * r + c * q) * 2 by ring,
+    Nat.add_mul_mod_self_right, Nat.mul_mod, hq, hr]
+
+/-! ### 2. Finset of Irreducible SU(2) Representations -/
+
+/-- The finite search space $\prod_{i=1}^3 [1, p_i - 1]$ of candidate representation parameters. -/
+def candidateRepFinset (p q r : ℕ) : Finset (ℕ × ℕ × ℕ) :=
+  Finset.Ico 1 p ×ˢ (Finset.Ico 1 q ×ˢ Finset.Ico 1 r)
+
+/-- The total number of candidate tuples before angle and parity filtering. -/
+theorem candidateRepFinset_card (p q r : ℕ) :
+    (candidateRepFinset p q r).card = (p - 1) * (q - 1) * (r - 1) := by
+  simp [candidateRepFinset, mul_assoc]
+
+/-- The finite set of irreducible $SU(2)$ representations $\mathcal{R}^*(\Sigma(p, q, r))$,
+    identified with the Diophantine spherical angle solution set. -/
+def IrredSU2RepSet (p q r : ℕ) : Finset (ℕ × ℕ × ℕ) :=
+  (candidateRepFinset p q r).filter (fun pt => isSphericalAngleBool p q r pt)
+
+/-- The number of irreducible $SU(2)$ representations of $\Sigma(p, q, r)$. -/
+def irredRepCount (p q r : ℕ) : ℕ :=
+  (IrredSU2RepSet p q r).card
+
+/-! ### 3. Certified Irreducible Representation Counts -/
+
+/-- Poincaré homology sphere $\Sigma(2, 3, 5)$ has exactly 2 irreducible $SU(2)$ representations. -/
+theorem card_irred_su2_2_3_5 : (IrredSU2RepSet 2 3 5).card = 2 := rfl
+
+/-- Alias for Poincaré homology sphere representation count. -/
+theorem card_irredRepSet_2_3_5 : (IrredSU2RepSet 2 3 5).card = 2 := rfl
+
+/-- Brieskorn sphere $\Sigma(2, 3, 7)$ has exactly 2 irreducible $SU(2)$ representations. -/
+theorem card_irred_su2_2_3_7 : (IrredSU2RepSet 2 3 7).card = 2 := rfl
+
+/-- Alias for $\Sigma(2, 3, 7)$ representation count. -/
+theorem card_irredRepSet_2_3_7 : (IrredSU2RepSet 2 3 7).card = 2 := rfl
+
+/-- Brieskorn sphere $\Sigma(2, 3, 11)$ has exactly 4 irreducible $SU(2)$ representations. -/
+theorem card_irred_su2_2_3_11 : (IrredSU2RepSet 2 3 11).card = 4 := rfl
+
+/-- Alias for $\Sigma(2, 3, 11)$ representation count. -/
+theorem card_irredRepSet_2_3_11 : (IrredSU2RepSet 2 3 11).card = 4 := rfl
+
+/-- Brieskorn sphere $\Sigma(2, 5, 7)$ has exactly 4 irreducible $SU(2)$ representations. -/
+theorem card_irred_su2_2_5_7 : (IrredSU2RepSet 2 5 7).card = 4 := rfl
+
+/-- Alias for $\Sigma(2, 5, 7)$ representation count. -/
+theorem card_irredRepSet_2_5_7 : (IrredSU2RepSet 2 5 7).card = 4 := rfl
+
+/-! ### 4. Casson Invariant Identification -/
+
+/-- Integer Casson invariant computed from the $SU(2)$ character variety:
+    $\lambda_{SU(2)}(\Sigma(p, q, r)) = \frac{1}{2} \#\mathcal{R}^*(\Sigma(p, q, r))$. -/
+def cassonSU2 (p q r : ℕ) : ℕ :=
+  (IrredSU2RepSet p q r).card / 2
+
+/-- Alias for integer Casson invariant from $SU(2)$. -/
+def cassonFromSU2 (p q r : ℕ) : ℕ :=
+  cassonSU2 p q r
+
+/-- Rational Casson invariant computed from the $SU(2)$ character variety. -/
+def cassonFromSU2Rat (p q r : ℕ) : ℚ :=
+  ((IrredSU2RepSet p q r).card : ℚ) / 2
+
+/-- Character variety Casson invariant for $\Sigma(2, 3, 5)$ is 1. -/
+theorem cassonSU2_2_3_5 : cassonSU2 2 3 5 = 1 := rfl
+
+/-- Character variety Casson invariant for $\Sigma(2, 3, 7)$ is 1. -/
+theorem cassonSU2_2_3_7 : cassonSU2 2 3 7 = 1 := rfl
+
+/-- Character variety Casson invariant for $\Sigma(2, 3, 11)$ is 2. -/
+theorem cassonSU2_2_3_11 : cassonSU2 2 3 11 = 2 := rfl
+
+/-- Character variety Casson invariant for $\Sigma(2, 5, 7)$ is 2. -/
+theorem cassonSU2_2_5_7 : cassonSU2 2 5 7 = 2 := rfl
+
+/-- Integer agreement between $SU(2)$ character variety Casson invariant and
+    Milnor fiber signature Casson invariant for $\Sigma(2, 3, 5)$. -/
+theorem casson_su2_eq_brieskorn_2_3_5 :
+    cassonSU2 2 3 5 = Brieskorn.cassonInvariantNat 2 3 5 := rfl
+
+/-- Integer agreement between $SU(2)$ character variety Casson invariant and
+    Milnor fiber signature Casson invariant for $\Sigma(2, 3, 7)$. -/
+theorem casson_su2_eq_brieskorn_2_3_7 :
+    cassonSU2 2 3 7 = Brieskorn.cassonInvariantNat 2 3 7 := rfl
+
+/-- Integer agreement between $SU(2)$ character variety Casson invariant and
+    Milnor fiber signature Casson invariant for $\Sigma(2, 3, 11)$. -/
+theorem casson_su2_eq_brieskorn_2_3_11 :
+    cassonSU2 2 3 11 = Brieskorn.cassonInvariantNat 2 3 11 := rfl
+
+/-- Integer agreement between $SU(2)$ character variety Casson invariant and
+    Milnor fiber signature Casson invariant for $\Sigma(2, 5, 7)$. -/
+theorem casson_su2_eq_brieskorn_2_5_7 :
+    cassonSU2 2 5 7 = Brieskorn.cassonInvariantNat 2 5 7 := rfl
+
+/-- Rational agreement between $SU(2)$ character variety Casson invariant and
+    Milnor fiber signature Casson invariant for $\Sigma(2, 3, 5)$. -/
+theorem cassonRat_su2_eq_brieskorn_2_3_5 :
+    cassonFromSU2Rat 2 3 5 = Brieskorn.cassonInvariant 2 3 5 := by
+  norm_num [cassonFromSU2Rat, card_irred_su2_2_3_5, Brieskorn.casson_2_3_5]
+
+/-- Rational agreement between $SU(2)$ character variety Casson invariant and
+    Milnor fiber signature Casson invariant for $\Sigma(2, 3, 7)$. -/
+theorem cassonRat_su2_eq_brieskorn_2_3_7 :
+    cassonFromSU2Rat 2 3 7 = Brieskorn.cassonInvariant 2 3 7 := by
+  norm_num [cassonFromSU2Rat, card_irred_su2_2_3_7, Brieskorn.casson_2_3_7]
+
+/-- Rational agreement between $SU(2)$ character variety Casson invariant and
+    Milnor fiber signature Casson invariant for $\Sigma(2, 3, 11)$. -/
+theorem cassonRat_su2_eq_brieskorn_2_3_11 :
+    cassonFromSU2Rat 2 3 11 = Brieskorn.cassonInvariant 2 3 11 := by
+  norm_num [cassonFromSU2Rat, card_irred_su2_2_3_11, Brieskorn.casson_2_3_11]
+
+/-- Rational agreement between $SU(2)$ character variety Casson invariant and
+    Milnor fiber signature Casson invariant for $\Sigma(2, 5, 7)$. -/
+theorem cassonRat_su2_eq_brieskorn_2_5_7 :
+    cassonFromSU2Rat 2 5 7 = Brieskorn.cassonInvariant 2 5 7 := by
+  norm_num [cassonFromSU2Rat, card_irred_su2_2_5_7, Brieskorn.casson_2_5_7]
+
+/-! ### 5. Fricke-Vogt Trace Variety & SU(2) Central Relation -/
+
+/-- The Fricke-Vogt trace polynomial for representations satisfying $XYZ = -I$:
+    $\Phi(t_x, t_y, t_z) = t_x^2 + t_y^2 + t_z^2 + t_x t_y t_z - 4$. -/
+def frickeVogtPoly {R : Type*} [CommRing R] (tx ty tz : R) : R :=
+  tx ^ 2 + ty ^ 2 + tz ^ 2 + tx * ty * tz - 4
+
+/-- Permutation symmetry of the Fricke-Vogt polynomial under $t_x \leftrightarrow t_y$. -/
+theorem frickeVogtPoly_perm_xy {R : Type*} [CommRing R] (tx ty tz : R) :
+    frickeVogtPoly tx ty tz = frickeVogtPoly ty tx tz := by
+  dsimp [frickeVogtPoly]; ring
+
+/-- Permutation symmetry of the Fricke-Vogt polynomial under $t_y \leftrightarrow t_z$. -/
+theorem frickeVogtPoly_perm_yz {R : Type*} [CommRing R] (tx ty tz : R) :
+    frickeVogtPoly tx ty tz = frickeVogtPoly tx tz ty := by
+  dsimp [frickeVogtPoly]; ring
+
+/-- Permutation symmetry of the Fricke-Vogt polynomial under $t_x \leftrightarrow t_z$. -/
+theorem frickeVogtPoly_perm_xz {R : Type*} [CommRing R] (tx ty tz : R) :
+    frickeVogtPoly tx ty tz = frickeVogtPoly tz ty tx := by
+  dsimp [frickeVogtPoly]; ring
+
+/-- Cyclic permutation symmetry of the Fricke-Vogt polynomial. -/
+theorem frickeVogtPoly_cyclic {R : Type*} [CommRing R] (tx ty tz : R) :
+    frickeVogtPoly tx ty tz = frickeVogtPoly ty tz tx := by
+  dsimp [frickeVogtPoly]; ring
+
+/-- The discriminant identity for the Fricke-Vogt trace variety:
+    $(2 t_z + t_x t_y)^2 - (4 - t_x^2)(4 - t_y^2) = 4 \Phi(t_x, t_y, t_z)$. -/
+theorem frickeVogt_discriminant_identity {R : Type*} [CommRing R] (tx ty tz : R) :
+    (2 * tz + tx * ty) ^ 2 - (4 - tx ^ 2) * (4 - ty ^ 2) = 4 * frickeVogtPoly tx ty tz := by
+  dsimp [frickeVogtPoly]; ring
+
+/-- Rational boundary vanishing: if $(2 t_z + t_x t_y)^2 = (4 - t_x^2)(4 - t_y^2) over $\mathbb{Q}$,
+    then the Fricke-Vogt polynomial vanishes: $t_x^2 + t_y^2 + t_z^2 + t_x t_y t_z - 4 = 0$. -/
+theorem frickeVogt_boundary_zero_rat (tx ty tz : ℚ)
+    (h : (2 * tz + tx * ty) ^ 2 = (4 - tx ^ 2) * (4 - ty ^ 2)) :
+    frickeVogtPoly tx ty tz = 0 := by
+  linarith [frickeVogt_discriminant_identity (R := ℚ) tx ty tz, h]
+
+/-- Specialization to order-2 generator $x$ ($p = 2 \implies t_x = 0$):
+    $\Phi(0, t_y, t_z) = t_y^2 + t_z^2 - 4$. -/
+theorem frickeVogt_order2_specialization {R : Type*} [CommRing R] (ty tz : R) :
+    frickeVogtPoly 0 ty tz = ty ^ 2 + tz ^ 2 - 4 := by
+  dsimp [frickeVogtPoly]; ring
+
+/-- Order-2 boundary circle relation: when $t_y^2 + t_z^2 = 4$, the Fricke-Vogt relation vanishes. -/
+theorem frickeVogt_order2_boundary_circle {R : Type*} [CommRing R] (ty tz : R)
+    (h : ty ^ 2 + tz ^ 2 = 4) :
+    frickeVogtPoly 0 ty tz = 0 := by
+  rw [frickeVogt_order2_specialization, h, sub_self]
+
+/-- Central fiber property: the central element $h \in \pi_1(\Sigma(p,q,r))$ is mapped
+    to $-I \in SU(2)$, which has trace $-2$. -/
+def centralFiberTrace : ℤ := -2
+
+/-- Central fiber relation: $\rho(xyz) = \rho(h)^b = (-I)^b = -I$ for odd Seifert exponent $b$. -/
+theorem central_fiber_odd_power (b : ℕ) (hb : b % 2 = 1) :
+    (-1 : ℤ) ^ b = -1 :=
+  Odd.neg_one_pow (Nat.odd_iff.mpr hb)
+
+end BrieskornSU2
