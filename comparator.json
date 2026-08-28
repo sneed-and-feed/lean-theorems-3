@@ -2,16 +2,14 @@
   "challenge_module": "Challenge",
   "solution_module": "Solution",
   "theorem_names": [
-    "RuzsaFreiman.doublingConstant_ge_one",
-    "RuzsaFreiman.ruzsa_triangle_cardinality",
-    "RuzsaFreiman.ruzsa_triangle_inequality",
-    "RuzsaFreiman.diffset_bound_of_doubling",
-    "RuzsaFreiman.plunnecke_petridis_lemma",
-    "RuzsaFreiman.plunnecke_ruzsa_inequality",
-    "RuzsaFreiman.plunnecke_tripling",
-    "RuzsaFreiman.plunnecke_two_sub_two",
-    "RuzsaFreiman.gapElements_card_le",
-    "RuzsaFreiman.freimanHomomorphism_id"
+    "SzemerediRegularity.pairDensity_le_one",
+    "SzemerediRegularity.pairDensity_weighted_split",
+    "SzemerediRegularity.isEpsilonRegularPair_symm",
+    "SzemerediRegularity.energy_le_one",
+    "SzemerediRegularity.energy_exhaustion_bound",
+    "SzemerediRegularity.max_increment_steps_bound",
+    "SzemerediRegularity.szemeredi_regularity_mathlib_bridge",
+    "SzemerediRegularity.triangle_removal_mathlib_bridge"
   ],
   "permitted_axioms": [
     "propext",

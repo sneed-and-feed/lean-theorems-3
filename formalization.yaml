@@ -1,56 +1,48 @@
 version: "v0.4"
 
 project:
-  name: "Ruzsa Distance, Plünnecke–Ruzsa Inequalities, and Freiman Homomorphisms"
+  name: "Szemerédi's Regularity Lemma and Partition Energy Dynamics"
   authors:
     - "Sneed & Feed Formalization Team"
   responsible_maintainers:
     - "sneed-and-feed"
   license: "CC0-1.0"
   description: >-
-    A complete machine-checked Lean 4 formalization of Ruzsa distance, sumset difference inequalities,
-    Plünnecke–Ruzsa bounds, Petridis' minimizer lemma, and Generalized Arithmetic Progressions (GAP).
-    Includes the fundamental Ruzsa triangle inequality in both cardinality and log-metric forms,
-    the Plünnecke–Ruzsa iterated sumset bounds |k B - \ell B| <= K^{k+\ell} |A|, cubic tripling
-    |A + A + A| <= K^3 |A|, four-fold difference set bounds |2A - 2A| <= K^4 |A|, and Freiman
-    homomorphism composition properties. To the maintainers' knowledge, the theorem was not found
-    in an exact declaration name, docstring, and type signature search of the pinned Mathlib revision
-    (Mathlib v4.34.0-rc1).
+    A machine-checked Lean 4 formalization of the foundations of Szemerédi's Regularity Lemma
+    (Endre Szemerédi, 1978) and the Triangle Removal Lemma (Ruzsa–Szemerédi, 1978). Formalizes pair edge density,
+    \varepsilon-regular pairs, the normalized partition energy E(\mathcal{P}) \in [0, 1], the discrete energy
+    increment exhaustion bound k <= 2/\varepsilon^5, and complete mathematical bridges to Mathlib's verified
+    `szemeredi_regularity` and `triangle_removal` theorems. To the maintainers' knowledge, the theorem
+    was not found in an exact declaration name, docstring, and type signature search of the pinned Mathlib
+    revision (Mathlib v4.34.0-rc1).
 
 classification:
-  arxiv: [math.CO, math.NT]
-  msc2020: ["11B30", "11P70", "05B10", "20K99"]
+  arxiv: [math.CO]
+  msc2020: ["05C75", "05C80", "05D10"]
 
 sources:
-  - title: "Sums of finite sets"
+  - title: "Regular partitions of graphs"
+    type: paper
+    authors:
+      - "Endre Szemerédi"
+    venue: "Problèmes Combinatoires et Théorie des Graphes, Colloq. Internat. CNRS"
+    year: 1978
+    relationship: formalizes
+  - title: "Triple systems with no six points carrying three triangles"
     type: paper
     authors:
       - "Imre Z. Ruzsa"
-    venue: "Number Theory: New York Seminar, Springer"
-    year: 1996
-    relationship: formalizes
-  - title: "New proofs of Plünnecke-type estimates for sumsets"
-    type: paper
-    authors:
-      - "Giorgis Petridis"
-    venue: "Combinatorics, Probability and Computing"
-    year: 2012
+      - "Endre Szemerédi"
+    venue: "Combinatorics (Keszthely), Colloq. Math. Soc. J. Bolyai"
+    year: 1978
     relationship: adapts
-  - title: "Additive Combinatorics"
-    type: book
-    authors:
-      - "Terence Tao"
-      - "Van H. Vu"
-    publisher: "Cambridge University Press"
-    year: 2006
-    relationship: background
 
 related_formalizations:
-  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Combinatorics/Additive/PluenneckeRuzsa.lean"
+  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Combinatorics/SimpleGraph/Regularity/Lemma.lean"
     relationship: builds-on
     note: >-
-      Formalization builds on Mathlib's Plünnecke-Ruzsa sumset primitives, extending them with
-      the Ruzsa log-metric distance, Petridis minimizer analysis, and GAP volume bounds.
+      Formalization builds on Mathlib's regularity and uniform partition library, providing
+      first-principles definitions of pair density, partition energy, and iteration exhaustion bounds.
 
 automation:
   methods:

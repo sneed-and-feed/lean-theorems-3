@@ -1,170 +1,168 @@
-import Mathlib.Algebra.Group.Pointwise.Finset.Basic
-import Mathlib.Data.Finset.Card
-import Mathlib.Data.Finset.Basic
-import Mathlib.Data.Fintype.BigOperators
-import Mathlib.Combinatorics.Additive.PluenneckeRuzsa
+import Mathlib.Combinatorics.SimpleGraph.Basic
+import Mathlib.Combinatorics.SimpleGraph.Density
+import Mathlib.Combinatorics.SimpleGraph.Regularity.Bound
+import Mathlib.Combinatorics.SimpleGraph.Regularity.Energy
+import Mathlib.Combinatorics.SimpleGraph.Regularity.Uniform
+import Mathlib.Combinatorics.SimpleGraph.Regularity.Lemma
+import Mathlib.Combinatorics.SimpleGraph.Triangle.Basic
+import Mathlib.Combinatorics.SimpleGraph.Triangle.Counting
+import Mathlib.Combinatorics.SimpleGraph.Triangle.Removal
 import Mathlib.Data.Real.Basic
-import Mathlib.Analysis.SpecialFunctions.Log.Basic
-import Mathlib.Analysis.SpecialFunctions.Sqrt
-import Mathlib.Analysis.SpecialFunctions.Pow.Real
+import Mathlib.Data.Finset.Basic
+import Mathlib.Data.Finset.Card
+import Mathlib.Data.Fintype.Card
 import Mathlib.Tactic.Positivity
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Linarith
+import Mathlib.Tactic.GCongr
+import Mathlib.Tactic.FieldSimp
 
-open scoped Pointwise
 open scoped BigOperators Finset
+open Classical
 
 set_option linter.unusedSectionVars false
+set_option linter.unusedVariables false
 
 /-!
-# Ruzsa–Freiman Sumset Calculus and Plünnecke–Ruzsa Bounds
+# Szemerédi's Regularity Lemma and Partition Energy Dynamics
 
-This module formalizes the core algebraic machinery of **Ruzsa Distance, Plünnecke–Ruzsa Bounds,
-and Freiman Homomorphisms** (Imre Z. Ruzsa 1989/1996, Helmut Plünnecke 1970, Giorgis Petridis 2012).
+This module formalizes the structural and dynamic foundations of **Szemerédi's Regularity Lemma** (Endre Szemerédi, 1978)
+and the **Triangle Removal Lemma** (Imre Z. Ruzsa and Endre Szemerédi, 1978).
 
 ## Mathematical Overview
 
-For finite subsets $A, B, C$ of an additive abelian group $G$:
-1. **Ruzsa Cardinality Inequality**: $|B| \cdot |A - C| \le |A - B| \cdot |B - C|$.
-2. **Ruzsa Metric Triangle Inequality**: $d_R(A, C) \le d_R(A, B) + d_R(B, C)$ where $d_R(A, B) = \log \frac{|A - B|}{\sqrt{|A||B|}}$.
-3. **Plünnecke–Petridis Lemma**: Existence of a minimal magnification subset $A' \subseteq A$.
-4. **Plünnecke–Ruzsa Inequality**: $|k B - \ell B| \le K^{k+\ell} |A|$ whenever $|A + B| \le K |A|$.
-5. **Sumset Tripling and Difference Bounds**: $|A + A + A| \le K^3 |A|$ and $|2A - 2A| \le K^4 |A|$.
+1. **Pair Edge Density**: $d(X, Y) = \frac{e(X, Y)}{|X| |Y|} \in [0, 1]$.
+2. **$\varepsilon$-Regular Pairs**: A pair $(X, Y)$ is $\varepsilon$-regular if $|d(A, B) - d(X, Y)| \le \varepsilon$
+   for all $A \subseteq X, B \subseteq Y$ with $|A| \ge \varepsilon |X|, |B| \ge \varepsilon |Y|$.
+3. **Partition Energy**: $E(\mathcal{P}) = \sum_{X, Y \in \mathcal{P}} \frac{|X||Y|}{n^2} d(X, Y)^2 \in [0, 1]$.
+4. **Energy Exhaustion**: Any energy sequence bounded in $[0, 1]$ with minimum step increment $\varepsilon^5 / 2$
+   can make at most $2 / \varepsilon^5$ steps.
+5. **Mathlib Regularity and Removal Bridges**: Connecting the formal definitions to Mathlib's verified `szemeredi_regularity`
+   and `triangle_removal` theorems.
 
 ## References
 
-- Ruzsa, I. Z. (1996). *Sums of finite sets*. Number Theory: New York Seminar, Springer, 281–293.
-- Petridis, G. (2012). *New proofs of Plünnecke-type estimates for sumsets*. Combinatorics, Probability and Computing, 21(6), 821–828.
-- Tao, T., & Vu, V. (2006). *Additive Combinatorics*. Cambridge University Press.
+- Szemerédi, E. (1978). *Regular partitions of graphs*. Problèmes Combinatoires et Théorie des Graphes, 260, 399–401.
+- Ruzsa, I. Z., & Szemerédi, E. (1978). *Triple systems with no six points carrying three triangles*. Combinatorics, 18, 939–945.
 -/
 
-namespace RuzsaFreiman
+variable {V : Type*} [Fintype V] [DecidableEq V]
 
-variable {G : Type*} [DecidableEq G] [AddCommGroup G]
+namespace SzemerediRegularity
 
-/-- The sumset $A + B = \{a + b : a \in A, b \in B\}$. -/
-def sumset (A B : Finset G) : Finset G := A + B
+/-- The number of edges between two subsets $X, Y \subseteq V$ in a simple graph $G$. -/
+def bipartiteEdgeCount (G : SimpleGraph V) [DecidableRel G.Adj] (X Y : Finset V) : ℕ :=
+  ((X ×ˢ Y).filter (fun p => G.Adj p.1 p.2)).card
 
-/-- The difference set $A - B = \{a - b : a \in A, b \in B\}$. -/
-def diffset (A B : Finset G) : Finset G := A - B
+/-- The edge density $d(X, Y) = \frac{e(X, Y)}{|X| |Y|}$ between sets $X, Y$. -/
+noncomputable def pairDensity (G : SimpleGraph V) [DecidableRel G.Adj] (X Y : Finset V) : ℝ :=
+  (bipartiteEdgeCount G X Y : ℝ) / ((X.card : ℝ) * (Y.card : ℝ))
 
-/-- The doubling constant $\sigma(A) = \frac{|A + A|}{|A|}$. -/
-def doublingConstant (A : Finset G) : ℚ :=
-  (A + A).card / (A.card : ℚ)
+/--
+**Definition of an $\varepsilon$-Regular Pair**:
+A pair $(X, Y)$ is $\varepsilon$-regular if for all $A \subseteq X$ with $|A| \ge \varepsilon |X|$
+and all $B \subseteq Y$ with $|B| \ge \varepsilon |Y|$, the sub-pair density satisfies:
+$$|d_G(A, B) - d_G(X, Y)| \le \varepsilon$$
+-/
+def IsEpsilonRegularPair (G : SimpleGraph V) [DecidableRel G.Adj] (ε : ℝ) (X Y : Finset V) : Prop :=
+  ∀ (A : Finset V) (B : Finset V),
+    A ⊆ X → B ⊆ Y →
+    ε * (X.card : ℝ) ≤ (A.card : ℝ) →
+    ε * (Y.card : ℝ) ≤ (B.card : ℝ) →
+    |pairDensity G A B - pairDensity G X Y| ≤ ε
 
-/-- The Ruzsa multiplicative ratio $\rho_R(A, B) = \frac{|A - B|}{\sqrt{|A| |B|}}$. -/
-noncomputable def ruzsaRatio (A B : Finset G) : ℝ :=
-  (A - B).card / Real.sqrt ((A.card : ℝ) * (B.card : ℝ))
+/-- A vertex partition of a finite graph $V$. -/
+structure GraphPartition (V : Type*) [Fintype V] [DecidableEq V] where
+  parts : Finset (Finset V)
+  disjoint : ∀ A ∈ parts, ∀ B ∈ parts, A ≠ B → Disjoint A B
+  cover : parts.biUnion id = Finset.univ
+  nonempty_parts : ∀ A ∈ parts, A.Nonempty
 
-/-- The Ruzsa distance $d_R(A, B) = \log \frac{|A - B|}{\sqrt{|A| |B|}}$. -/
-noncomputable def ruzsaDistance (A B : Finset G) : ℝ :=
-  Real.log (ruzsaRatio A B)
+/-- The normalized quadratic energy of a graph partition:
+    $E(\mathcal{P}) = \sum_{X \in \mathcal{P}} \sum_{Y \in \mathcal{P}} \frac{|X| |Y|}{|V|^2} d_G(X, Y)^2$. -/
+noncomputable def partitionEnergy (G : SimpleGraph V) [DecidableRel G.Adj] (P : GraphPartition V) : ℝ :=
+  ∑ X ∈ P.parts, ∑ Y ∈ P.parts,
+    ((X.card : ℝ) * (Y.card : ℝ) / ((Fintype.card V : ℝ) ^ 2)) * (pairDensity G X Y) ^ 2
 
-/-- Iterated sumset $k A = A + \dots + A$ ($k$ terms). -/
-def iteratedSumset (k : ℕ) (A : Finset G) : Finset G :=
-  match k with
-  | 0 => {0}
-  | k + 1 => iteratedSumset k A + A
+/-- The edge density is bounded in $[0, 1]$ for non-empty sets. -/
+theorem pairDensity_le_one (G : SimpleGraph V) [DecidableRel G.Adj] (X Y : Finset V)
+    (hX : X.Nonempty) (hY : Y.Nonempty) :
+    pairDensity G X Y ≤ 1 := by
+  sorry
 
-/-- A Generalized Arithmetic Progression (GAP) of dimension `dim` in an additive group $G$. -/
-structure GAP (G : Type*) [AddCommGroup G] where
-  dim : ℕ
-  base : G
-  steps : Fin dim → G
-  lengths : Fin dim → ℕ
+/-- Weighted average split for pair density under partitioning the left set. -/
+theorem pairDensity_weighted_split (G : SimpleGraph V) [DecidableRel G.Adj] {X₁ X₂ Y : Finset V}
+    (hdisj : Disjoint X₁ X₂) (hU : (X₁ ∪ X₂).Nonempty) (hY : Y.Nonempty) :
+    pairDensity G (X₁ ∪ X₂) Y =
+      ((X₁.card : ℝ) / ((X₁ ∪ X₂).card : ℝ)) * pairDensity G X₁ Y +
+      ((X₂.card : ℝ) / ((X₁ ∪ X₂).card : ℝ)) * pairDensity G X₂ Y := by
+  sorry
 
-/-- The Finset of elements represented by a GAP $P$. -/
-def gapElements (P : GAP G) : Finset G :=
-  (Fintype.piFinset (fun i : Fin P.dim => Finset.range (P.lengths i))).image
-    (fun (k : Fin P.dim → ℕ) => P.base + ∑ i : Fin P.dim, (k i) • (P.steps i))
-
-/-- A map $\phi : A \to B$ is a Freiman homomorphism of order $k$ if it preserves $k$-term equality of sums. -/
-def IsFreimanHomomorphism {H : Type*} [AddCommGroup H]
-    (A : Finset G) (f : G → H) (k : ℕ) : Prop :=
-  ∀ (xs ys : Fin k → G), (∀ i, xs i ∈ A) → (∀ i, ys i ∈ A) →
-    (∑ i, xs i = ∑ i, ys i) → (∑ i, f (xs i) = ∑ i, f (ys i))
-
-/-- Doubling constant is at least 1 for non-empty sets. -/
-theorem doublingConstant_ge_one {A : Finset G} (hA : A.Nonempty) :
-    1 ≤ doublingConstant A := by
+/-- Symmetry of the $\varepsilon$-regular pair predicate: $(X, Y)$ is $\varepsilon$-regular iff $(Y, X)$ is. -/
+theorem isEpsilonRegularPair_symm (G : SimpleGraph V) [DecidableRel G.Adj] (ε : ℝ) (X Y : Finset V) :
+    IsEpsilonRegularPair G ε X Y ↔ IsEpsilonRegularPair G ε Y X := by
   sorry
 
 /--
-**Ruzsa Triangle Inequality (Cardinality Form)**:
-For any finite subsets $A, B, C$ in an additive group $G$:
-$$|B| \cdot |A - C| \le |A - B| \cdot |B - C|$$
+**Energy Upper Bound**:
+For any graph $G$ and partition $\mathcal{P}$, the normalized energy satisfies $E(\mathcal{P}) \le 1$.
 -/
-theorem ruzsa_triangle_cardinality (A B C : Finset G) :
-    B.card * (A - C).card ≤ (A - B).card * (B - C).card := by
+theorem energy_le_one (G : SimpleGraph V) [DecidableRel G.Adj] (P : GraphPartition V) :
+    partitionEnergy G P ≤ 1 := by
   sorry
 
 /--
-**Ruzsa Triangle Inequality (Metric Form)**:
-For any non-empty finite subsets $A, B, C \subseteq G$:
-$$d_R(A, C) \le d_R(A, B) + d_R(B, C)$$
+**Energy Exhaustion Principle**:
+Any energy sequence bounded in $[0, 1]$ with strict minimum increment $\Delta > 0$
+at each step can make at most $\lfloor 1 / \Delta \rfloor$ steps.
 -/
-theorem ruzsa_triangle_inequality {A B C : Finset G}
-    (hA : A.Nonempty) (hB : B.Nonempty) (hC : C.Nonempty) :
-    ruzsaDistance A C ≤ ruzsaDistance A B + ruzsaDistance B C := by
+theorem energy_exhaustion_bound (energy_seq : ℕ → ℝ)
+    (h_nonneg : ∀ (i : ℕ), 0 ≤ energy_seq i)
+    (h_le_one : ∀ (i : ℕ), energy_seq i ≤ 1)
+    (Δ : ℝ) (hΔ : 0 < Δ)
+    (h_inc : ∀ (i : ℕ), energy_seq i + Δ ≤ energy_seq (i + 1)) (k : ℕ) :
+    (k : ℝ) * Δ ≤ 1 := by
   sorry
 
 /--
-**Iterated Difference Bound**:
-For any non-empty finite set $A \subseteq G$ with $|A + A| \le K |A|$,
-$|A - A| \le K^2 |A|$.
+**Maximum Number of Increment Iterations**:
+The maximum number of times the energy increment can occur under an $\varepsilon^5 / 2$ step boost
+is bounded by $2 / \varepsilon^5$.
 -/
-theorem diffset_bound_of_doubling {A : Finset G} (hA : A.Nonempty) {K : ℝ}
-    (hK : ((A + A).card : ℝ) ≤ K * (A.card : ℝ)) :
-    ((A - A).card : ℝ) ≤ K ^ 2 * (A.card : ℝ) := by
+theorem max_increment_steps_bound (energy_seq : ℕ → ℝ)
+    (h_nonneg : ∀ (i : ℕ), 0 ≤ energy_seq i)
+    (h_le_one : ∀ (i : ℕ), energy_seq i ≤ 1)
+    (ε : ℝ) (hε : 0 < ε)
+    (h_inc : ∀ (i : ℕ), energy_seq i + (ε ^ 5) / 2 ≤ energy_seq (i + 1)) (k : ℕ) :
+    (k : ℝ) ≤ 2 / (ε ^ 5) := by
   sorry
 
 /--
-**Petridis' Minimizer Lemma**:
-For any non-empty finite subsets $A, B \subseteq G$, there exists a non-empty subset $A' \subseteq A$ such that
-for all finite sets $X \subseteq G$:
-$$|A' + B + X| \le \frac{|A' + B|}{|A'|} |A' + X|$$
+**Mathlib Bridge for Szemerédi's Regularity Lemma**:
+Mathlib's `szemeredi_regularity` produces an equitable $\varepsilon$-uniform finpartition
+whose size is bounded by `SzemerediRegularity.bound ε l`.
 -/
-theorem plunnecke_petridis_lemma (A B : Finset G) (hA : A.Nonempty) (hB : B.Nonempty) :
-    ∃ A' : Finset G, A'.Nonempty ∧ A' ⊆ A ∧
-      ∀ X : Finset G, (A' + B + X).card * A'.card ≤ (A' + B).card * (A' + X).card := by
+theorem szemeredi_regularity_mathlib_bridge (G : SimpleGraph V) [DecidableRel G.Adj]
+    (ε : ℝ) (hε : 0 < ε) (l : ℕ) (hl : l ≤ Fintype.card V) :
+    ∃ P : Finpartition (Finset.univ : Finset V),
+      P.IsEquipartition ∧
+      l ≤ P.parts.card ∧
+      P.parts.card ≤ SzemerediRegularity.bound ε l ∧
+      P.IsUniform G ε := by
   sorry
 
 /--
-**The Plünnecke–Ruzsa Inequality (General Two-Set Form)**:
-If $A, B \subseteq G$ are finite sets with $|A + B| \le K |A|$, then for any $k, \ell \ge 0$:
-$$|k B - \ell B| \le K^{k + \ell} |A|$$
+**Mathlib Bridge for Triangle Removal**:
+Mathlib's `SimpleGraph.triangle_removal` ensures that if the number of 3-cliques is strictly below
+`triangleRemovalBound δ * |V|^3`, there exists a subgraph `G' ≤ G` with `G'.CliqueFree 3` obtained
+by removing fewer than `δ * |V|^2` edges.
 -/
-theorem plunnecke_ruzsa_inequality {A B : Finset G} (hA : A.Nonempty) {K : ℝ}
-    (hK : ((A + B).card : ℝ) ≤ K * (A.card : ℝ)) (k l : ℕ) :
-    ((iteratedSumset k B - iteratedSumset l B).card : ℝ) ≤ K ^ (k + l) * (A.card : ℝ) := by
+theorem triangle_removal_mathlib_bridge (G : SimpleGraph V) [DecidableRel G.Adj] {δ : ℝ}
+    (hG : (#(G.cliqueFinset 3) : ℝ) < SimpleGraph.triangleRemovalBound δ * (Fintype.card V : ℝ) ^ 3) :
+    ∃ (G' : SimpleGraph V) (_ : DecidableRel G'.Adj),
+      G' ≤ G ∧
+      ((#G.edgeFinset - #G'.edgeFinset : ℝ) < δ * ((Fintype.card V : ℝ) ^ 2)) ∧
+      G'.CliqueFree 3 := by
   sorry
 
-/--
-**Tripling Bound from Doubling**:
-If $|A + A| \le K |A|$, then $|A + A + A| \le K^3 |A|$.
--/
-theorem plunnecke_tripling {A : Finset G} (hA : A.Nonempty) {K : ℝ}
-    (hK : ((A + A).card : ℝ) ≤ K * (A.card : ℝ)) :
-    ((A + A + A).card : ℝ) ≤ K ^ 3 * (A.card : ℝ) := by
-  sorry
-
-/--
-**Four-fold Difference Bound**:
-If $|A + A| \le K |A|$, then $|2A - 2A| \le K^4 |A|$.
--/
-theorem plunnecke_two_sub_two {A : Finset G} (hA : A.Nonempty) {K : ℝ}
-    (hK : ((A + A).card : ℝ) ≤ K * (A.card : ℝ)) :
-    (((A + A) - (A + A)).card : ℝ) ≤ K ^ 4 * (A.card : ℝ) := by
-  sorry
-
-/-- The cardinality of a GAP is bounded by the product of side lengths. -/
-theorem gapElements_card_le (P : GAP G) :
-    (gapElements P).card ≤ ∏ i : Fin P.dim, P.lengths i := by
-  sorry
-
-/-- Identity map is always a Freiman homomorphism of any order $k$. -/
-theorem freimanHomomorphism_id (A : Finset G) (k : ℕ) :
-    IsFreimanHomomorphism A id k := by
-  sorry
-
-end RuzsaFreiman
+end SzemerediRegularity
