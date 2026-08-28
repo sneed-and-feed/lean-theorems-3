@@ -1,232 +1,729 @@
-import Mathlib.Combinatorics.SimpleGraph.Basic
-import Mathlib.Combinatorics.SimpleGraph.Density
-import Mathlib.Combinatorics.SimpleGraph.Regularity.Bound
-import Mathlib.Combinatorics.SimpleGraph.Regularity.Energy
-import Mathlib.Combinatorics.SimpleGraph.Regularity.Uniform
-import Mathlib.Combinatorics.SimpleGraph.Regularity.Lemma
-import Mathlib.Combinatorics.SimpleGraph.Triangle.Basic
-import Mathlib.Combinatorics.SimpleGraph.Triangle.Counting
-import Mathlib.Combinatorics.SimpleGraph.Triangle.Removal
 import Mathlib.Data.Real.Basic
-import Mathlib.Data.Finset.Basic
-import Mathlib.Data.Finset.Card
+import Mathlib.Data.Matrix.Basic
 import Mathlib.Data.Fintype.Card
-import Mathlib.Tactic.Positivity
-import Mathlib.Tactic.Ring
+import Mathlib.Data.Fintype.BigOperators
+import Mathlib.Data.Finset.Card
+import Mathlib.Data.Finset.Basic
+import Mathlib.Combinatorics.SimpleGraph.Basic
+import Mathlib.Combinatorics.SimpleGraph.DegreeSum
+import Mathlib.Algebra.Order.BigOperators.Ring.Finset
+import Mathlib.Analysis.SpecialFunctions.Pow.Real
+import Mathlib.Analysis.SpecialFunctions.Sqrt
 import Mathlib.Tactic.Linarith
-import Mathlib.Tactic.GCongr
-import Mathlib.Tactic.FieldSimp
+import Mathlib.Tactic.Ring
+import Mathlib.Tactic.Positivity
 
-open scoped BigOperators Finset
+open scoped BigOperators Matrix Finset
 open Classical
 
 set_option linter.unusedSectionVars false
-set_option linter.unusedVariables false
 
 variable {V : Type*} [Fintype V] [DecidableEq V]
 
-namespace SzemerediRegularity
+namespace TannerExpansion
 
-/-- The number of edges between two subsets $X, Y \subseteq V$ in a simple graph $G$. -/
-def bipartiteEdgeCount (G : SimpleGraph V) [DecidableRel G.Adj] (X Y : Finset V) : ℕ :=
-  ((X ×ˢ Y).filter (fun p => G.Adj p.1 p.2)).card
+/-- The $0$-$1$ adjacency matrix of a simple graph $G$ over $\mathbb{R}$. -/
+def adjacencyMatrix (G : SimpleGraph V) [DecidableRel G.Adj] : Matrix V V ℝ :=
+  fun u v => if G.Adj u v then 1 else 0
 
-/-- The edge density $d(X, Y) = \frac{e(X, Y)}{|X| |Y|}$ between sets $X, Y$. -/
-noncomputable def pairDensity (G : SimpleGraph V) [DecidableRel G.Adj] (X Y : Finset V) : ℝ :=
-  (bipartiteEdgeCount G X Y : ℝ) / ((X.card : ℝ) * (Y.card : ℝ))
+/-- Predicate stating that a simple graph is $d$-regular. -/
+def isRegularOfDegree (G : SimpleGraph V) (d : ℕ) [DecidableRel G.Adj] : Prop :=
+  ∀ v : V, G.degree v = d
 
-/-- Bridge: `pairDensity` coincides with the real coercion of Mathlib's `SimpleGraph.edgeDensity`. -/
-theorem pairDensity_eq_edgeDensity (G : SimpleGraph V) [DecidableRel G.Adj] (X Y : Finset V) :
-    pairDensity G X Y = (G.edgeDensity X Y : ℝ) := by
-  dsimp [pairDensity, SimpleGraph.edgeDensity, Rel.edgeDensity]
-  push_cast
-  rfl
+/-- In a $d$-regular graph, the sum of any row of the adjacency matrix is $d$. -/
+theorem sum_adj_row_eq_degree (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (u : V) :
+    (∑ v : V, adjacencyMatrix G u v) = (d : ℝ) := by
+  dsimp [adjacencyMatrix]
+  rw [Finset.sum_boole]
+  have h_deg : (Finset.filter (fun v => G.Adj u v) Finset.univ).card = G.degree u := by
+    rw [← SimpleGraph.card_neighborFinset_eq_degree]
+    congr 1
+    ext v
+    simp [SimpleGraph.mem_neighborFinset]
+  rw [h_deg, hreg u]
 
-/-- Symmetry of bipartite edge count: $e(X, Y) = e(Y, X)$. -/
-theorem bipartiteEdgeCount_symm (G : SimpleGraph V) [DecidableRel G.Adj] (X Y : Finset V) :
-    bipartiteEdgeCount G X Y = bipartiteEdgeCount G Y X := by
-  have : Std.Symm G.Adj := ⟨fun _ _ => G.adj_symm⟩
-  exact Rel.card_interedges_comm X Y
+/-- In a $d$-regular graph, the sum of any column of the adjacency matrix is $d$. -/
+theorem sum_adj_col_eq_degree (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (v : V) :
+    (∑ u : V, adjacencyMatrix G u v) = (d : ℝ) := by
+  have h_symm : (∑ u : V, adjacencyMatrix G u v) = (∑ u : V, adjacencyMatrix G v u) := by
+    apply Finset.sum_congr rfl
+    intro u _
+    dsimp [adjacencyMatrix]
+    by_cases h : G.Adj u v
+    · have h' : G.Adj v u := G.adj_symm h
+      simp [h, h']
+    · have h' : ¬ G.Adj v u := fun hvu => h (G.adj_symm hvu)
+      simp [h, h']
+  rw [h_symm]
+  exact sum_adj_row_eq_degree G hreg v
 
-/-- Symmetry of pair density: $d(X, Y) = d(Y, X)$. -/
-theorem pairDensity_symm (G : SimpleGraph V) [DecidableRel G.Adj] (X Y : Finset V) :
-    pairDensity G X Y = pairDensity G Y X := by
-  dsimp [pairDensity]
-  rw [bipartiteEdgeCount_symm G X Y, mul_comm (X.card : ℝ)]
+/-- Standard Euclidean inner product on $\mathbb{R}^V$. -/
+def innerProduct (u v : V → ℝ) : ℝ :=
+  ∑ x : V, u x * v x
 
-/-- The edge density is non-negative. -/
-theorem pairDensity_nonneg (G : SimpleGraph V) [DecidableRel G.Adj] (X Y : Finset V) :
-    0 ≤ pairDensity G X Y := by
-  rw [pairDensity_eq_edgeDensity]
-  exact_mod_cast G.edgeDensity_nonneg X Y
+/-- The squared Euclidean norm $\|v\|^2 = \langle v, v \rangle$. -/
+def normSq (v : V → ℝ) : ℝ :=
+  innerProduct v v
 
-/-- The edge density is bounded in $[0, 1]$ for non-empty sets. -/
-theorem pairDensity_le_one (G : SimpleGraph V) [DecidableRel G.Adj] (X Y : Finset V)
-    (hX : X.Nonempty) (hY : Y.Nonempty) :
-    pairDensity G X Y ≤ 1 := by
-  rw [pairDensity_eq_edgeDensity]
-  exact_mod_cast G.edgeDensity_le_one X Y
+/-- A vector $v \in \mathbb{R}^V$ is orthogonal to $\mathbf{1}$ if its coordinate sum is zero. -/
+def isOrthogonalToOnes (v : V → ℝ) : Prop :=
+  ∑ x : V, v x = 0
 
-/-- The edge density is unconditionally bounded by 1 for any pair of sets. -/
-theorem pairDensity_le_one' (G : SimpleGraph V) [DecidableRel G.Adj] (X Y : Finset V) :
-    pairDensity G X Y ≤ 1 := by
-  rw [pairDensity_eq_edgeDensity]
-  exact_mod_cast G.edgeDensity_le_one X Y
+/-- The indicator function $\mathbf{1}_S : V \to \mathbb{R}$ of a subset $S \subseteq V$. -/
+def indicator (S : Finset V) : V → ℝ :=
+  fun v => if v ∈ S then 1 else 0
 
-/-- Bipartite edge count is additive on disjoint unions on the left. -/
-theorem bipartiteEdgeCount_union_left (G : SimpleGraph V) [DecidableRel G.Adj] {X₁ X₂ Y : Finset V}
-    (hdisj : Disjoint X₁ X₂) :
-    bipartiteEdgeCount G (X₁ ∪ X₂) Y = bipartiteEdgeCount G X₁ Y + bipartiteEdgeCount G X₂ Y := by
-  change (G.interedges (X₁ ∪ X₂) Y).card = (G.interedges X₁ Y).card + (G.interedges X₂ Y).card
-  rw [SimpleGraph.interedges, Rel.interedges, Finset.union_product, Finset.filter_union]
-  exact Finset.card_union_of_disjoint (SimpleGraph.interedges_disjoint_left G hdisj Y)
+/-- Auxiliary: sum of indicator over universe is cardinality. -/
+theorem sum_indicator_univ (S : Finset V) : (∑ x : V, indicator S x) = (S.card : ℝ) := by
+  simp only [indicator, Finset.sum_boole]
+  have h_filt : (Finset.filter (fun x => x ∈ S) Finset.univ) = S := by
+    ext x
+    simp
+  rw [h_filt]
 
-@[simp]
-theorem pairDensity_empty_left (G : SimpleGraph V) [DecidableRel G.Adj] (Y : Finset V) :
-    pairDensity G ∅ Y = 0 := by simp [pairDensity]
+/-- Sum of a function times indicator over universe is sum over the set. -/
+theorem sum_mul_indicator (S : Finset V) (f : V → ℝ) :
+    (∑ x : V, f x * indicator S x) = ∑ x ∈ S, f x := by
+  have h : (∑ x : V, f x * indicator S x) = ∑ x : V, (if x ∈ S then f x else 0) := by
+    apply Finset.sum_congr rfl
+    intro x _
+    dsimp [indicator]
+    split_ifs <;> ring
+  rw [h, Finset.sum_ite_mem, Finset.univ_inter]
 
-/-- Weighted average split for pair density under partitioning the left set. -/
-theorem pairDensity_weighted_split (G : SimpleGraph V) [DecidableRel G.Adj] {X₁ X₂ Y : Finset V}
-    (hdisj : Disjoint X₁ X₂) (hU : (X₁ ∪ X₂).Nonempty) (hY : Y.Nonempty) :
-    pairDensity G (X₁ ∪ X₂) Y =
-      ((X₁.card : ℝ) / ((X₁ ∪ X₂).card : ℝ)) * pairDensity G X₁ Y +
-      ((X₂.card : ℝ) / ((X₁ ∪ X₂).card : ℝ)) * pairDensity G X₂ Y := by
-  rcases X₁.eq_empty_or_nonempty with rfl | hX₁
-  · have hX₂ : X₂.Nonempty := by rwa [Finset.empty_union] at hU
-    have : (X₂.card : ℝ) ≠ 0 := ne_of_gt (Nat.cast_pos.mpr hX₂.card_pos)
-    simp [pairDensity_empty_left, div_self this]
-  rcases X₂.eq_empty_or_nonempty with rfl | hX₂
-  · have hX₁ : X₁.Nonempty := by rwa [Finset.union_empty] at hU
-    have : (X₁.card : ℝ) ≠ 0 := ne_of_gt (Nat.cast_pos.mpr hX₁.card_pos)
-    simp [pairDensity_empty_left, div_self this]
-  have : ((X₁ ∪ X₂).card : ℝ) ≠ 0 := by positivity
-  have : (Y.card : ℝ) ≠ 0 := by positivity
-  have : (X₁.card : ℝ) ≠ 0 := by positivity
-  have : (X₂.card : ℝ) ≠ 0 := by positivity
-  dsimp [pairDensity]
-  rw [bipartiteEdgeCount_union_left G hdisj]
-  push_cast
-  field_simp
+/-- The parallel projection of the indicator vector $\mathbf{1}_S$ along $\mathbf{1}$:
+    $\mathbf{1}_S^\parallel = \frac{|S|}{n} \mathbf{1}$. -/
+noncomputable def decompParallel (S : Finset V) : V → ℝ :=
+  fun _ => (S.card : ℝ) / (Fintype.card V : ℝ)
+
+/-- The orthogonal component $\mathbf{1}_S^\perp = \mathbf{1}_S - \frac{|S|}{n} \mathbf{1} \in \mathbf{1}^\perp$. -/
+noncomputable def decompPerp (S : Finset V) : V → ℝ :=
+  fun v => indicator S v - (S.card : ℝ) / (Fintype.card V : ℝ)
+
+/-- Orthogonality of the perpendicular component: $\sum_{v \in V} \mathbf{1}_S^\perp(v) = 0$. -/
+theorem decompPerp_orthogonal (S : Finset V) (hn : Fintype.card V ≠ 0) :
+    isOrthogonalToOnes (decompPerp S) := by
+  dsimp [isOrthogonalToOnes, decompPerp]
+  rw [Finset.sum_sub_distrib]
+  have h1 : (∑ x : V, indicator S x) = (S.card : ℝ) := sum_indicator_univ S
+  have h2 : (∑ x : V, (S.card : ℝ) / (Fintype.card V : ℝ)) = (S.card : ℝ) := by
+    rw [Finset.sum_const, Finset.card_univ, nsmul_eq_mul]
+    have hnc : (Fintype.card V : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr hn
+    exact mul_div_cancel₀ (S.card : ℝ) hnc
+  rw [h1, h2, sub_self]
+
+/-- The squared $\ell^2$-norm of $\mathbf{1}_S^\perp$ is $|S|(1 - |S|/n)$. -/
+theorem decompPerp_normSq (S : Finset V) (hn : Fintype.card V ≠ 0) :
+    normSq (decompPerp S) = (S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) := by
+  dsimp [normSq, innerProduct, decompPerp]
+  have h_sq : ∀ x : V, (indicator S x - (S.card : ℝ) / (Fintype.card V : ℝ)) *
+      (indicator S x - (S.card : ℝ) / (Fintype.card V : ℝ)) =
+      (indicator S x) ^ 2 - 2 * indicator S x * ((S.card : ℝ) / (Fintype.card V : ℝ)) +
+      ((S.card : ℝ) / (Fintype.card V : ℝ)) ^ 2 := by
+    intro x; ring
+  simp_rw [h_sq, Finset.sum_add_distrib, Finset.sum_sub_distrib]
+  have h_ind_sq : (∑ x : V, (indicator S x) ^ 2) = (S.card : ℝ) := by
+    have : ∀ x : V, (indicator S x) ^ 2 = indicator S x := by
+      intro x; simp only [indicator]; split_ifs <;> ring
+    simp_rw [this]
+    exact sum_indicator_univ S
+  have h_ind_sum : (∑ x : V, 2 * indicator S x * ((S.card : ℝ) / (Fintype.card V : ℝ))) =
+      2 * ((S.card : ℝ) ^ 2 / (Fintype.card V : ℝ)) := by
+    have h_factor : (∑ x : V, 2 * indicator S x * ((S.card : ℝ) / (Fintype.card V : ℝ))) =
+        (2 * ((S.card : ℝ) / (Fintype.card V : ℝ))) * (∑ x : V, indicator S x) := by
+      rw [Finset.mul_sum]
+      congr 1; ext x; ring
+    rw [h_factor, sum_indicator_univ S]
+    ring
+  have h_const_sum : (∑ x : V, ((S.card : ℝ) / (Fintype.card V : ℝ)) ^ 2) =
+      (S.card : ℝ) ^ 2 / (Fintype.card V : ℝ) := by
+    rw [Finset.sum_const, Finset.card_univ, nsmul_eq_mul]
+    have hnc : (Fintype.card V : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr hn
+    field_simp [hnc]
+  rw [h_ind_sq, h_ind_sum, h_const_sum]
+  ring
+
+/-- The graph adjacency operator $A : \mathbb{R}^V \to \mathbb{R}^V$ acting on vertex functions. -/
+def adjOp (G : SimpleGraph V) [DecidableRel G.Adj] (f : V → ℝ) : V → ℝ :=
+  fun u => ∑ v : V, adjacencyMatrix G u v * f v
+
+/-- The open neighborhood of a vertex set $S \subseteq V$: $N(S) = \bigcup_{u \in S} N(u)$. -/
+def neighborhood (G : SimpleGraph V) [DecidableRel G.Adj] (S : Finset V) : Finset V :=
+  Finset.biUnion S (fun u => G.neighborFinset u)
+
+/-- A vertex $v$ belongs to $N(S)$ iff there is some $u \in S$ adjacent to $v$. -/
+theorem mem_neighborhood_iff (G : SimpleGraph V) [DecidableRel G.Adj] (S : Finset V) (v : V) :
+    v ∈ neighborhood G S ↔ ∃ u ∈ S, G.Adj u v := by
+  simp [neighborhood, SimpleGraph.mem_neighborFinset]
+
+/-- The adjacency operator applied to the indicator $\mathbf{1}_S$ evaluates to the sum
+of adjacency entries over $S$. -/
+theorem adjOp_indicator_apply (G : SimpleGraph V) [DecidableRel G.Adj] (S : Finset V) (u : V) :
+    adjOp G (indicator S) u = ∑ v ∈ S, adjacencyMatrix G u v :=
+  sum_mul_indicator S (fun v => adjacencyMatrix G u v)
+
+/-- If $u \notin N(S)$, then $(A \mathbf{1}_S)(u) = 0$. -/
+theorem adjOp_indicator_zero_of_not_mem_neighborhood (G : SimpleGraph V) [DecidableRel G.Adj]
+    (S : Finset V) (u : V) (hu : u ∉ neighborhood G S) :
+    adjOp G (indicator S) u = 0 := by
+  rw [adjOp_indicator_apply, Finset.sum_eq_zero]
+  intro v hv
+  dsimp [adjacencyMatrix]
+  exact ite_eq_right_iff.2 fun h => (hu ((mem_neighborhood_iff G S u).2 ⟨v, hv, h.symm⟩)).elim
+
+/-- Total sum of $(A \mathbf{1}_S)(u)$ over all $u \in V$ is $d |S|$. -/
+theorem sum_adjOp_indicator_eq (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (S : Finset V) :
+    (∑ u : V, adjOp G (indicator S) u) = (d : ℝ) * (S.card : ℝ) := by
+  dsimp [adjOp]
+  rw [Finset.sum_comm]
+  simp_rw [← Finset.sum_mul, sum_adj_col_eq_degree G hreg, ← Finset.mul_sum, sum_indicator_univ]
+
+/-- Total sum of $(A \mathbf{1}_S)(u)$ restricted to the neighborhood $N(S)$ is $d |S|$. -/
+theorem sum_neighborhood_adjOp_indicator_eq (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (S : Finset V) :
+    (∑ u ∈ neighborhood G S, adjOp G (indicator S) u) = (d : ℝ) * (S.card : ℝ) := by
+  rw [← sum_adjOp_indicator_eq G hreg S, ← Finset.sum_subset (Finset.subset_univ _)]
+  exact fun u _ hu => adjOp_indicator_zero_of_not_mem_neighborhood G S u hu
+
+/-- Cauchy-Schwarz inequality for sums of real functions over a finite set:
+$(\sum_{x \in s} f(x))^2 \le |s| \sum_{x \in s} f(x)^2$. -/
+theorem cauchy_schwarz_finset (s : Finset V) (f : V → ℝ) :
+    (∑ x ∈ s, f x) ^ 2 ≤ (s.card : ℝ) * (∑ x ∈ s, (f x) ^ 2) := by
+  simpa using Finset.sum_mul_sq_le_sq_mul_sq s (fun _ => (1 : ℝ)) f
+
+/-- The squared $\ell^2$-norm of $(A \mathbf{1}_S)$ equals the sum of squares over the neighborhood $N(S)$. -/
+theorem normSq_adjOp_indicator_eq_sum_neighborhood (G : SimpleGraph V) [DecidableRel G.Adj]
+    (S : Finset V) :
+    normSq (adjOp G (indicator S)) = ∑ u ∈ neighborhood G S, (adjOp G (indicator S) u) ^ 2 := by
+  simp only [normSq, innerProduct, sq]
+  rw [← Finset.sum_subset (Finset.subset_univ _)]
+  intro u _ hu
+  simp [adjOp_indicator_zero_of_not_mem_neighborhood G S u hu]
 
 /--
-**Definition of an $\varepsilon$-Regular Pair**:
-A pair $(X, Y)$ is $\varepsilon$-regular if for all $A \subseteq X$ with $|A| \ge \varepsilon |X|$
-and all $B \subseteq Y$ with $|B| \ge \varepsilon |Y|$, the sub-pair density satisfies:
-$$|d_G(A, B) - d_G(X, Y)| \le \varepsilon$$
+**Cauchy-Schwarz Inequality for $A \mathbf{1}_S$ on $N(S)$**:
+$$(d |S|)^2 \le |N(S)| \cdot \|A \mathbf{1}_S\|^2$$
 -/
-def IsEpsilonRegularPair (G : SimpleGraph V) [DecidableRel G.Adj] (ε : ℝ) (X Y : Finset V) : Prop :=
-  ∀ (A : Finset V) (B : Finset V),
-    A ⊆ X → B ⊆ Y →
-    ε * (X.card : ℝ) ≤ (A.card : ℝ) →
-    ε * (Y.card : ℝ) ≤ (B.card : ℝ) →
-    |pairDensity G A B - pairDensity G X Y| ≤ ε
+theorem cauchy_schwarz_neighborhood (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (S : Finset V) :
+    ((d : ℝ) * (S.card : ℝ)) ^ 2 ≤ ((neighborhood G S).card : ℝ) * normSq (adjOp G (indicator S)) := by
+  have := cauchy_schwarz_finset (neighborhood G S) (adjOp G (indicator S))
+  rwa [sum_neighborhood_adjOp_indicator_eq G hreg, ← normSq_adjOp_indicator_eq_sum_neighborhood] at this
 
-/-- Symmetry of the $\varepsilon$-regular pair predicate: $(X, Y)$ is $\varepsilon$-regular iff $(Y, X)$ is. -/
-theorem isEpsilonRegularPair_symm (G : SimpleGraph V) [DecidableRel G.Adj] (ε : ℝ) (X Y : Finset V) :
-    IsEpsilonRegularPair G ε X Y ↔ IsEpsilonRegularPair G ε Y X :=
-  ⟨fun h B A hB hA hb ha => by rw [pairDensity_symm G B A, pairDensity_symm G Y X]; exact h A B hA hB ha hb,
-   fun h A B hA hB ha hb => by rw [pairDensity_symm G A B, pairDensity_symm G X Y]; exact h B A hB hA hb ha⟩
+/-- Decomposition of the indicator vector $\mathbf{1}_S = \mathbf{1}_S^\parallel + \mathbf{1}_S^\perp$. -/
+theorem indicator_eq_decompParallel_add_decompPerp (S : Finset V) (u : V) :
+    indicator S u = decompParallel S u + decompPerp S u := by
+  dsimp [decompParallel, decompPerp]; ring
 
-/-- A vertex partition of a finite graph $V$. -/
-structure GraphPartition (V : Type*) [Fintype V] [DecidableEq V] where
-  parts : Finset (Finset V)
-  disjoint : ∀ A ∈ parts, ∀ B ∈ parts, A ≠ B → Disjoint A B
-  cover : parts.biUnion id = Finset.univ
-  nonempty_parts : ∀ A ∈ parts, A.Nonempty
+/-- Linearity of the adjacency operator across the orthogonal decomposition:
+$A \mathbf{1}_S = A \mathbf{1}_S^\parallel + A \mathbf{1}_S^\perp$. -/
+theorem adjOp_indicator_eq_add (G : SimpleGraph V) [DecidableRel G.Adj] (S : Finset V) (u : V) :
+    adjOp G (indicator S) u = adjOp G (decompParallel S) u + adjOp G (decompPerp S) u := by
+  simp_rw [adjOp, indicator_eq_decompParallel_add_decompPerp S, mul_add, Finset.sum_add_distrib]
 
-/-- The sum of cardinalities of all parts in a partition equals the total number of vertices $|V|$. -/
-theorem GraphPartition.sum_card_parts (P : GraphPartition V) :
-    ∑ X ∈ P.parts, X.card = Fintype.card V := by
-  have := Finset.card_biUnion (t := id) (fun A hA B hB => P.disjoint A hA B hB)
-  exact (this.symm.trans (congr_arg Finset.card P.cover)).trans Finset.card_univ
+/-- The parallel component maps to the constant vector $\frac{d |S|}{n} \mathbf{1}$. -/
+theorem adjOp_decompParallel (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (S : Finset V) (u : V) :
+    adjOp G (decompParallel S) u = (d : ℝ) * (S.card : ℝ) / (Fintype.card V : ℝ) := by
+  dsimp [adjOp, decompParallel]
+  simp_rw [mul_div_right_comm, ← Finset.sum_mul, sum_adj_row_eq_degree G hreg]
+  ring
 
-/-- The normalized quadratic energy of a graph partition:
-    $E(\mathcal{P}) = \sum_{X \in \mathcal{P}} \sum_{Y \in \mathcal{P}} \frac{|X| |Y|}{|V|^2} d_G(X, Y)^2$. -/
-noncomputable def partitionEnergy (G : SimpleGraph V) [DecidableRel G.Adj] (P : GraphPartition V) : ℝ :=
-  ∑ X ∈ P.parts, ∑ Y ∈ P.parts,
-    ((X.card : ℝ) * (Y.card : ℝ) / ((Fintype.card V : ℝ) ^ 2)) * (pairDensity G X Y) ^ 2
+/-- The perpendicular component after applying $A$ is orthogonal to the all-ones vector:
+$A \mathbf{1}_S^\perp \in \mathbf{1}^\perp$. -/
+theorem adjOp_decompPerp_orthogonal (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (S : Finset V) (hn : Fintype.card V ≠ 0) :
+    isOrthogonalToOnes (adjOp G (decompPerp S)) := by
+  dsimp [isOrthogonalToOnes, adjOp]
+  rw [Finset.sum_comm]
+  simp_rw [← Finset.sum_mul, sum_adj_col_eq_degree G hreg, ← Finset.mul_sum]
+  rw [decompPerp_orthogonal S hn, mul_zero]
+
+/-- The squared norm of the parallel component:
+$\|A \mathbf{1}_S^\parallel\|^2 = \frac{d^2 |S|^2}{n}$. -/
+theorem normSq_adjOp_decompParallel (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (S : Finset V) :
+    normSq (adjOp G (decompParallel S)) = (d : ℝ) ^ 2 * (S.card : ℝ) ^ 2 / (Fintype.card V : ℝ) := by
+  have h_app : ∀ u : V, adjOp G (decompParallel S) u = (d : ℝ) * (S.card : ℝ) / (Fintype.card V : ℝ) :=
+    adjOp_decompParallel G hreg S
+  simp only [normSq, innerProduct, h_app, Finset.sum_const, Finset.card_univ, nsmul_eq_mul]
+  have hnc : (Fintype.card V : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr hn
+  field_simp [hnc]
+
+/-- Pythagorean theorem for the spectral decomposition:
+$\|A \mathbf{1}_S\|^2 = \|A \mathbf{1}_S^\parallel\|^2 + \|A \mathbf{1}_S^\perp\|^2$. -/
+theorem normSq_adjOp_indicator_decomp (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (S : Finset V) :
+    normSq (adjOp G (indicator S)) =
+      normSq (adjOp G (decompParallel S)) + normSq (adjOp G (decompPerp S)) := by
+  have h_cross : (∑ u : V, 2 * (adjOp G (decompParallel S) u) * (adjOp G (decompPerp S) u)) = 0 := by
+    simp_rw [adjOp_decompParallel G hreg, ← Finset.mul_sum]
+    rw [adjOp_decompPerp_orthogonal G hreg S hn, mul_zero]
+  simp only [normSq, innerProduct, adjOp_indicator_eq_add G S]
+  have h_alg : ∀ u : V, (adjOp G (decompParallel S) u + adjOp G (decompPerp S) u) * (adjOp G (decompParallel S) u + adjOp G (decompPerp S) u) =
+      (adjOp G (decompParallel S) u) * (adjOp G (decompParallel S) u) +
+      (adjOp G (decompPerp S) u) * (adjOp G (decompPerp S) u) +
+      2 * (adjOp G (decompParallel S) u) * (adjOp G (decompPerp S) u) := by
+    intro u; ring
+  simp_rw [h_alg, Finset.sum_add_distrib, h_cross, add_zero]
+
+/-- Bilinear Cauchy-Schwarz bound for the adjacency operator:
+$\langle u, A v \rangle^2 \le d^2 \|u\|^2 \|v\|^2$. -/
+theorem innerProduct_adjOp_sq_le (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (u v : V → ℝ) :
+    (innerProduct u (adjOp G v)) ^ 2 ≤ (d : ℝ) ^ 2 * normSq u * normSq v := by
+  dsimp [innerProduct, adjOp, normSq]
+  have h_inner_sq : ∀ x y : V, (adjacencyMatrix G x y * u x) * (adjacencyMatrix G x y * v y) =
+      u x * (adjacencyMatrix G x y * v y) := by
+    intro x y; dsimp [adjacencyMatrix]; split_ifs <;> ring
+  have h_lhs : (∑ x : V, u x * ∑ y : V, adjacencyMatrix G x y * v y) =
+      ∑ p : V × V, (adjacencyMatrix G p.1 p.2 * u p.1) * (adjacencyMatrix G p.1 p.2 * v p.2) := by
+    rw [Fintype.sum_prod_type]
+    simp_rw [Finset.mul_sum, ← h_inner_sq]
+  rw [h_lhs]
+  have h_cs := Finset.sum_mul_sq_le_sq_mul_sq Finset.univ
+    (fun p : V × V => adjacencyMatrix G p.1 p.2 * u p.1)
+    (fun p : V × V => adjacencyMatrix G p.1 p.2 * v p.2)
+  have h_mat_sq : ∀ (a : ℝ) (x y : V), (adjacencyMatrix G x y * a) ^ 2 = adjacencyMatrix G x y * a ^ 2 :=
+    fun a x y => by dsimp [adjacencyMatrix]; split_ifs <;> ring
+  have h_left : (∑ p : V × V, (adjacencyMatrix G p.1 p.2 * u p.1) ^ 2) = (d : ℝ) * ∑ x : V, (u x) ^ 2 := by
+    rw [Fintype.sum_prod_type]
+    simp_rw [h_mat_sq, ← Finset.sum_mul, sum_adj_row_eq_degree G hreg, ← Finset.mul_sum]
+  have h_right : (∑ p : V × V, (adjacencyMatrix G p.1 p.2 * v p.2) ^ 2) = (d : ℝ) * ∑ y : V, (v y) ^ 2 := by
+    rw [Fintype.sum_prod_type_right]
+    simp_rw [h_mat_sq, ← Finset.sum_mul, sum_adj_col_eq_degree G hreg, ← Finset.mul_sum]
+  have h_sq_sum_u : (∑ x : V, u x * u x) = ∑ x : V, (u x) ^ 2 := by simp_rw [sq]
+  have h_sq_sum_v : (∑ x : V, v x * v x) = ∑ x : V, (v x) ^ 2 := by simp_rw [sq]
+  rw [h_left, h_right] at h_cs
+  rw [h_sq_sum_u, h_sq_sum_v]
+  have : ((d : ℝ) * ∑ x : V, (u x) ^ 2) * ((d : ℝ) * ∑ y : V, (v y) ^ 2) =
+      (d : ℝ) ^ 2 * (∑ x : V, (u x) ^ 2) * (∑ y : V, (v y) ^ 2) := by ring
+  rwa [this] at h_cs
+
+/-- Squared norm is the sum of component squares. -/
+theorem normSq_eq_sum_sq (v : V → ℝ) : normSq v = ∑ u : V, (v u) ^ 2 := by
+  simp only [normSq, innerProduct, sq]
+
+/-- Squared norm is non-negative. -/
+theorem normSq_nonneg (v : V → ℝ) : 0 ≤ normSq v := by
+  rw [normSq_eq_sum_sq]
+  exact Finset.sum_nonneg fun _ _ => sq_nonneg _
+
+/-- Squared norm is zero if and only if the vector is zero. -/
+theorem normSq_eq_zero_iff (v : V → ℝ) : normSq v = 0 ↔ v = 0 := by
+  simp [normSq_eq_sum_sq, Finset.sum_eq_zero_iff_of_nonneg (fun _ _ => sq_nonneg _), funext_iff]
+
+/-- Squared norm is strictly positive for any non-zero vector. -/
+theorem normSq_pos_of_ne_zero {v : V → ℝ} (hne : v ≠ 0) : 0 < normSq v :=
+  lt_of_le_of_ne (normSq_nonneg v) (Ne.symm (mt (normSq_eq_zero_iff v).mp hne))
+
+/-- If $w$ is orthogonal to $\mathbf{1}$, then $A w$ is also orthogonal to $\mathbf{1}$. -/
+theorem isOrthogonalToOnes_adjOp (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (w : V → ℝ) (hw : isOrthogonalToOnes w) :
+    isOrthogonalToOnes (adjOp G w) := by
+  dsimp [isOrthogonalToOnes, adjOp]
+  rw [Finset.sum_comm]
+  simp_rw [← Finset.sum_mul, sum_adj_col_eq_degree G hreg, ← Finset.mul_sum]
+  dsimp [isOrthogonalToOnes] at hw
+  rw [hw, mul_zero]
+
+/-- The spectral expansion parameter $\lambda(G) = \max_{i \ge 2} |\lambda_i|$ of a regular graph $G$. -/
+noncomputable def spectralExpansionParameter (G : SimpleGraph V) [DecidableRel G.Adj] : ℝ :=
+  sSup { |innerProduct u (fun x => ∑ y : V, adjacencyMatrix G x y * v y)| /
+         (Real.sqrt (normSq u) * Real.sqrt (normSq v)) |
+         (u : V → ℝ) (v : V → ℝ) (_ : u ≠ 0) (_ : v ≠ 0)
+         (_ : isOrthogonalToOnes u) (_ : isOrthogonalToOnes v) }
+
+/-- The set in the definition of $\lambda(G)$ is bounded above by $d$. -/
+theorem bddAbove_spectralExpansionParameter_set (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) :
+    BddAbove { |innerProduct u (fun x => ∑ y : V, adjacencyMatrix G x y * v y)| /
+         (Real.sqrt (normSq u) * Real.sqrt (normSq v)) |
+         (u : V → ℝ) (v : V → ℝ) (_ : u ≠ 0) (_ : v ≠ 0)
+         (_ : isOrthogonalToOnes u) (_ : isOrthogonalToOnes v) } := by
+  use (d : ℝ)
+  rintro x ⟨u, v, hu, hv, _, _, rfl⟩
+  have hu_pos : 0 < normSq u := normSq_pos_of_ne_zero hu
+  have hv_pos : 0 < normSq v := normSq_pos_of_ne_zero hv
+  have h_denom_pos : 0 < Real.sqrt (normSq u) * Real.sqrt (normSq v) :=
+    mul_pos (Real.sqrt_pos.mpr hu_pos) (Real.sqrt_pos.mpr hv_pos)
+  have h_sq := innerProduct_adjOp_sq_le G hreg u v
+  rw [← sq_abs (innerProduct u (adjOp G v))] at h_sq
+  have h_rhs : (d : ℝ) ^ 2 * normSq u * normSq v = ((d : ℝ) * (Real.sqrt (normSq u) * Real.sqrt (normSq v))) ^ 2 := by
+    rw [mul_pow, mul_pow, Real.sq_sqrt hu_pos.le, Real.sq_sqrt hv_pos.le]; ring
+  rw [h_rhs] at h_sq
+  have h_nonneg : 0 ≤ (d : ℝ) * (Real.sqrt (normSq u) * Real.sqrt (normSq v)) := by positivity
+  have h_le : |innerProduct u (adjOp G v)| ≤ (d : ℝ) * (Real.sqrt (normSq u) * Real.sqrt (normSq v)) := by
+    have := sq_le_sq.mp h_sq
+    rwa [abs_abs, abs_of_nonneg h_nonneg] at this
+  exact (div_le_iff₀ h_denom_pos).mpr h_le
+
+/-- The spectral expansion parameter is non-negative. -/
+theorem spectralExpansionParameter_nonneg (G : SimpleGraph V) [DecidableRel G.Adj] :
+    0 ≤ spectralExpansionParameter G := by
+  dsimp [spectralExpansionParameter]
+  by_cases h_bdd : BddAbove { |innerProduct u (fun x => ∑ y : V, adjacencyMatrix G x y * v y)| /
+         (Real.sqrt (normSq u) * Real.sqrt (normSq v)) |
+         (u : V → ℝ) (v : V → ℝ) (_ : u ≠ 0) (_ : v ≠ 0)
+         (_ : isOrthogonalToOnes u) (_ : isOrthogonalToOnes v) }
+  · by_cases h_nonempty : { |innerProduct u (fun x => ∑ y : V, adjacencyMatrix G x y * v y)| /
+         (Real.sqrt (normSq u) * Real.sqrt (normSq v)) |
+         (u : V → ℝ) (v : V → ℝ) (_ : u ≠ 0) (_ : v ≠ 0)
+         (_ : isOrthogonalToOnes u) (_ : isOrthogonalToOnes v) }.Nonempty
+    · rcases h_nonempty with ⟨x, ⟨u, v, hu, hv, hu_orth, hv_orth, rfl⟩⟩
+      have hx : 0 ≤ |innerProduct u (fun x => ∑ y : V, adjacencyMatrix G x y * v y)| /
+           (Real.sqrt (normSq u) * Real.sqrt (normSq v)) := by
+        exact div_nonneg (abs_nonneg _) (mul_nonneg (Real.sqrt_nonneg _) (Real.sqrt_nonneg _))
+      have h_le : |innerProduct u (fun x => ∑ y : V, adjacencyMatrix G x y * v y)| /
+           (Real.sqrt (normSq u) * Real.sqrt (normSq v)) ≤
+           sSup { |innerProduct u (fun x => ∑ y : V, adjacencyMatrix G x y * v y)| /
+           (Real.sqrt (normSq u) * Real.sqrt (normSq v)) |
+           (u : V → ℝ) (v : V → ℝ) (_ : u ≠ 0) (_ : v ≠ 0)
+           (_ : isOrthogonalToOnes u) (_ : isOrthogonalToOnes v) } := by
+        apply le_csSup h_bdd
+        exact ⟨u, v, hu, hv, hu_orth, hv_orth, rfl⟩
+      exact le_trans hx h_le
+    · have : { |innerProduct u (fun x => ∑ y : V, adjacencyMatrix G x y * v y)| /
+         (Real.sqrt (normSq u) * Real.sqrt (normSq v)) |
+         (u : V → ℝ) (v : V → ℝ) (_ : u ≠ 0) (_ : v ≠ 0)
+         (_ : isOrthogonalToOnes u) (_ : isOrthogonalToOnes v) } = ∅ := Set.not_nonempty_iff_eq_empty.mp h_nonempty
+      rw [this, Real.sSup_empty]
+  · rw [Real.sSup_of_not_bddAbove h_bdd]
+
+/-- Operator norm spectral bound on the orthogonal complement $\mathbf{1}^\perp$:
+$\|A w\|^2 \le \lambda(G)^2 \|w\|^2$ for any $w \in \mathbf{1}^\perp$. -/
+theorem spectral_operator_norm_bound (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (w : V → ℝ) (hw : isOrthogonalToOnes w) :
+    normSq (adjOp G w) ≤ (spectralExpansionParameter G) ^ 2 * normSq w := by
+  rcases eq_or_ne w 0 with rfl | hw0
+  · simp [normSq, innerProduct, adjOp]
+  rcases eq_or_ne (adjOp G w) 0 with hu0 | hu0
+  · simp [hu0, normSq, innerProduct]
+    exact mul_nonneg (sq_nonneg _) (normSq_nonneg w)
+  · let u := adjOp G w
+    have hu_orth : isOrthogonalToOnes u := isOrthogonalToOnes_adjOp G hreg w hw
+    have hu_pos : 0 < normSq u := normSq_pos_of_ne_zero hu0
+    have hw_pos : 0 < normSq w := normSq_pos_of_ne_zero hw0
+    have h_elem : |normSq u| / (Real.sqrt (normSq u) * Real.sqrt (normSq w)) ∈
+        { |innerProduct u' (fun x => ∑ y : V, adjacencyMatrix G x y * v' y)| /
+          (Real.sqrt (normSq u') * Real.sqrt (normSq v')) |
+          (u' : V → ℝ) (v' : V → ℝ) (_ : u' ≠ 0) (_ : v' ≠ 0)
+          (_ : isOrthogonalToOnes u') (_ : isOrthogonalToOnes v') } :=
+      ⟨u, w, hu0, hw0, hu_orth, hw, rfl⟩
+    have h_le_sup := le_csSup (bddAbove_spectralExpansionParameter_set G hreg) h_elem
+    rw [abs_of_pos hu_pos] at h_le_sup
+    have h_sim : normSq u / (Real.sqrt (normSq u) * Real.sqrt (normSq w)) = Real.sqrt (normSq u) / Real.sqrt (normSq w) := by
+      have h_ne : Real.sqrt (normSq u) ≠ 0 := Real.sqrt_ne_zero'.mpr hu_pos
+      have h_split : normSq u = Real.sqrt (normSq u) * Real.sqrt (normSq u) := by
+        rw [← Real.sqrt_mul hu_pos.le, Real.sqrt_mul_self hu_pos.le]
+      have h_frac : normSq u / (Real.sqrt (normSq u) * Real.sqrt (normSq w)) =
+          (Real.sqrt (normSq u) * Real.sqrt (normSq u)) / (Real.sqrt (normSq u) * Real.sqrt (normSq w)) := by
+        rw [← h_split]
+      rw [h_frac, mul_div_mul_left _ _ h_ne]
+    rw [h_sim] at h_le_sup
+    have h_sqrt_w_pos : 0 < Real.sqrt (normSq w) := Real.sqrt_pos.mpr hw_pos
+    have h_mul_le : Real.sqrt (normSq u) ≤ spectralExpansionParameter G * Real.sqrt (normSq w) :=
+      (div_le_iff₀ h_sqrt_w_pos).mp h_le_sup
+    have h_sq : (Real.sqrt (normSq u)) ^ 2 ≤ (spectralExpansionParameter G * Real.sqrt (normSq w)) ^ 2 := by
+      have : 0 ≤ Real.sqrt (normSq u) := Real.sqrt_nonneg _
+      have : 0 ≤ spectralExpansionParameter G * Real.sqrt (normSq w) :=
+        mul_nonneg (spectralExpansionParameter_nonneg G) (Real.sqrt_nonneg _)
+      nlinarith [h_mul_le]
+    rw [Real.sq_sqrt hu_pos.le, mul_pow, Real.sq_sqrt hw_pos.le] at h_sq
+    exact h_sq
+
+/-- Bounding the norm of $A \mathbf{1}_S^\perp$ by $\lambda^2 |S|(1 - |S|/n)$. -/
+theorem normSq_adjOp_decompPerp_le (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (S : Finset V) :
+    normSq (adjOp G (decompPerp S)) ≤
+      (spectralExpansionParameter G) ^ 2 * (S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) := by
+  have := spectral_operator_norm_bound G hreg (decompPerp S) (decompPerp_orthogonal S hn)
+  rw [decompPerp_normSq S hn] at this
+  have h_ring : (spectralExpansionParameter G) ^ 2 * ((S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ))) =
+      (spectralExpansionParameter G) ^ 2 * (S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) := by ring
+  rwa [← h_ring]
 
 /--
-**Energy Upper Bound**:
-For any graph $G$ and partition $\mathcal{P}$, the normalized energy satisfies $E(\mathcal{P}) \le 1$.
+**Upper Bound on $\|A \mathbf{1}_S\|^2$ via Spectral Decomposition**:
+$$\|A \mathbf{1}_S\|^2 \le |S| \left( \frac{d^2 - \lambda^2}{n} |S| + \lambda^2 \right)$$
 -/
-theorem energy_le_one (G : SimpleGraph V) [DecidableRel G.Adj] (P : GraphPartition V) :
-    partitionEnergy G P ≤ 1 := by
-  rcases isEmpty_or_nonempty V with hV | ⟨v⟩
-  · have : P.parts = ∅ := Finset.subset_empty.mp fun A hA => (P.nonempty_parts A hA).elim fun x _ => isEmptyElim x
-    simp [partitionEnergy, this]
-  have h_sum : ∑ X ∈ P.parts, (X.card : ℝ) = (Fintype.card V : ℝ) := by
-    rw [← Nat.cast_sum, P.sum_card_parts]
-  have h_term (X Y : Finset V) : ((X.card : ℝ) * (Y.card : ℝ) / ((Fintype.card V : ℝ) ^ 2)) *
-      (pairDensity G X Y) ^ 2 ≤ (X.card : ℝ) * (Y.card : ℝ) / ((Fintype.card V : ℝ) ^ 2) := by
-    have : (pairDensity G X Y) ^ 2 ≤ 1 := by
-      nlinarith [pairDensity_nonneg G X Y, pairDensity_le_one' G X Y]
-    nlinarith [show 0 ≤ (X.card : ℝ) * (Y.card : ℝ) / ((Fintype.card V : ℝ) ^ 2) by positivity]
-  refine (Finset.sum_le_sum fun X _ => Finset.sum_le_sum fun Y _ => h_term X Y).trans ?_
-  simp_rw [← Finset.sum_div, ← Finset.sum_mul_sum, h_sum]
-  have : (Fintype.card V : ℝ) * (Fintype.card V : ℝ) = (Fintype.card V : ℝ) ^ 2 := by ring
-  rw [this, div_self (by positivity)]
+theorem normSq_adjOp_indicator_le (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (S : Finset V) :
+    normSq (adjOp G (indicator S)) ≤
+      (S.card : ℝ) * (((d : ℝ) ^ 2 - (spectralExpansionParameter G) ^ 2) / (Fintype.card V : ℝ) * (S.card : ℝ) + (spectralExpansionParameter G) ^ 2) := by
+  rw [normSq_adjOp_indicator_decomp G hreg hn S, normSq_adjOp_decompParallel G hreg hn S]
+  have h_perp := normSq_adjOp_decompPerp_le G hreg hn S
+  have h_alg : (d : ℝ) ^ 2 * (S.card : ℝ) ^ 2 / (Fintype.card V : ℝ) +
+      (spectralExpansionParameter G) ^ 2 * (S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) =
+      (S.card : ℝ) * (((d : ℝ) ^ 2 - (spectralExpansionParameter G) ^ 2) / (Fintype.card V : ℝ) * (S.card : ℝ) + (spectralExpansionParameter G) ^ 2) := by ring
+  linarith
 
-/--
-**Energy Exhaustion Principle**:
-Any energy sequence bounded in $[0, 1]$ with strict minimum increment $\Delta > 0$
-at each step can make at most $\lfloor 1 / \Delta \rfloor$ steps.
--/
-theorem energy_exhaustion_bound (energy_seq : ℕ → ℝ)
-    (h_nonneg : ∀ (i : ℕ), 0 ≤ energy_seq i)
-    (h_le_one : ∀ (i : ℕ), energy_seq i ≤ 1)
-    (Δ : ℝ) (hΔ : 0 < Δ)
-    (h_inc : ∀ (i : ℕ), energy_seq i + Δ ≤ energy_seq (i + 1)) (k : ℕ) :
-    (k : ℝ) * Δ ≤ 1 := by
-  have h_step (i : ℕ) : (i : ℝ) * Δ ≤ energy_seq i := by
-    induction i with
-    | zero => simpa using h_nonneg 0
-    | succ n ih => push_cast; linarith [h_inc n]
-  exact (h_step k).trans (h_le_one k)
+/-- Upper bound $\lambda(G) \le d$ for any $d$-regular graph $G$. -/
+theorem spectralExpansionParameter_le_d (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) :
+    spectralExpansionParameter G ≤ (d : ℝ) := by
+  dsimp [spectralExpansionParameter]
+  by_cases h_empty : { |innerProduct u (fun x => ∑ y : V, adjacencyMatrix G x y * v y)| /
+         (Real.sqrt (normSq u) * Real.sqrt (normSq v)) |
+         (u : V → ℝ) (v : V → ℝ) (_ : u ≠ 0) (_ : v ≠ 0)
+         (_ : isOrthogonalToOnes u) (_ : isOrthogonalToOnes v) }.Nonempty
+  · apply csSup_le h_empty
+    rintro x ⟨u, v, hu, hv, _, _, rfl⟩
+    have hu_pos : 0 < normSq u := normSq_pos_of_ne_zero hu
+    have hv_pos : 0 < normSq v := normSq_pos_of_ne_zero hv
+    have h_denom_pos : 0 < Real.sqrt (normSq u) * Real.sqrt (normSq v) :=
+      mul_pos (Real.sqrt_pos.mpr hu_pos) (Real.sqrt_pos.mpr hv_pos)
+    have h_sq := innerProduct_adjOp_sq_le G hreg u v
+    rw [← sq_abs (innerProduct u (adjOp G v))] at h_sq
+    have h_rhs : (d : ℝ) ^ 2 * normSq u * normSq v = ((d : ℝ) * (Real.sqrt (normSq u) * Real.sqrt (normSq v))) ^ 2 := by
+      rw [mul_pow, mul_pow, Real.sq_sqrt hu_pos.le, Real.sq_sqrt hv_pos.le]; ring
+    rw [h_rhs] at h_sq
+    have h_nonneg : 0 ≤ (d : ℝ) * (Real.sqrt (normSq u) * Real.sqrt (normSq v)) := by positivity
+    have h_le : |innerProduct u (adjOp G v)| ≤ (d : ℝ) * (Real.sqrt (normSq u) * Real.sqrt (normSq v)) := by
+      have := sq_le_sq.mp h_sq
+      rwa [abs_abs, abs_of_nonneg h_nonneg] at this
+    exact (div_le_iff₀ h_denom_pos).mpr h_le
+  · rw [Set.not_nonempty_iff_eq_empty.mp h_empty, Real.sSup_empty]
+    positivity
 
-/--
-**Maximum Number of Increment Iterations**:
-The maximum number of times the energy increment can occur under an $\varepsilon^5 / 2$ step boost
-is bounded by $2 / \varepsilon^5$.
--/
-theorem max_increment_steps_bound (energy_seq : ℕ → ℝ)
-    (h_nonneg : ∀ (i : ℕ), 0 ≤ energy_seq i)
-    (h_le_one : ∀ (i : ℕ), energy_seq i ≤ 1)
-    (ε : ℝ) (hε : 0 < ε)
-    (h_inc : ∀ (i : ℕ), energy_seq i + (ε ^ 5) / 2 ≤ energy_seq (i + 1)) (k : ℕ) :
-    (k : ℝ) ≤ 2 / (ε ^ 5) := by
-  have h_bound := energy_exhaustion_bound energy_seq h_nonneg h_le_one ((ε ^ 5) / 2) (by positivity) h_inc k
-  have : 0 < ε ^ 5 := by positivity
-  rw [le_div_iff₀ this]
+/-- $\lambda(G)^2 \le d^2$ for any $d$-regular graph $G$. -/
+theorem sq_spectralExpansionParameter_le_sq_d (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) :
+    (spectralExpansionParameter G) ^ 2 ≤ (d : ℝ) ^ 2 := by
+  have := spectralExpansionParameter_le_d G hreg
+  have := spectralExpansionParameter_nonneg G
+  nlinarith
+
+/-- Positivity of the Tanner denominator for non-empty $S \subseteq V$ and $d > 0$. -/
+theorem tanner_denominator_pos (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hn : Fintype.card V ≠ 0) (hd : 0 < d) (S : Finset V) (hS : 0 < S.card) :
+    0 < ((d : ℝ) ^ 2 - (spectralExpansionParameter G) ^ 2) / (Fintype.card V : ℝ) * (S.card : ℝ) +
+        (spectralExpansionParameter G) ^ 2 := by
+  have hn_pos : 0 < (Fintype.card V : ℝ) := Nat.cast_pos.mpr (Nat.pos_of_ne_zero hn)
+  have hs_pos : 0 < (S.card : ℝ) := Nat.cast_pos.mpr hS
+  have hs_le : (S.card : ℝ) ≤ (Fintype.card V : ℝ) := Nat.cast_le.mpr (Finset.card_le_univ S)
+  have h_eq : ((d : ℝ) ^ 2 - (spectralExpansionParameter G) ^ 2) / (Fintype.card V : ℝ) * (S.card : ℝ) +
+        (spectralExpansionParameter G) ^ 2 =
+      (d : ℝ) ^ 2 * (S.card : ℝ) / (Fintype.card V : ℝ) +
+        (spectralExpansionParameter G) ^ 2 * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) := by ring
+  rw [h_eq]
+  have h1 : 0 < (d : ℝ) ^ 2 * (S.card : ℝ) / (Fintype.card V : ℝ) := by
+    have : 0 < (d : ℝ) := Nat.cast_pos.mpr hd
+    positivity
+  have h2 : 0 ≤ (spectralExpansionParameter G) ^ 2 * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) := by
+    have : 0 ≤ 1 - (S.card : ℝ) / (Fintype.card V : ℝ) := by
+      rw [sub_nonneg]; exact (div_le_one hn_pos).mpr hs_le
+    positivity
   linarith
 
 /--
-**Mathlib Bridge for Szemerédi's Regularity Lemma**:
-Mathlib's `szemeredi_regularity` produces an equitable $\varepsilon$-uniform finpartition
-whose size is bounded by `SzemerediRegularity.bound ε l`.
+**Tanner's Vertex Expansion Theorem** (R. M. Tanner, 1984):
+For any $d$-regular graph $G$ on $n$ vertices ($n \ne 0$, $d > 0$) and any non-empty subset $S \subseteq V$,
+the size of the open neighborhood $N(S)$ satisfies:
+$$|N(S)| \ge \frac{d^2 |S|}{\frac{d^2 - \lambda^2}{n} |S| + \lambda^2}$$
+where $\lambda = \lambda(G) = \text{spectralExpansionParameter } G$.
 -/
-theorem szemeredi_regularity_mathlib_bridge (G : SimpleGraph V) [DecidableRel G.Adj]
-    (ε : ℝ) (hε : 0 < ε) (l : ℕ) (hl : l ≤ Fintype.card V) :
-    ∃ P : Finpartition (Finset.univ : Finset V),
-      P.IsEquipartition ∧
-      l ≤ P.parts.card ∧
-      P.parts.card ≤ SzemerediRegularity.bound ε l ∧
-      P.IsUniform G ε :=
-  _root_.szemeredi_regularity G hε hl
+theorem tanner_vertex_expansion_bound (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (hd : 0 < d)
+    (S : Finset V) (hS : 0 < S.card) :
+    ((d : ℝ) ^ 2 * (S.card : ℝ)) /
+      (((d : ℝ) ^ 2 - (spectralExpansionParameter G) ^ 2) / (Fintype.card V : ℝ) * (S.card : ℝ) + (spectralExpansionParameter G) ^ 2) ≤
+    ((neighborhood G S).card : ℝ) := by
+  have hs_pos : 0 < (S.card : ℝ) := Nat.cast_pos.mpr hS
+  have h_cs := cauchy_schwarz_neighborhood G hreg S
+  have h_spec := normSq_adjOp_indicator_le G hreg hn S
+  have h_denom_pos := tanner_denominator_pos G hn hd S hS
+  have h_neigh_nonneg : 0 ≤ ((neighborhood G S).card : ℝ) := Nat.cast_nonneg _
+  have h_comb := le_trans h_cs (mul_le_mul_of_nonneg_left h_spec h_neigh_nonneg)
+  rw [div_le_iff₀ h_denom_pos]
+  nlinarith
 
 /--
-**Mathlib Bridge for Triangle Removal**:
-Mathlib's `SimpleGraph.triangle_removal` ensures that if the number of 3-cliques is strictly below
-`triangleRemovalBound δ * |V|^3`, there exists a subgraph `G' ≤ G` with `G'.CliqueFree 3` obtained
-by removing fewer than `δ * |V|^2` edges.
+**Tanner's Expansion Ratio Bound**:
+For any non-empty subset $S \subseteq V$, the vertex expansion ratio $|N(S)| / |S|$ satisfies:
+$$\frac{|N(S)|}{|S|} \ge \frac{d^2}{(d^2 - \lambda^2)\frac{|S|}{n} + \lambda^2}$$
 -/
-theorem triangle_removal_mathlib_bridge (G : SimpleGraph V) [DecidableRel G.Adj] {δ : ℝ}
-    (hG : (#(G.cliqueFinset 3) : ℝ) < SimpleGraph.triangleRemovalBound δ * (Fintype.card V : ℝ) ^ 3) :
-    ∃ (G' : SimpleGraph V) (_ : DecidableRel G'.Adj),
-      G' ≤ G ∧
-      ((#G.edgeFinset - #G'.edgeFinset : ℝ) < δ * ((Fintype.card V : ℝ) ^ 2)) ∧
-      G'.CliqueFree 3 := by
-  obtain ⟨G', hG'le, instG', hedge, hfree⟩ := SimpleGraph.triangle_removal (G := G) (ε := δ) hG
-  exact ⟨G', instG', hG'le, mod_cast hedge, hfree⟩
+theorem tanner_expansion_ratio_bound (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (hd : 0 < d)
+    (S : Finset V) (hS : 0 < S.card) :
+    ((d : ℝ) ^ 2) /
+      (((d : ℝ) ^ 2 - (spectralExpansionParameter G) ^ 2) * ((S.card : ℝ) / (Fintype.card V : ℝ)) + (spectralExpansionParameter G) ^ 2) ≤
+    ((neighborhood G S).card : ℝ) / (S.card : ℝ) := by
+  have hs_pos : 0 < (S.card : ℝ) := Nat.cast_pos.mpr hS
+  have h_bound := tanner_vertex_expansion_bound G hreg hn hd S hS
+  have h_eq : (((d : ℝ) ^ 2 - (spectralExpansionParameter G) ^ 2) / (Fintype.card V : ℝ) * (S.card : ℝ) + (spectralExpansionParameter G) ^ 2) =
+      (((d : ℝ) ^ 2 - (spectralExpansionParameter G) ^ 2) * ((S.card : ℝ) / (Fintype.card V : ℝ)) + (spectralExpansionParameter G) ^ 2) := by ring
+  rw [h_eq] at h_bound
+  rw [le_div_iff₀ hs_pos]
+  have h_cancel : ((d : ℝ) ^ 2 * (S.card : ℝ)) / (((d : ℝ) ^ 2 - (spectralExpansionParameter G) ^ 2) * ((S.card : ℝ) / (Fintype.card V : ℝ)) + (spectralExpansionParameter G) ^ 2) =
+      ((d : ℝ) ^ 2 / (((d : ℝ) ^ 2 - (spectralExpansionParameter G) ^ 2) * ((S.card : ℝ) / (Fintype.card V : ℝ)) + (spectralExpansionParameter G) ^ 2)) * (S.card : ℝ) := by ring
+  rwa [h_cancel] at h_bound
 
-end SzemerediRegularity
+/--
+**Small Set Expansion via Tanner's Bound**:
+If $S \subseteq V$ is non-empty with relative volume $|S|/n \le \alpha$ where $0 < \alpha$,
+then $|N(S)| \ge \frac{d^2}{\alpha (d^2 - \lambda^2) + \lambda^2} |S|$.
+-/
+theorem tanner_small_set_expansion (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (hd : 0 < d)
+    (S : Finset V) (hS : 0 < S.card) {α : ℝ} (hα : (S.card : ℝ) / (Fintype.card V : ℝ) ≤ α)
+    (_hα_pos : 0 < α) :
+    ((d : ℝ) ^ 2 / (α * ((d : ℝ) ^ 2 - (spectralExpansionParameter G) ^ 2) + (spectralExpansionParameter G) ^ 2)) * (S.card : ℝ) ≤
+    ((neighborhood G S).card : ℝ) := by
+  have hs_pos : 0 < (S.card : ℝ) := Nat.cast_pos.mpr hS
+  have h_ratio := tanner_expansion_ratio_bound G hreg hn hd S hS
+  have h_diff_nonneg : 0 ≤ (d : ℝ) ^ 2 - (spectralExpansionParameter G) ^ 2 := by
+    have := sq_spectralExpansionParameter_le_sq_d G hreg; linarith
+  have h_denom_le : ((d : ℝ) ^ 2 - (spectralExpansionParameter G) ^ 2) * ((S.card : ℝ) / (Fintype.card V : ℝ)) + (spectralExpansionParameter G) ^ 2 ≤
+      α * ((d : ℝ) ^ 2 - (spectralExpansionParameter G) ^ 2) + (spectralExpansionParameter G) ^ 2 := by
+    nlinarith
+  have h_denom1_pos : 0 < ((d : ℝ) ^ 2 - (spectralExpansionParameter G) ^ 2) * ((S.card : ℝ) / (Fintype.card V : ℝ)) + (spectralExpansionParameter G) ^ 2 := by
+    have h_orig := tanner_denominator_pos G hn hd S hS
+    have : ((d : ℝ) ^ 2 - (spectralExpansionParameter G) ^ 2) / (Fintype.card V : ℝ) * (S.card : ℝ) + (spectralExpansionParameter G) ^ 2 =
+        ((d : ℝ) ^ 2 - (spectralExpansionParameter G) ^ 2) * ((S.card : ℝ) / (Fintype.card V : ℝ)) + (spectralExpansionParameter G) ^ 2 := by ring
+    rwa [this] at h_orig
+  have h_frac_le : (d : ℝ) ^ 2 / (α * ((d : ℝ) ^ 2 - (spectralExpansionParameter G) ^ 2) + (spectralExpansionParameter G) ^ 2) ≤
+      (d : ℝ) ^ 2 / (((d : ℝ) ^ 2 - (spectralExpansionParameter G) ^ 2) * ((S.card : ℝ) / (Fintype.card V : ℝ)) + (spectralExpansionParameter G) ^ 2) := by
+    have h_denom2_pos : 0 < α * ((d : ℝ) ^ 2 - (spectralExpansionParameter G) ^ 2) + (spectralExpansionParameter G) ^ 2 :=
+      lt_of_lt_of_le h_denom1_pos h_denom_le
+    rw [div_le_div_iff₀ h_denom2_pos h_denom1_pos]
+    nlinarith
+  rw [← le_div_iff₀ hs_pos]
+  exact le_trans h_frac_le h_ratio
+
+/-- Ramanujan spectral parameter squared bound: $\lambda^2 \le 4(d-1)$. -/
+theorem ramanujan_sq_spectralExpansionParameter_le (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hd : 2 ≤ d) (hRam : spectralExpansionParameter G ≤ 2 * Real.sqrt ((d : ℝ) - 1)) :
+    (spectralExpansionParameter G) ^ 2 ≤ 4 * ((d : ℝ) - 1) := by
+  have hd1 : 0 ≤ (d : ℝ) - 1 := by
+    have : (2 : ℝ) ≤ (d : ℝ) := Nat.ofNat_le_cast.mpr hd; linarith
+  have h_nonneg := spectralExpansionParameter_nonneg G
+  have h_sq : (spectralExpansionParameter G) ^ 2 ≤ (2 * Real.sqrt ((d : ℝ) - 1)) ^ 2 := by nlinarith
+  have h_eval : (2 * Real.sqrt ((d : ℝ) - 1)) ^ 2 = 4 * ((d : ℝ) - 1) := by
+    rw [mul_pow, Real.sq_sqrt hd1]; ring
+  linarith
+
+/-- Positivity of the Ramanujan denominator for non-empty $S \subseteq V$ and $d \ge 2$. -/
+theorem tanner_ramanujan_denominator_pos (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hn : Fintype.card V ≠ 0) (hd : 2 ≤ d) (S : Finset V) (hS : 0 < S.card) :
+    0 < (((d : ℝ) ^ 2 - 4 * ((d : ℝ) - 1)) / (Fintype.card V : ℝ)) * (S.card : ℝ) + 4 * ((d : ℝ) - 1) := by
+  have hn_pos : 0 < (Fintype.card V : ℝ) := Nat.cast_pos.mpr (Nat.pos_of_ne_zero hn)
+  have hs_pos : 0 < (S.card : ℝ) := Nat.cast_pos.mpr hS
+  have hd_ge : (2 : ℝ) ≤ (d : ℝ) := Nat.ofNat_le_cast.mpr hd
+  have h_sq_nonneg : 0 ≤ (d : ℝ) ^ 2 - 4 * ((d : ℝ) - 1) := by
+    have : (d : ℝ) ^ 2 - 4 * ((d : ℝ) - 1) = ((d : ℝ) - 2) ^ 2 := by ring
+    rw [this]; exact sq_nonneg _
+  have : 0 ≤ (((d : ℝ) ^ 2 - 4 * ((d : ℝ) - 1)) / (Fintype.card V : ℝ)) * (S.card : ℝ) := by positivity
+  linarith
+
+/--
+**Tanner's Expansion Bound for Ramanujan Graphs**:
+For a Ramanujan graph where $\lambda(G) \le 2\sqrt{d-1}$ ($d \ge 2$), any non-empty subset $S \subseteq V$ satisfies:
+$$|N(S)| \ge \frac{d^2 |S|}{\frac{d^2 - 4(d-1)}{n}|S| + 4(d-1)}$$
+-/
+theorem tanner_ramanujan_expansion (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (hd : 2 ≤ d)
+    (hRam : spectralExpansionParameter G ≤ 2 * Real.sqrt ((d : ℝ) - 1))
+    (S : Finset V) (hS : 0 < S.card) :
+    ((d : ℝ) ^ 2 * (S.card : ℝ)) /
+      ((((d : ℝ) ^ 2 - 4 * ((d : ℝ) - 1)) / (Fintype.card V : ℝ)) * (S.card : ℝ) + 4 * ((d : ℝ) - 1)) ≤
+    ((neighborhood G S).card : ℝ) := by
+  have hd_pos : 0 < d := by linarith
+  have hn_pos : 0 < (Fintype.card V : ℝ) := Nat.cast_pos.mpr (Nat.pos_of_ne_zero hn)
+  have hs_pos : 0 < (S.card : ℝ) := Nat.cast_pos.mpr hS
+  have hs_le : (S.card : ℝ) ≤ (Fintype.card V : ℝ) := Nat.cast_le.mpr (Finset.card_le_univ S)
+  have h_bound := tanner_vertex_expansion_bound G hreg hn hd_pos S hS
+  have h_lam_sq_le := ramanujan_sq_spectralExpansionParameter_le G hd hRam
+  have h_sub_nonneg : 0 ≤ 1 - (S.card : ℝ) / (Fintype.card V : ℝ) := by
+    rw [sub_nonneg]; exact (div_le_one hn_pos).mpr hs_le
+  have h_denom_orig : ((d : ℝ) ^ 2 - (spectralExpansionParameter G) ^ 2) / (Fintype.card V : ℝ) * (S.card : ℝ) + (spectralExpansionParameter G) ^ 2 =
+      (d : ℝ) ^ 2 * (S.card : ℝ) / (Fintype.card V : ℝ) + (spectralExpansionParameter G) ^ 2 * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) := by ring
+  have h_denom_ram : (((d : ℝ) ^ 2 - 4 * ((d : ℝ) - 1)) / (Fintype.card V : ℝ)) * (S.card : ℝ) + 4 * ((d : ℝ) - 1) =
+      (d : ℝ) ^ 2 * (S.card : ℝ) / (Fintype.card V : ℝ) + (4 * ((d : ℝ) - 1)) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) := by ring
+  have h_denom_le : ((d : ℝ) ^ 2 - (spectralExpansionParameter G) ^ 2) / (Fintype.card V : ℝ) * (S.card : ℝ) + (spectralExpansionParameter G) ^ 2 ≤
+      (((d : ℝ) ^ 2 - 4 * ((d : ℝ) - 1)) / (Fintype.card V : ℝ)) * (S.card : ℝ) + 4 * ((d : ℝ) - 1) := by
+    rw [h_denom_orig, h_denom_ram]
+    nlinarith
+  have h_denom1_pos := tanner_denominator_pos G hn hd_pos S hS
+  have h_denom2_pos := tanner_ramanujan_denominator_pos G hn hd S hS
+  have h_frac_le : ((d : ℝ) ^ 2 * (S.card : ℝ)) / ((((d : ℝ) ^ 2 - 4 * ((d : ℝ) - 1)) / (Fintype.card V : ℝ)) * (S.card : ℝ) + 4 * ((d : ℝ) - 1)) ≤
+      ((d : ℝ) ^ 2 * (S.card : ℝ)) / (((d : ℝ) ^ 2 - (spectralExpansionParameter G) ^ 2) / (Fintype.card V : ℝ) * (S.card : ℝ) + (spectralExpansionParameter G) ^ 2) := by
+    rw [div_le_div_iff₀ h_denom2_pos h_denom1_pos]
+    exact mul_le_mul_of_nonneg_left h_denom_le (by positivity)
+  exact le_trans h_frac_le h_bound
+
+/--
+**Tanner's Expansion Bound for Ramanujan Graphs (Factored Form)**:
+Expressing the denominator leading coefficient as $((d-2)^2 / n) |S| + 4(d-1)$.
+-/
+theorem tanner_ramanujan_expansion_factored (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (hd : 2 ≤ d)
+    (hRam : spectralExpansionParameter G ≤ 2 * Real.sqrt ((d : ℝ) - 1))
+    (S : Finset V) (hS : 0 < S.card) :
+    ((d : ℝ) ^ 2 * (S.card : ℝ)) /
+      ((((d : ℝ) - 2) ^ 2 / (Fintype.card V : ℝ)) * (S.card : ℝ) + 4 * ((d : ℝ) - 1)) ≤
+    ((neighborhood G S).card : ℝ) := by
+  have : (d : ℝ) ^ 2 - 4 * ((d : ℝ) - 1) = ((d : ℝ) - 2) ^ 2 := by ring
+  have h_ram := tanner_ramanujan_expansion G hreg hn hd hRam S hS
+  rwa [this] at h_ram
+
+/--
+**Tanner Vertex Expansion for Bounded Subsets ($|S| \le n/2$)**:
+For any non-empty subset $S \subseteq V$ containing at most half the vertices ($|S| \le n/2$),
+$$|N(S)| \ge \frac{2 d^2}{d^2 + \lambda^2} |S|$$
+-/
+theorem tanner_half_set_expansion (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (hd : 0 < d)
+    (S : Finset V) (hS : 0 < S.card)
+    (hhalf : (S.card : ℝ) ≤ (Fintype.card V : ℝ) / 2) :
+    ((2 * (d : ℝ) ^ 2) / ((d : ℝ) ^ 2 + (spectralExpansionParameter G) ^ 2)) * (S.card : ℝ) ≤
+    ((neighborhood G S).card : ℝ) := by
+  have hn_pos : 0 < (Fintype.card V : ℝ) := Nat.cast_pos.mpr (Nat.pos_of_ne_zero hn)
+  have hd_pos_r : 0 < (d : ℝ) := Nat.cast_pos.mpr hd
+  have h_denom_ne : (d : ℝ) ^ 2 + (spectralExpansionParameter G) ^ 2 ≠ 0 := by positivity
+  have hα : (S.card : ℝ) / (Fintype.card V : ℝ) ≤ (1 / 2 : ℝ) := (div_le_iff₀ hn_pos).mpr (by linarith)
+  have h_small := tanner_small_set_expansion G hreg hn hd S hS hα (by norm_num)
+  have h_frac_eq : (d : ℝ) ^ 2 / ((1 / 2 : ℝ) * ((d : ℝ) ^ 2 - (spectralExpansionParameter G) ^ 2) + (spectralExpansionParameter G) ^ 2) =
+      (2 * (d : ℝ) ^ 2) / ((d : ℝ) ^ 2 + (spectralExpansionParameter G) ^ 2) := by
+    have : (1 / 2 : ℝ) * ((d : ℝ) ^ 2 - (spectralExpansionParameter G) ^ 2) + (spectralExpansionParameter G) ^ 2 =
+        ((d : ℝ) ^ 2 + (spectralExpansionParameter G) ^ 2) / 2 := by ring
+    rw [this]; field_simp [h_denom_ne]
+  rwa [h_frac_eq] at h_small
+
+/--
+**Tanner Vertex Expansion Ratio for Bounded Subsets ($|S| \le n/2$)**:
+$$\frac{|N(S)|}{|S|} \ge \frac{2 d^2}{d^2 + \lambda^2}$$
+-/
+theorem tanner_half_set_expansion_ratio (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (hd : 0 < d)
+    (S : Finset V) (hS : 0 < S.card)
+    (hhalf : (S.card : ℝ) ≤ (Fintype.card V : ℝ) / 2) :
+    (2 * (d : ℝ) ^ 2) / ((d : ℝ) ^ 2 + (spectralExpansionParameter G) ^ 2) ≤
+    ((neighborhood G S).card : ℝ) / (S.card : ℝ) := by
+  have hs_pos : 0 < (S.card : ℝ) := Nat.cast_pos.mpr hS
+  exact (le_div_iff₀ hs_pos).mpr (tanner_half_set_expansion G hreg hn hd S hS hhalf)
+
+/--
+**Vertex Expansion Difference Bound (Relation to Cheeger Constant)**:
+For any non-empty subset $S \subseteq V$ with $|S| \le n/2$,
+the vertex expansion margin $|N(S)| - |S|$ satisfies:
+$$|N(S)| - |S| \ge \frac{d^2 - \lambda^2}{d^2 + \lambda^2} |S|$$
+-/
+theorem tanner_vertex_margin_bound (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (hd : 0 < d)
+    (S : Finset V) (hS : 0 < S.card)
+    (hhalf : (S.card : ℝ) ≤ (Fintype.card V : ℝ) / 2) :
+    (((d : ℝ) ^ 2 - (spectralExpansionParameter G) ^ 2) / ((d : ℝ) ^ 2 + (spectralExpansionParameter G) ^ 2)) * (S.card : ℝ) ≤
+    ((neighborhood G S).card : ℝ) - (S.card : ℝ) := by
+  have h_exp := tanner_half_set_expansion G hreg hn hd S hS hhalf
+  have hd_pos_r : 0 < (d : ℝ) := Nat.cast_pos.mpr hd
+  have h_denom_ne : (d : ℝ) ^ 2 + (spectralExpansionParameter G) ^ 2 ≠ 0 := by positivity
+  have h_alg : ((2 * (d : ℝ) ^ 2) / ((d : ℝ) ^ 2 + (spectralExpansionParameter G) ^ 2)) * (S.card : ℝ) - (S.card : ℝ) =
+      (((d : ℝ) ^ 2 - (spectralExpansionParameter G) ^ 2) / ((d : ℝ) ^ 2 + (spectralExpansionParameter G) ^ 2)) * (S.card : ℝ) := by
+    field_simp [h_denom_ne]; ring
+  linarith
+
+end TannerExpansion

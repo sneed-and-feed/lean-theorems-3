@@ -1,168 +1,179 @@
-import Mathlib.Combinatorics.SimpleGraph.Basic
-import Mathlib.Combinatorics.SimpleGraph.Density
-import Mathlib.Combinatorics.SimpleGraph.Regularity.Bound
-import Mathlib.Combinatorics.SimpleGraph.Regularity.Energy
-import Mathlib.Combinatorics.SimpleGraph.Regularity.Uniform
-import Mathlib.Combinatorics.SimpleGraph.Regularity.Lemma
-import Mathlib.Combinatorics.SimpleGraph.Triangle.Basic
-import Mathlib.Combinatorics.SimpleGraph.Triangle.Counting
-import Mathlib.Combinatorics.SimpleGraph.Triangle.Removal
 import Mathlib.Data.Real.Basic
-import Mathlib.Data.Finset.Basic
-import Mathlib.Data.Finset.Card
+import Mathlib.Data.Matrix.Basic
 import Mathlib.Data.Fintype.Card
-import Mathlib.Tactic.Positivity
-import Mathlib.Tactic.Ring
+import Mathlib.Data.Fintype.BigOperators
+import Mathlib.Data.Finset.Card
+import Mathlib.Data.Finset.Basic
+import Mathlib.Combinatorics.SimpleGraph.Basic
+import Mathlib.Combinatorics.SimpleGraph.DegreeSum
+import Mathlib.Algebra.Order.BigOperators.Ring.Finset
+import Mathlib.Analysis.SpecialFunctions.Pow.Real
+import Mathlib.Analysis.SpecialFunctions.Sqrt
 import Mathlib.Tactic.Linarith
-import Mathlib.Tactic.GCongr
-import Mathlib.Tactic.FieldSimp
+import Mathlib.Tactic.Ring
+import Mathlib.Tactic.Positivity
 
-open scoped BigOperators Finset
+open scoped BigOperators Matrix Finset
 open Classical
 
 set_option linter.unusedSectionVars false
-set_option linter.unusedVariables false
 
 /-!
-# Szemerédi's Regularity Lemma and Partition Energy Dynamics
+# Tanner's Vertex Expansion Bound for Regular Graphs
 
-This module formalizes the structural and dynamic foundations of **Szemerédi's Regularity Lemma** (Endre Szemerédi, 1978)
-and the **Triangle Removal Lemma** (Imre Z. Ruzsa and Endre Szemerédi, 1978).
+This module formalizes **Tanner's Vertex Expansion Bound** (R. Michael Tanner, 1984),
+a fundamental theorem in spectral graph theory and coding theory establishing a quantitative
+lower bound on the vertex expansion (neighborhood size $|N(S)|$) of subsets in a $d$-regular graph
+in terms of the spectral expansion parameter $\lambda = \lambda(G) = \max_{i \ge 2} |\lambda_i|$.
 
 ## Mathematical Overview
 
-1. **Pair Edge Density**: $d(X, Y) = \frac{e(X, Y)}{|X| |Y|} \in [0, 1]$.
-2. **$\varepsilon$-Regular Pairs**: A pair $(X, Y)$ is $\varepsilon$-regular if $|d(A, B) - d(X, Y)| \le \varepsilon$
-   for all $A \subseteq X, B \subseteq Y$ with $|A| \ge \varepsilon |X|, |B| \ge \varepsilon |Y|$.
-3. **Partition Energy**: $E(\mathcal{P}) = \sum_{X, Y \in \mathcal{P}} \frac{|X||Y|}{n^2} d(X, Y)^2 \in [0, 1]$.
-4. **Energy Exhaustion**: Any energy sequence bounded in $[0, 1]$ with minimum step increment $\varepsilon^5 / 2$
-   can make at most $2 / \varepsilon^5$ steps.
-5. **Mathlib Regularity and Removal Bridges**: Connecting the formal definitions to Mathlib's verified `szemeredi_regularity`
-   and `triangle_removal` theorems.
+Let $G = (V, E)$ be a $d$-regular graph on $n = |V|$ vertices.
+For any subset $S \subseteq V$, its open neighborhood is:
+$$N(S) = \{ v \in V \mid \exists u \in S, \{u, v\} \in E \}$$
+
+### 1. Tanner's Vertex Expansion Theorem
+For any non-empty subset $S \subseteq V$ ($0 < |S|$):
+$$|N(S)| \ge \frac{d^2 |S|}{\frac{d^2 - \lambda^2}{n} |S| + \lambda^2}$$
+
+Equivalently, the vertex expansion ratio satisfies:
+$$\frac{|N(S)|}{|S|} \ge \frac{d^2}{(d^2 - \lambda^2) \frac{|S|}{n} + \lambda^2}$$
+
+### 2. Key Corollaries & Limiting Regimes
+
+1. **Small-Set Expansion**: If $|S| \le \alpha n$, then:
+   $$|N(S)| \ge \frac{d^2}{\alpha (d^2 - \lambda^2) + \lambda^2} |S|$$
+
+2. **Ramanujan Graphs**: For graphs satisfying the optimal Ramanujan bound $\lambda \le 2\sqrt{d-1}$:
+   $$|N(S)| \ge \frac{d^2 |S|}{\frac{(d-2)^2}{n} |S| + 4(d-1)}$$
+
+3. **Subsets of Size $\le n/2$**: For any non-empty $S$ with $|S| \le n/2$:
+   $$|N(S)| \ge \frac{2 d^2}{d^2 + \lambda^2} |S|$$
 
 ## References
 
-- Szemerédi, E. (1978). *Regular partitions of graphs*. Problèmes Combinatoires et Théorie des Graphes, 260, 399–401.
-- Ruzsa, I. Z., & Szemerédi, E. (1978). *Triple systems with no six points carrying three triangles*. Combinatorics, 18, 939–945.
+- Tanner, R. M. (1984). *Explicit construction of concentrators from generalized $N$-gons*.
+  SIAM Journal on Algebraic and Discrete Methods, 5(3), 287–293.
+- Alon, N., & Spencer, J. (2016). *The Probabilistic Method* (4th ed.). Wiley.
+- Hoory, S., Linial, N., & Wigderson, A. (2006). *Expander graphs and their applications*.
+  Bulletin of the American Mathematical Society, 43(4), 439–561.
 -/
 
 variable {V : Type*} [Fintype V] [DecidableEq V]
 
-namespace SzemerediRegularity
+namespace TannerExpansion
 
-/-- The number of edges between two subsets $X, Y \subseteq V$ in a simple graph $G$. -/
-def bipartiteEdgeCount (G : SimpleGraph V) [DecidableRel G.Adj] (X Y : Finset V) : ℕ :=
-  ((X ×ˢ Y).filter (fun p => G.Adj p.1 p.2)).card
+/-- The $0$-$1$ adjacency matrix of a simple graph $G$ over $\mathbb{R}$. -/
+def adjacencyMatrix (G : SimpleGraph V) [DecidableRel G.Adj] : Matrix V V ℝ :=
+  fun u v => if G.Adj u v then 1 else 0
 
-/-- The edge density $d(X, Y) = \frac{e(X, Y)}{|X| |Y|}$ between sets $X, Y$. -/
-noncomputable def pairDensity (G : SimpleGraph V) [DecidableRel G.Adj] (X Y : Finset V) : ℝ :=
-  (bipartiteEdgeCount G X Y : ℝ) / ((X.card : ℝ) * (Y.card : ℝ))
+/-- Predicate stating that a simple graph is $d$-regular. -/
+def isRegularOfDegree (G : SimpleGraph V) (d : ℕ) [DecidableRel G.Adj] : Prop :=
+  ∀ v : V, G.degree v = d
+
+/-- Standard Euclidean inner product on $\mathbb{R}^V$. -/
+def innerProduct (u v : V → ℝ) : ℝ :=
+  ∑ x : V, u x * v x
+
+/-- The squared Euclidean norm $\|v\|^2 = \langle v, v \rangle$. -/
+def normSq (v : V → ℝ) : ℝ :=
+  innerProduct v v
+
+/-- A vector $v \in \mathbb{R}^V$ is orthogonal to $\mathbf{1}$ if its coordinate sum is zero. -/
+def isOrthogonalToOnes (v : V → ℝ) : Prop :=
+  ∑ x : V, v x = 0
+
+/-- The spectral expansion parameter $\lambda(G) = \max_{i \ge 2} |\lambda_i|$ of a regular graph $G$. -/
+noncomputable def spectralExpansionParameter (G : SimpleGraph V) [DecidableRel G.Adj] : ℝ :=
+  sSup { |innerProduct u (fun x => ∑ y : V, adjacencyMatrix G x y * v y)| /
+         (Real.sqrt (normSq u) * Real.sqrt (normSq v)) |
+         (u : V → ℝ) (v : V → ℝ) (_ : u ≠ 0) (_ : v ≠ 0)
+         (_ : isOrthogonalToOnes u) (_ : isOrthogonalToOnes v) }
+
+/-- The open neighborhood of a vertex set $S \subseteq V$: $N(S) = \bigcup_{u \in S} N(u)$. -/
+def neighborhood (G : SimpleGraph V) [DecidableRel G.Adj] (S : Finset V) : Finset V :=
+  Finset.biUnion S (fun u => G.neighborFinset u)
 
 /--
-**Definition of an $\varepsilon$-Regular Pair**:
-A pair $(X, Y)$ is $\varepsilon$-regular if for all $A \subseteq X$ with $|A| \ge \varepsilon |X|$
-and all $B \subseteq Y$ with $|B| \ge \varepsilon |Y|$, the sub-pair density satisfies:
-$$|d_G(A, B) - d_G(X, Y)| \le \varepsilon$$
+**Tanner's Vertex Expansion Theorem** (R. M. Tanner, 1984):
+For any $d$-regular graph $G$ on $n$ vertices ($n \ne 0$, $d > 0$) and any non-empty subset $S \subseteq V$,
+the size of the open neighborhood $N(S)$ satisfies:
+$$|N(S)| \ge \frac{d^2 |S|}{\frac{d^2 - \lambda^2}{n} |S| + \lambda^2}$$
+where $\lambda = \lambda(G) = \text{spectralExpansionParameter } G$.
 -/
-def IsEpsilonRegularPair (G : SimpleGraph V) [DecidableRel G.Adj] (ε : ℝ) (X Y : Finset V) : Prop :=
-  ∀ (A : Finset V) (B : Finset V),
-    A ⊆ X → B ⊆ Y →
-    ε * (X.card : ℝ) ≤ (A.card : ℝ) →
-    ε * (Y.card : ℝ) ≤ (B.card : ℝ) →
-    |pairDensity G A B - pairDensity G X Y| ≤ ε
-
-/-- A vertex partition of a finite graph $V$. -/
-structure GraphPartition (V : Type*) [Fintype V] [DecidableEq V] where
-  parts : Finset (Finset V)
-  disjoint : ∀ A ∈ parts, ∀ B ∈ parts, A ≠ B → Disjoint A B
-  cover : parts.biUnion id = Finset.univ
-  nonempty_parts : ∀ A ∈ parts, A.Nonempty
-
-/-- The normalized quadratic energy of a graph partition:
-    $E(\mathcal{P}) = \sum_{X \in \mathcal{P}} \sum_{Y \in \mathcal{P}} \frac{|X| |Y|}{|V|^2} d_G(X, Y)^2$. -/
-noncomputable def partitionEnergy (G : SimpleGraph V) [DecidableRel G.Adj] (P : GraphPartition V) : ℝ :=
-  ∑ X ∈ P.parts, ∑ Y ∈ P.parts,
-    ((X.card : ℝ) * (Y.card : ℝ) / ((Fintype.card V : ℝ) ^ 2)) * (pairDensity G X Y) ^ 2
-
-/-- The edge density is bounded in $[0, 1]$ for non-empty sets. -/
-theorem pairDensity_le_one (G : SimpleGraph V) [DecidableRel G.Adj] (X Y : Finset V)
-    (hX : X.Nonempty) (hY : Y.Nonempty) :
-    pairDensity G X Y ≤ 1 := by
-  sorry
-
-/-- Weighted average split for pair density under partitioning the left set. -/
-theorem pairDensity_weighted_split (G : SimpleGraph V) [DecidableRel G.Adj] {X₁ X₂ Y : Finset V}
-    (hdisj : Disjoint X₁ X₂) (hU : (X₁ ∪ X₂).Nonempty) (hY : Y.Nonempty) :
-    pairDensity G (X₁ ∪ X₂) Y =
-      ((X₁.card : ℝ) / ((X₁ ∪ X₂).card : ℝ)) * pairDensity G X₁ Y +
-      ((X₂.card : ℝ) / ((X₁ ∪ X₂).card : ℝ)) * pairDensity G X₂ Y := by
-  sorry
-
-/-- Symmetry of the $\varepsilon$-regular pair predicate: $(X, Y)$ is $\varepsilon$-regular iff $(Y, X)$ is. -/
-theorem isEpsilonRegularPair_symm (G : SimpleGraph V) [DecidableRel G.Adj] (ε : ℝ) (X Y : Finset V) :
-    IsEpsilonRegularPair G ε X Y ↔ IsEpsilonRegularPair G ε Y X := by
+theorem tanner_vertex_expansion_bound (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (hd : 0 < d)
+    (S : Finset V) (hS : 0 < S.card) :
+    ((d : ℝ) ^ 2 * (S.card : ℝ)) /
+      (((d : ℝ) ^ 2 - (spectralExpansionParameter G) ^ 2) / (Fintype.card V : ℝ) * (S.card : ℝ) + (spectralExpansionParameter G) ^ 2) ≤
+    ((neighborhood G S).card : ℝ) := by
   sorry
 
 /--
-**Energy Upper Bound**:
-For any graph $G$ and partition $\mathcal{P}$, the normalized energy satisfies $E(\mathcal{P}) \le 1$.
+**Tanner's Expansion Ratio Bound**:
+For any non-empty subset $S \subseteq V$, the vertex expansion ratio $|N(S)| / |S|$ satisfies:
+$$\frac{|N(S)|}{|S|} \ge \frac{d^2}{(d^2 - \lambda^2)\frac{|S|}{n} + \lambda^2}$$
 -/
-theorem energy_le_one (G : SimpleGraph V) [DecidableRel G.Adj] (P : GraphPartition V) :
-    partitionEnergy G P ≤ 1 := by
+theorem tanner_expansion_ratio_bound (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (hd : 0 < d)
+    (S : Finset V) (hS : 0 < S.card) :
+    ((d : ℝ) ^ 2) /
+      (((d : ℝ) ^ 2 - (spectralExpansionParameter G) ^ 2) * ((S.card : ℝ) / (Fintype.card V : ℝ)) + (spectralExpansionParameter G) ^ 2) ≤
+    ((neighborhood G S).card : ℝ) / (S.card : ℝ) := by
   sorry
 
 /--
-**Energy Exhaustion Principle**:
-Any energy sequence bounded in $[0, 1]$ with strict minimum increment $\Delta > 0$
-at each step can make at most $\lfloor 1 / \Delta \rfloor$ steps.
+**Small Set Expansion via Tanner's Bound**:
+If $S \subseteq V$ is non-empty with relative volume $|S|/n \le \alpha$ where $0 < \alpha$,
+then $|N(S)| \ge \frac{d^2}{\alpha (d^2 - \lambda^2) + \lambda^2} |S|$.
 -/
-theorem energy_exhaustion_bound (energy_seq : ℕ → ℝ)
-    (h_nonneg : ∀ (i : ℕ), 0 ≤ energy_seq i)
-    (h_le_one : ∀ (i : ℕ), energy_seq i ≤ 1)
-    (Δ : ℝ) (hΔ : 0 < Δ)
-    (h_inc : ∀ (i : ℕ), energy_seq i + Δ ≤ energy_seq (i + 1)) (k : ℕ) :
-    (k : ℝ) * Δ ≤ 1 := by
+theorem tanner_small_set_expansion (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (hd : 0 < d)
+    (S : Finset V) (hS : 0 < S.card) {α : ℝ} (hα : (S.card : ℝ) / (Fintype.card V : ℝ) ≤ α)
+    (hα_pos : 0 < α) :
+    ((d : ℝ) ^ 2 / (α * ((d : ℝ) ^ 2 - (spectralExpansionParameter G) ^ 2) + (spectralExpansionParameter G) ^ 2)) * (S.card : ℝ) ≤
+    ((neighborhood G S).card : ℝ) := by
   sorry
 
 /--
-**Maximum Number of Increment Iterations**:
-The maximum number of times the energy increment can occur under an $\varepsilon^5 / 2$ step boost
-is bounded by $2 / \varepsilon^5$.
+**Tanner's Expansion Bound for Ramanujan Graphs**:
+For a Ramanujan graph where $\lambda(G) \le 2\sqrt{d-1}$ ($d \ge 2$), any non-empty subset $S \subseteq V$ satisfies:
+$$|N(S)| \ge \frac{d^2 |S|}{\frac{d^2 - 4(d-1)}{n}|S| + 4(d-1)}$$
 -/
-theorem max_increment_steps_bound (energy_seq : ℕ → ℝ)
-    (h_nonneg : ∀ (i : ℕ), 0 ≤ energy_seq i)
-    (h_le_one : ∀ (i : ℕ), energy_seq i ≤ 1)
-    (ε : ℝ) (hε : 0 < ε)
-    (h_inc : ∀ (i : ℕ), energy_seq i + (ε ^ 5) / 2 ≤ energy_seq (i + 1)) (k : ℕ) :
-    (k : ℝ) ≤ 2 / (ε ^ 5) := by
+theorem tanner_ramanujan_expansion (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (hd : 2 ≤ d)
+    (hRam : spectralExpansionParameter G ≤ 2 * Real.sqrt ((d : ℝ) - 1))
+    (S : Finset V) (hS : 0 < S.card) :
+    ((d : ℝ) ^ 2 * (S.card : ℝ)) /
+      ((((d : ℝ) ^ 2 - 4 * ((d : ℝ) - 1)) / (Fintype.card V : ℝ)) * (S.card : ℝ) + 4 * ((d : ℝ) - 1)) ≤
+    ((neighborhood G S).card : ℝ) := by
   sorry
 
 /--
-**Mathlib Bridge for Szemerédi's Regularity Lemma**:
-Mathlib's `szemeredi_regularity` produces an equitable $\varepsilon$-uniform finpartition
-whose size is bounded by `SzemerediRegularity.bound ε l`.
+**Tanner Vertex Expansion for Bounded Subsets ($|S| \le n/2$)**:
+For any non-empty subset $S \subseteq V$ containing at most half the vertices ($|S| \le n/2$),
+$$|N(S)| \ge \frac{2 d^2}{d^2 + \lambda^2} |S|$$
 -/
-theorem szemeredi_regularity_mathlib_bridge (G : SimpleGraph V) [DecidableRel G.Adj]
-    (ε : ℝ) (hε : 0 < ε) (l : ℕ) (hl : l ≤ Fintype.card V) :
-    ∃ P : Finpartition (Finset.univ : Finset V),
-      P.IsEquipartition ∧
-      l ≤ P.parts.card ∧
-      P.parts.card ≤ SzemerediRegularity.bound ε l ∧
-      P.IsUniform G ε := by
+theorem tanner_half_set_expansion (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (hd : 0 < d)
+    (S : Finset V) (hS : 0 < S.card)
+    (hhalf : (S.card : ℝ) ≤ (Fintype.card V : ℝ) / 2) :
+    ((2 * (d : ℝ) ^ 2) / ((d : ℝ) ^ 2 + (spectralExpansionParameter G) ^ 2)) * (S.card : ℝ) ≤
+    ((neighborhood G S).card : ℝ) := by
   sorry
 
 /--
-**Mathlib Bridge for Triangle Removal**:
-Mathlib's `SimpleGraph.triangle_removal` ensures that if the number of 3-cliques is strictly below
-`triangleRemovalBound δ * |V|^3`, there exists a subgraph `G' ≤ G` with `G'.CliqueFree 3` obtained
-by removing fewer than `δ * |V|^2` edges.
+**Vertex Expansion Difference Bound (Relation to Cheeger Constant)**:
+For any non-empty subset $S \subseteq V$ with $|S| \le n/2$,
+the vertex expansion margin $|N(S)| - |S|$ satisfies:
+$$|N(S)| - |S| \ge \frac{d^2 - \lambda^2}{d^2 + \lambda^2} |S|$$
 -/
-theorem triangle_removal_mathlib_bridge (G : SimpleGraph V) [DecidableRel G.Adj] {δ : ℝ}
-    (hG : (#(G.cliqueFinset 3) : ℝ) < SimpleGraph.triangleRemovalBound δ * (Fintype.card V : ℝ) ^ 3) :
-    ∃ (G' : SimpleGraph V) (_ : DecidableRel G'.Adj),
-      G' ≤ G ∧
-      ((#G.edgeFinset - #G'.edgeFinset : ℝ) < δ * ((Fintype.card V : ℝ) ^ 2)) ∧
-      G'.CliqueFree 3 := by
+theorem tanner_vertex_margin_bound (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (hd : 0 < d)
+    (S : Finset V) (hS : 0 < S.card)
+    (hhalf : (S.card : ℝ) ≤ (Fintype.card V : ℝ) / 2) :
+    (((d : ℝ) ^ 2 - (spectralExpansionParameter G) ^ 2) / ((d : ℝ) ^ 2 + (spectralExpansionParameter G) ^ 2)) * (S.card : ℝ) ≤
+    ((neighborhood G S).card : ℝ) - (S.card : ℝ) := by
   sorry
 
-end SzemerediRegularity
+end TannerExpansion
