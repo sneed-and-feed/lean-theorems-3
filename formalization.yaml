@@ -1,60 +1,56 @@
 version: "v0.4"
 
 project:
-  name: "Order-4 Picard–Fuchs Differential Equations, Monodromy, and Mirror Yukawa Couplings"
+  name: "Roth's Theorem on 3-Term Arithmetic Progressions"
   authors:
     - "Sneed & Feed Formalization Team"
   responsible_maintainers:
     - "sneed-and-feed"
   license: "CC0-1.0"
   description: >-
-    A complete, machine-checked Lean 4 formalization of the order-4 Picard–Fuchs differential
-    operator L_4 for the modular families Delta(3,4,infty) and Delta(2,3,infty). Formalizes
-    the Calabi–Yau self-duality sum condition sum alpha_i = 2, indicial polynomial I_0(theta) = theta^4,
-    Frobenius cusp monodromy T_0 in Sp_4(Z), nilpotence of index 2 (Type II degeneration N^2 = 0),
-    CY3 Maximally Unipotent Monodromy (Type III, N^4 = 0), infinitesimal and finite symplectic Lie algebra
-    invariance (Griffiths transversality), and classical/multi-instanton BPS Yukawa expansions.
-    To the maintainers' knowledge, the theorem was verified absent from the core Mathlib library
-    (checked against Mathlib v4.34.0-rc1).
+    A machine-checked Lean 4 formalization of the combinatorial core of Roth's Theorem (Klaus Roth, 1953)
+    on 3-term arithmetic progressions (3-APs) in dense subsets of integers and finite abelian groups.
+    Includes the multilinear 3-AP counting functional \Lambda(f_1, f_2, f_3), exact counting evaluation
+    \Lambda(1_A, 1_A, 1_A) = |A|/|G|^2 on 3-AP free sets, arithmetic progression preservation under affine maps,
+    and the discrete density increment iteration step bound k <= 16/\alpha_0^2. To the maintainers' knowledge,
+    the theorem was not found in an exact declaration name, docstring, and type signature search of the pinned
+    Mathlib revision (Mathlib v4.34.0-rc1).
 
 classification:
-  arxiv: [math.AG, hep-th, math.CA]
-  msc2020: ["14J32", "34M35", "32G20", "14J33"]
+  arxiv: [math.NT, math.CO]
+  msc2020: ["11B30", "05D10", "42A99", "11K70"]
 
 sources:
-  - title: "A pair of Calabi-Yau manifolds as an exactly soluble superconformal theory"
+  - title: "On certain sets of integers"
     type: paper
     authors:
-      - "Philip Candelas"
-      - "Xenia C. de la Ossa"
-      - "Paul S. Green"
-      - "Linda Parkes"
-    year: 1991
-    venue: "Nuclear Physics B, 359(1), 21-74"
+      - "Klaus F. Roth"
+    venue: "Journal of the London Mathematical Society"
+    year: 1953
     relationship: formalizes
-  - title: "Mirror symmetry and algebraic geometry"
+  - title: "Additive Combinatorics"
     type: book
     authors:
-      - "David A. Cox"
-      - "Sheldon Katz"
-    year: 1999
-    venue: "Mathematical Surveys and Monographs, Vol. 68, American Mathematical Society"
-    relationship: adapts
-  - title: "Periods of integrals on algebraic manifolds, III: Abelian integrals and the Abel-Jacobi mapping"
-    type: paper
+      - "Terence Tao"
+      - "Van H. Vu"
+    publisher: "Cambridge University Press"
+    year: 2006
+    relationship: background
+  - title: "Strong bounds for 3-progressions"
+    type: preprint
     authors:
-      - "Phillip A. Griffiths"
-    year: 1968
-    venue: "Publications Mathématiques de l'IHÉS, 38, 125-180"
+      - "Zander Kelley"
+      - "Raghu Meka"
+    venue: "arXiv:2302.05537"
+    year: 2023
     relationship: background
 
 related_formalizations:
-  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Data/Matrix/Basic.lean"
+  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Data/ZMod/Basic.lean"
     relationship: builds-on
     note: >-
-      Formalization builds on Mathlib's matrix algebra and rational polynomial infrastructure,
-      formalizing hypergeometric differential equations, symplectic Lie algebra actions,
-      Frobenius local monodromy, and multi-instanton BPS Yukawa expansions.
+      Formalization builds on Mathlib's modular arithmetic and finite group representation,
+      extending them with multilinear 3-AP counting functionals and density increment exhaustion.
 
 automation:
   methods:
@@ -71,4 +67,4 @@ review:
   notes: >-
     Challenge contains deliberate proof holes (`:= sorry` for automated benchmark evaluation),
     while all definitions and theorem statements are completely specified. Solution verified through
-    maintainer audit with 0 errors, 0 sorries, and strictly standard kernel axioms.
+    human audit by the maintainers with 0 errors, 0 sorries, and strictly standard kernel axioms.
