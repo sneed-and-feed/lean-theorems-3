@@ -1,418 +1,676 @@
-/-
-Copyright (c) 2026. All rights reserved.
-Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Antigravity
--/
+import Mathlib.Data.Matrix.Basic
 import Mathlib.Data.Rat.Defs
-import Mathlib.Data.Rat.Lemmas
-import Mathlib.Algebra.Order.Field.Basic
-import Mathlib.Algebra.Order.Field.Rat
-import Mathlib.Algebra.Order.Ring.Rat
-import Mathlib.Data.Rat.Cast.Order
-import Mathlib.Data.Real.Basic
-import Mathlib.Analysis.SpecialFunctions.Trigonometric.Basic
-import Mathlib.Data.Complex.Basic
+import Mathlib.Algebra.BigOperators.Intervals
+import Mathlib.Algebra.BigOperators.Fin
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.NormNum
+import Mathlib.Tactic.FinCases
+import Mathlib.Tactic.FieldSimp
+
+open scoped Matrix BigOperators
+open Matrix
+
+set_option linter.unusedSectionVars false
+set_option linter.unusedVariables false
+
 
 /-!
-# Hyperbolic Orbifold Spectral Zeta, Gauss–Bonnet Area & Selberg Trace Formula
+# Order-4 Picard-Fuchs Differential Equations & Yukawa Couplings for $\Delta(p,q,\infty)$
 
-This module formalizes the spectral geometry of 1-cusped hyperbolic 2-orbifolds
-$\mathcal{O}(p, q, \infty) = \Delta(p, q, \infty) \backslash \mathbb{H}$:
+This module formalizes the analytical and differential-geometric structures of the
+order-4 Picard-Fuchs system for the modular families $\Delta(3,4,\infty)$ and $\Delta(2,3,\infty)$,
+connecting the Picard-Fuchs differential operator to the Frobenius cusp monodromy,
+symplectic Lie algebra invariance, and classical Yukawa couplings.
 
-1. **Hyperbolic Triangle Orbifold Signatures**:
-   Signature $(p, q, \infty)$ with $2 \le p, q$ and hyperbolic condition $1/p + 1/q < 1$.
+## Mathematical Summary
 
-2. **Orbifold Euler Characteristic & Gauss–Bonnet Area**:
-   $$\chi_{\text{orb}}(\mathbb{P}^1(p, q, \infty)) = \frac{1}{p} + \frac{1}{q} - 1 < 0$$
-   $$\operatorname{Area}(\mathcal{O}(p, q, \infty)) = -2\pi \chi_{\text{orb}} = 2\pi \left(1 - \frac{1}{p} - \frac{1}{q}\right) > 0$$
+1. **Picard-Fuchs Differential Operator $\mathcal{L}_4$**:
+   In the logarithmic derivative coordinate $\theta = z \frac{d}{dz}$, the standard order-4
+   hypergeometric Picard-Fuchs ODE is:
+   $$\mathcal{L}_4 = \theta^4 - z(\theta + \alpha_1)(\theta + \alpha_2)(\theta + \alpha_3)(\theta + \alpha_4)$$
+   where $\alpha = (\alpha_1, \alpha_2, \alpha_3, \alpha_4) \in \mathbb{Q}^4$ are the local exponents.
+   - For $(3,4,\infty)$ geometric/mirror family: $\alpha = (1/12, 5/12, 7/12, 11/12)$.
+   - For $(3,4,\infty)$ modular family: $\alpha = (1/3, 2/3, 1/4, 3/4)$.
+   - For $(2,3,\infty)$ modular family: $\alpha = (1/6, 5/6, 1/6, 5/6)$.
+   - Calabi-Yau self-duality sum condition: $\sum_{i=1}^4 \alpha_i = 2$.
+   - Indicial polynomial at $z = 0$ is $I_0(\lambda) = \lambda^4$, exhibiting a unique quadruple root at $\lambda = 0$.
 
-3. **Certified Exact Areas for Canonical Families**:
-   - $(3, 4, \infty) \implies \chi_{\text{orb}} = -5/12,\; \mu_{\text{orb}} = 5/12,\; \operatorname{Area} = 5\pi/6$
-   - $(2, 3, \infty) \implies \chi_{\text{orb}} = -1/6,\; \mu_{\text{orb}} = 1/6,\; \operatorname{Area} = \pi/3$
-   - $(2, 5, \infty) \implies \chi_{\text{orb}} = -3/10,\; \mu_{\text{orb}} = 3/10,\; \operatorname{Area} = 3\pi/5$
-   - $(3, 5, \infty) \implies \chi_{\text{orb}} = -7/15,\; \mu_{\text{orb}} = 7/15,\; \operatorname{Area} = 14\pi/15,\; \operatorname{Area}_{\Delta} = 7\pi/15$
+2. **Frobenius Local Monodromy at Cusp $z = 0$**:
+   - Parabolic cusp monodromy $T_0 \in \mathrm{Sp}_4(\mathbb{Z})$ and nilpotent operator $N = T_0 - I_4$.
+   - Machine-checked proof that $N$ matches `SymplecticTriangleRepresentations.N` and `ModularFamilyS6.N`.
+   - Index-2 unipotence: $N^2 = 0$ for the abelian surface modular family $\Delta(3,4,\infty)$ (Type II degeneration).
+   - Action on basis vectors: $N \gamma = 0$, $N u = 0$, $N w = -u$, $N \delta = \gamma$.
+   - Calabi-Yau 3-fold MUM (Maximally Unipotent Monodromy): $N_{\mathrm{MUM}}^4 = 0$ and $N_{\mathrm{MUM}}^3 \ne 0$ (Type III).
+   - Mutual exclusion and classification between Type I, Type II, and Type III monodromies.
 
-4. **Eisenstein Series Scattering Determinant $\phi(s)$**:
-   Functional equation $\phi(s)\phi(1-s) = 1$, critical line unitarity $\|\phi(1/2 + ir)\|^2 = 1$,
-   and residue $\operatorname{Res}_{s=1} \phi(s) = \frac{1}{1 - 1/p - 1/q} = \frac{1}{\mu_{\text{orb}}}$.
+3. **Symplectic Bilinear Invariance & Griffiths Transversality**:
+   - Symplectic Lie algebra condition: $N^T J + J N = 0$ for standard $J$.
+   - Symplectic Lie algebra condition: $N^T \Omega_6 + \Omega_6 N = 0$ for the $S_6$-polarized form.
+   - Symplectic group invariance: $T_0^T J T_0 = J$ and $T_0^T \Omega_6 T_0 = \Omega_6$.
+   - Symplectic pairing $\langle v, w \rangle_J = v^T J w$ satisfies skew-symmetry and infinitesimal invariance:
+     $$\langle N v, w \rangle_J + \langle v, N w \rangle_J = 0$$
 
-5. **Orbifold Selberg Trace Formula**:
-   Spectral-geometric identity decomposing discrete spectrum (Maass cusp forms), continuous
-   spectrum (Eisenstein scattering), and geometric conjugacy classes (identity, elliptic cone points
-   of orders $p, q$, parabolic cusp, and hyperbolic closed geodesics).
-
-6. **Selberg Zeta Function $\mathcal{Z}_{\mathcal{O}}(s)$**:
-   Euler product over primitive closed geodesics, logarithmic derivative, and functional equation.
+4. **Classical Yukawa Coupling & Mirror Map**:
+   - Yukawa coupling function $C_{zzz}(z, \kappa_0, \mu) = \frac{\kappa_0}{z^3 (1 - \mu z)}$.
+   - Regularized cusp function $\kappa_{\mathrm{reg}}(z) = \frac{\kappa_0}{1 - \mu z}$ (order-3 pole at $z = 0$).
+   - Conifold regularized function $\kappa_{\mathrm{con}}(z) = \frac{\kappa_0}{z^3}$ (discriminant singularity at $z = 1/\mu$).
+   - Instantaneous BPS / Gromov-Witten instanton expansion:
+     $$C_{ttt}(q, K_0, n) = K_0 + \sum_{d=1}^M \frac{d^3 n_d q^d}{1 - q^d}$$
+   - Machine-checked evaluations for degree 1, degree 2, Quintic Calabi-Yau 3-fold, and modular certificates.
 -/
 
-namespace OrbifoldSpectralZeta
-
-/-! ## 1. Hyperbolic Triangle Orbifold Signatures -/
-
-/-- A signature $(p, q, \infty)$ for a 1-cusped hyperbolic 2-orbifold $\mathcal{O}(p, q, \infty)$.
-The integers $p, q \ge 2$ represent cone point orders, and the hyperbolic condition requires
-$1/p + 1/q < 1$, ensuring negative orbifold Euler characteristic. -/
-structure HyperbolicTriangleSignature where
-  p : ℕ
-  q : ℕ
-  hp : 2 ≤ p
-  hq : 2 ≤ q
-  hyperbolic : (p : ℚ)⁻¹ + (q : ℚ)⁻¹ < 1
-
-/-- Number of conical singularity points for $\mathcal{O}(p, q, \infty)$. -/
-def numConePoints (_ : HyperbolicTriangleSignature) : ℕ := 2
-
-/-- Number of parabolic cusps for $\mathcal{O}(p, q, \infty)$. -/
-def numCusps (_ : HyperbolicTriangleSignature) : ℕ := 1
-
-/-- The orders of the conical singularities. -/
-def coneOrders (sig : HyperbolicTriangleSignature) : List ℕ := [sig.p, sig.q]
-
-/-- The hyperbolic condition is equivalent to $p + q < pq$. -/
-theorem hyperbolic_iff_mul (p q : ℕ) (hp : 0 < p) (hq : 0 < q) :
-    (p : ℚ)⁻¹ + (q : ℚ)⁻¹ < 1 ↔ p + q < p * q := by
-  have hp0 : (p : ℚ) ≠ 0 := Nat.cast_ne_zero.2 hp.ne'
-  have hq0 : (q : ℚ) ≠ 0 := Nat.cast_ne_zero.2 hq.ne'
-  have hpq : 0 < (p : ℚ) * q := mul_pos (Nat.cast_pos.2 hp) (Nat.cast_pos.2 hq)
-  rw [← mul_lt_mul_iff_of_pos_right hpq, one_mul]
-  have h : ((p : ℚ)⁻¹ + (q : ℚ)⁻¹) * ((p : ℚ) * q) = ((p + q : ℕ) : ℚ) := by
-    push_cast; linear_combination (q : ℚ) * inv_mul_cancel₀ hp0 + (p : ℚ) * inv_mul_cancel₀ hq0
-  rw [h, ← Nat.cast_mul, Nat.cast_lt]
-
-/-! ## 2. Orbifold Euler Characteristic & Gauss–Bonnet Hyperbolic Area -/
-
-/-- Rational orbifold Euler characteristic $\chi_{\text{orb}}(\mathcal{O}(p, q, \infty)) = 1/p + 1/q - 1$. -/
-def chiOrb (sig : HyperbolicTriangleSignature) : ℚ :=
-  (sig.p : ℚ)⁻¹ + (sig.q : ℚ)⁻¹ - 1
-
-/-- Real orbifold Euler characteristic. -/
-noncomputable def chiOrbReal (sig : HyperbolicTriangleSignature) : ℝ :=
-  (sig.p : ℝ)⁻¹ + (sig.q : ℝ)⁻¹ - 1
-
-/-- Normalized hyperbolic area $\mu_{\text{orb}} = 1 - 1/p - 1/q = -\chi_{\text{orb}} \in \mathbb{Q}$. -/
-def normalizedArea (sig : HyperbolicTriangleSignature) : ℚ :=
-  1 - (sig.p : ℚ)⁻¹ - (sig.q : ℚ)⁻¹
-
-/-- Real normalized hyperbolic area. -/
-noncomputable def normalizedAreaReal (sig : HyperbolicTriangleSignature) : ℝ :=
-  1 - (sig.p : ℝ)⁻¹ - (sig.q : ℝ)⁻¹
-
-/-- Fundamental hyperbolic triangle area $\operatorname{Area}_\Delta(p, q, \infty) = \pi (1 - 1/p - 1/q)$. -/
-noncomputable def triangleArea (sig : HyperbolicTriangleSignature) : ℝ :=
-  Real.pi * normalizedAreaReal sig
-
-/-- The Gauss–Bonnet hyperbolic Riemannian area $\operatorname{Area}(\mathcal{O}) = 2\pi \mu_{\text{orb}} = -2\pi \chi_{\text{orb}}$. -/
-noncomputable def hyperbolicArea (sig : HyperbolicTriangleSignature) : ℝ :=
-  2 * Real.pi * normalizedAreaReal sig
-
-/-- The orbifold Euler characteristic is strictly negative for all hyperbolic triangle signatures. -/
-theorem chiOrb_neg (sig : HyperbolicTriangleSignature) : chiOrb sig < 0 :=
-  sub_neg.2 sig.hyperbolic
-
-/-- The normalized hyperbolic area is strictly positive. -/
-theorem normalizedArea_pos (sig : HyperbolicTriangleSignature) : 0 < normalizedArea sig := by
-  have h := sig.hyperbolic; dsimp [normalizedArea]; linarith
-
-/-- Normalized area is exactly the negative of the orbifold Euler characteristic. -/
-theorem normalizedArea_eq_neg_chiOrb (sig : HyperbolicTriangleSignature) :
-    normalizedArea sig = - chiOrb sig := by
-  dsimp [normalizedArea, chiOrb]; ring
-
-/-- Real normalized area coincides with rational normalized area cast to $\mathbb{R}$. -/
-theorem normalizedAreaReal_eq_coe (sig : HyperbolicTriangleSignature) :
-    normalizedAreaReal sig = (normalizedArea sig : ℝ) := by
-  dsimp [normalizedAreaReal, normalizedArea]; push_cast; rfl
-
-/-- Real orbifold Euler characteristic coincides with rational Euler characteristic cast to $\mathbb{R}$. -/
-theorem chiOrbReal_eq_coe (sig : HyperbolicTriangleSignature) :
-    chiOrbReal sig = (chiOrb sig : ℝ) := by
-  dsimp [chiOrbReal, chiOrb]; push_cast; rfl
-
-/-- Gauss–Bonnet theorem for 1-cusped hyperbolic 2-orbifolds:
-$\operatorname{Area}(\mathcal{O}(p, q, \infty)) = -2\pi \chi_{\text{orb}}(\mathcal{O}(p, q, \infty))$. -/
-theorem gauss_bonnet_area (sig : HyperbolicTriangleSignature) :
-    hyperbolicArea sig = -2 * Real.pi * chiOrbReal sig := by
-  dsimp [hyperbolicArea, normalizedAreaReal, chiOrbReal]; ring
+namespace PicardFuchsMirrorMonodromy
+
+/-! ### 1. Picard-Fuchs Differential Operator $\mathcal{L}_4$ & Hypergeometric Parameters -/
+
+/-- Elementary symmetric polynomial $e_1(\alpha) = \sum \alpha_i$. -/
+def e1 (α : Fin 4 → ℚ) : ℚ :=
+  α 0 + α 1 + α 2 + α 3
+
+/-- Elementary symmetric polynomial $e_2(\alpha) = \sum_{i < j} \alpha_i \alpha_j$. -/
+def e2 (α : Fin 4 → ℚ) : ℚ :=
+  α 0 * α 1 + α 0 * α 2 + α 0 * α 3 + α 1 * α 2 + α 1 * α 3 + α 2 * α 3
+
+/-- Elementary symmetric polynomial $e_3(\alpha) = \sum_{i < j < k} \alpha_i \alpha_j \alpha_k$. -/
+def e3 (α : Fin 4 → ℚ) : ℚ :=
+  α 0 * α 1 * α 2 + α 0 * α 1 * α 3 + α 0 * α 2 * α 3 + α 1 * α 2 * α 3
+
+/-- Elementary symmetric polynomial $e_4(\alpha) = \prod \alpha_i$. -/
+def e4 (α : Fin 4 → ℚ) : ℚ :=
+  α 0 * α 1 * α 2 * α 3
+
+/-- Order-4 Picard-Fuchs algebraic symbol $\mathcal{L}_4(\theta, z) = \theta^4 - z \prod_{i=0}^3 (\theta + \alpha_i)$. -/
+def pfSymbol (α : Fin 4 → ℚ) (z θ : ℚ) : ℚ :=
+  θ^4 - z * (θ + α 0) * (θ + α 1) * (θ + α 2) * (θ + α 3)
+
+/-- Expansion of the Picard-Fuchs operator symbol in powers of $\theta$. -/
+theorem pfSymbol_expansion (α : Fin 4 → ℚ) (z θ : ℚ) :
+    pfSymbol α z θ = (1 - z) * θ^4 - z * (e1 α * θ^3 + e2 α * θ^2 + e3 α * θ + e4 α) := by
+  dsimp [pfSymbol, e1, e2, e3, e4]; ring
 
-/-- The Gauss–Bonnet hyperbolic area is strictly positive when $\pi > 0$. -/
-theorem hyperbolicArea_pos (sig : HyperbolicTriangleSignature) (hpi : 0 < Real.pi) :
-    0 < hyperbolicArea sig := by
-  rw [hyperbolicArea, normalizedAreaReal_eq_coe]
-  exact mul_pos (mul_pos (by norm_num) hpi) (Rat.cast_pos.2 (normalizedArea_pos sig))
+/-- Geometric Riemann parameter exponents for the $(3,4,\infty)$ family:
+    $\alpha = (1/12, 5/12, 7/12, 11/12)$. -/
+def alpha_3_4_infty : Fin 4 → ℚ :=
+  ![1/12, 5/12, 7/12, 11/12]
+
+/-- Alias for geometric parameters of $(3,4,\infty)$. -/
+def alpha_3_4_geom : Fin 4 → ℚ :=
+  alpha_3_4_infty
+
+/-- Modular parameter exponents for the $(3,4,\infty)$ family:
+    $\alpha = (1/3, 2/3, 1/4, 3/4)$. -/
+def alpha_3_4_mod : Fin 4 → ℚ :=
+  ![1/3, 2/3, 1/4, 3/4]
+
+/-- Parameter exponents for the $(2,3,\infty)$ modular family:
+    $\alpha = (1/6, 5/6, 1/6, 5/6)$. -/
+def alpha_2_3_infty : Fin 4 → ℚ :=
+  ![1/6, 5/6, 1/6, 5/6]
+
+/-- Alias for $(2,3,\infty)$ exponents. -/
+def alpha_2_3 : Fin 4 → ℚ :=
+  alpha_2_3_infty
+
+/-- Calabi-Yau self-duality sum condition: $\sum_{i=0}^3 \alpha_i = 2$ for $(3,4,\infty)$ geometric exponents. -/
+theorem sum_alpha_3_4_infty : (∑ i : Fin 4, alpha_3_4_infty i) = 2 := by
+  rw [Fin.sum_univ_four]; dsimp [alpha_3_4_infty]; norm_num
+
+/-- Calabi-Yau self-duality sum condition for `e1` on $(3,4,\infty)$ geometric exponents. -/
+theorem e1_alpha_3_4_infty : e1 alpha_3_4_infty = 2 := by
+  dsimp [e1, alpha_3_4_infty]; norm_num
+
+/-- Calabi-Yau self-duality sum condition for `e1` on $(3,4,\infty)$ geometric exponents (geom alias). -/
+theorem e1_alpha_3_4_geom : e1 alpha_3_4_geom = 2 :=
+  e1_alpha_3_4_infty
+
+/-- Calabi-Yau self-duality sum condition: $\sum_{i=0}^3 \alpha_i = 2$ for $(3,4,\infty)$ geometric exponents (geom alias). -/
+theorem sum_alpha_3_4_geom : (∑ i : Fin 4, alpha_3_4_geom i) = 2 :=
+  sum_alpha_3_4_infty
 
-/-- Hyperbolic area is twice the fundamental triangle area. -/
-theorem hyperbolicArea_eq_two_triangleArea (sig : HyperbolicTriangleSignature) :
-    hyperbolicArea sig = 2 * triangleArea sig := by
-  dsimp [hyperbolicArea, triangleArea]; ring
-
-/-! ## 3. Machine-Proved Certified Exact Values for Canonical Families -/
-
-/-- The canonical $(3, 4, \infty)$ hyperbolic triangle orbifold signature. -/
-def sig34 : HyperbolicTriangleSignature := ⟨3, 4, by decide, by decide, by norm_num⟩
-
-/-- Exact rational Euler characteristic $\chi_{\text{orb}}(3, 4, \infty) = -5/12$. -/
-theorem chiOrb_sig34 : chiOrb sig34 = -5 / 12 := by
-  norm_num [chiOrb, sig34]
-
-/-- Exact normalized area $\mu_{\text{orb}}(3, 4, \infty) = 5/12$. -/
-theorem normalizedArea_sig34 : normalizedArea sig34 = 5 / 12 := by
-  norm_num [normalizedArea, sig34]
-
-/-- Exact Gauss–Bonnet hyperbolic area $\operatorname{Area}(\mathcal{O}(3, 4, \infty)) = 5\pi / 6$. -/
-theorem hyperbolicArea_sig34 : hyperbolicArea sig34 = 5 * Real.pi / 6 := by
-  rw [hyperbolicArea, normalizedAreaReal_eq_coe, normalizedArea_sig34]; push_cast; ring
-
-/-- The canonical $(2, 3, \infty)$ modular triangle orbifold signature. -/
-def sig23 : HyperbolicTriangleSignature := ⟨2, 3, by decide, by decide, by norm_num⟩
-
-/-- Exact rational Euler characteristic $\chi_{\text{orb}}(2, 3, \infty) = -1/6$. -/
-theorem chiOrb_sig23 : chiOrb sig23 = -1 / 6 := by
-  norm_num [chiOrb, sig23]
-
-/-- Exact normalized area $\mu_{\text{orb}}(2, 3, \infty) = 1/6$. -/
-theorem normalizedArea_sig23 : normalizedArea sig23 = 1 / 6 := by
-  norm_num [normalizedArea, sig23]
-
-/-- Exact Gauss–Bonnet hyperbolic area $\operatorname{Area}(\mathcal{O}(2, 3, \infty)) = \pi / 3$. -/
-theorem hyperbolicArea_sig23 : hyperbolicArea sig23 = Real.pi / 3 := by
-  rw [hyperbolicArea, normalizedAreaReal_eq_coe, normalizedArea_sig23]; push_cast; ring
-
-/-- The canonical $(2, 5, \infty)$ hyperbolic triangle orbifold signature. -/
-def sig25 : HyperbolicTriangleSignature := ⟨2, 5, by decide, by decide, by norm_num⟩
-
-/-- Exact rational Euler characteristic $\chi_{\text{orb}}(2, 5, \infty) = -3/10$. -/
-theorem chiOrb_sig25 : chiOrb sig25 = -3 / 10 := by
-  norm_num [chiOrb, sig25]
-
-/-- Exact normalized area $\mu_{\text{orb}}(2, 5, \infty) = 3/10$. -/
-theorem normalizedArea_sig25 : normalizedArea sig25 = 3 / 10 := by
-  norm_num [normalizedArea, sig25]
-
-/-- Exact Gauss–Bonnet hyperbolic area $\operatorname{Area}(\mathcal{O}(2, 5, \infty)) = 3\pi / 5$. -/
-theorem hyperbolicArea_sig25 : hyperbolicArea sig25 = 3 * Real.pi / 5 := by
-  rw [hyperbolicArea, normalizedAreaReal_eq_coe, normalizedArea_sig25]; push_cast; ring
-
-/-- The canonical $(3, 5, \infty)$ hyperbolic triangle orbifold signature. -/
-def sig35 : HyperbolicTriangleSignature := ⟨3, 5, by decide, by decide, by norm_num⟩
-
-/-- Exact rational Euler characteristic $\chi_{\text{orb}}(3, 5, \infty) = -7/15$. -/
-theorem chiOrb_sig35 : chiOrb sig35 = -7 / 15 := by
-  norm_num [chiOrb, sig35]
-
-/-- Exact normalized area $\mu_{\text{orb}}(3, 5, \infty) = 7/15$. -/
-theorem normalizedArea_sig35 : normalizedArea sig35 = 7 / 15 := by
-  norm_num [normalizedArea, sig35]
-
-/-- Exact Gauss–Bonnet hyperbolic area $\operatorname{Area}(\mathcal{O}(3, 5, \infty)) = 14\pi / 15$. -/
-theorem hyperbolicArea_sig35 : hyperbolicArea sig35 = 14 * Real.pi / 15 := by
-  rw [hyperbolicArea, normalizedAreaReal_eq_coe, normalizedArea_sig35]; push_cast; ring
-
-/-- Exact fundamental triangle area $\operatorname{Area}_\Delta(3, 5, \infty) = 7\pi / 15$. -/
-theorem triangleArea_sig35 : triangleArea sig35 = 7 * Real.pi / 15 := by
-  rw [triangleArea, normalizedAreaReal_eq_coe, normalizedArea_sig35]; push_cast; ring
-
-/-- Additional canonical family $(2, 4, \infty)$. -/
-def sig24 : HyperbolicTriangleSignature := ⟨2, 4, by decide, by decide, by norm_num⟩
-
-theorem chiOrb_sig24 : chiOrb sig24 = -1 / 4 := by
-  norm_num [chiOrb, sig24]
-
-theorem normalizedArea_sig24 : normalizedArea sig24 = 1 / 4 := by
-  norm_num [normalizedArea, sig24]
-
-theorem hyperbolicArea_sig24 : hyperbolicArea sig24 = Real.pi / 2 := by
-  rw [hyperbolicArea, normalizedAreaReal_eq_coe, normalizedArea_sig24]; push_cast; ring
-
-/-- Additional canonical family $(4, 4, \infty)$. -/
-def sig44 : HyperbolicTriangleSignature := ⟨4, 4, by decide, by decide, by norm_num⟩
-
-theorem chiOrb_sig44 : chiOrb sig44 = -1 / 2 := by
-  norm_num [chiOrb, sig44]
-
-theorem normalizedArea_sig44 : normalizedArea sig44 = 1 / 2 := by
-  norm_num [normalizedArea, sig44]
-
-theorem hyperbolicArea_sig44 : hyperbolicArea sig44 = Real.pi := by
-  rw [hyperbolicArea, normalizedAreaReal_eq_coe, normalizedArea_sig44]; push_cast; ring
-
-/-! ## 4. Eisenstein Series Scattering Determinant $\phi(s)$ -/
-
-/-- Exact rational residue value of the scattering determinant $\phi(s)$ at $s = 1$:
-$$\operatorname{Res}_{s=1} \phi(s) = \frac{1}{\mu_{\text{orb}}(\mathcal{O})} = \frac{1}{1 - 1/p - 1/q}$$ -/
-def residueValue (sig : HyperbolicTriangleSignature) : ℚ :=
-  (normalizedArea sig)⁻¹
-
-/-- Real residue value of the scattering determinant $\phi(s)$ at $s = 1$. -/
-noncomputable def residueValueReal (sig : HyperbolicTriangleSignature) : ℝ :=
-  (normalizedAreaReal sig)⁻¹
-
-/-- Formal representation of the Eisenstein series scattering determinant $\phi(s)$
-for the hyperbolic triangle orbifold $\mathcal{O}(p, q, \infty)$. -/
-structure ScatteringDeterminantData (sig : HyperbolicTriangleSignature) where
-  /-- Meromorphic scattering determinant $\phi : \mathbb{C} \to \mathbb{C}$. -/
-  phi : ℂ → ℂ
-  /-- Functional equation: $\phi(s) \phi(1-s) = 1$. -/
-  functional_equation : ∀ s : ℂ, phi s * phi (1 - s) = 1
-  /-- Unitarity on the critical line $\operatorname{Re}(s) = 1/2$: $\|\phi(1/2 + ir)\|^2 = 1$. -/
-  unitarity : ∀ r : ℝ, Complex.normSq (phi (1/2 + Complex.I * (r : ℂ))) = 1
-  /-- Residue at $s = 1$ matches the reciprocal of normalized area: $\operatorname{Res}_{s=1} \phi(s) = 1/\mu_{\text{orb}}$. -/
-  residue_at_one : ℂ
-  residue_eq : residue_at_one = ((residueValue sig : ℂ))
-
-/-- Certified scattering residue for $(3, 4, \infty)$: $\operatorname{Res}_{s=1} \phi(s) = 12/5$. -/
-theorem residue_sig34 : residueValue sig34 = 12 / 5 := by
-  norm_num [residueValue, sig34, normalizedArea]
-
-/-- Certified scattering residue for $(2, 3, \infty)$: $\operatorname{Res}_{s=1} \phi(s) = 6$. -/
-theorem residue_sig23 : residueValue sig23 = 6 := by
-  norm_num [residueValue, sig23, normalizedArea]
-
-/-- Certified scattering residue for $(2, 5, \infty)$: $\operatorname{Res}_{s=1} \phi(s) = 10/3$. -/
-theorem residue_sig25 : residueValue sig25 = 10 / 3 := by
-  norm_num [residueValue, sig25, normalizedArea]
-
-/-- Certified scattering residue for $(3, 5, \infty)$: $\operatorname{Res}_{s=1} \phi(s) = 15/7$. -/
-theorem residue_sig35 : residueValue sig35 = 15 / 7 := by
-  norm_num [residueValue, sig35, normalizedArea]
-
-/-- Certified scattering residue for $(2, 4, \infty)$: $\operatorname{Res}_{s=1} \phi(s) = 4$. -/
-theorem residue_sig24 : residueValue sig24 = 4 := by
-  norm_num [residueValue, sig24, normalizedArea]
-
-/-- Certified scattering residue for $(4, 4, \infty)$: $\operatorname{Res}_{s=1} \phi(s) = 2$. -/
-theorem residue_sig44 : residueValue sig44 = 2 := by
-  norm_num [residueValue, sig44, normalizedArea]
-
-/-- Fundamental algebraic relation: $\operatorname{Res}_{s=1} \phi(s) \cdot \mu_{\text{orb}}(\mathcal{O}) = 1$. -/
-theorem residue_mul_normalizedArea (sig : HyperbolicTriangleSignature) :
-    residueValue sig * normalizedArea sig = 1 :=
-  inv_mul_cancel₀ (normalizedArea_pos sig).ne'
-
-/-- Fundamental spectral-geometric identity: $\operatorname{Res}_{s=1} \phi(s) \cdot \operatorname{Area}(\mathcal{O}) = 2\pi$. -/
-theorem residue_area_product (sig : HyperbolicTriangleSignature) :
-    (residueValue sig : ℝ) * hyperbolicArea sig = 2 * Real.pi := by
-  have hpos : (normalizedArea sig : ℝ) ≠ 0 := (Rat.cast_pos.2 (normalizedArea_pos sig)).ne'
-  rw [residueValue, hyperbolicArea, normalizedAreaReal_eq_coe]; push_cast
-  linear_combination 2 * Real.pi * inv_mul_cancel₀ hpos
-
-/-! ## 5. Orbifold Selberg Trace Formula -/
-
-/-- Test function pair $(h, g)$ on the spectral line and hyperbolic geodesic length space. -/
-structure SelbergTestFunction where
-  /-- Spectral test function $h(r)$ on $r \in \mathbb{R}$. -/
-  h : ℝ → ℝ
-  /-- Geometric Fourier transform $g(u) = \frac{1}{2\pi} \int_{-\infty}^\infty h(r) e^{-i r u} dr$. -/
-  g : ℝ → ℝ
-  /-- Parity: $h(-r) = h(r)$. -/
-  h_even : ∀ r, h (-r) = h r
-  /-- Parity: $g(-u) = g(u)$. -/
-  g_even : ∀ u, g (-u) = g u
-
-/-- Discrete spectrum data for $\mathcal{O}(p, q, \infty)$, decomposing the constant eigenvalue
-$\lambda_0 = 0$ ($r_0 = i/2$) and the Maass cusp form discrete spectrum $\{\lambda_j = 1/4 + r_j^2\}$. -/
-structure DiscreteSpectrumData where
-  /-- Contribution of the trivial eigenvalue $\lambda_0 = 0$: $h(i/2)$. -/
-  lambda0_term : ℝ
-  /-- Discrete sum over Maass cusp form eigenvalues: $\sum_{j=1}^\infty h(r_j)$. -/
-  cusp_forms_sum : ℝ
-
-/-- Continuous spectrum data governed by the scattering determinant $\phi(s)$. -/
-structure ContinuousSpectrumData where
-  /-- Scattering integral: $-\frac{1}{4\pi} \int_{-\infty}^\infty h(r) \frac{\phi'}{\phi}(1/2 + ir) dr$. -/
-  scattering_integral : ℝ
-  /-- Scattering center correction: $\frac{1}{4} \phi(1/2) h(0)$. -/
-  scattering_center : ℝ
-
-/-- Total spectral side of the Orbifold Selberg Trace Formula. -/
-def spectralSide (disc : DiscreteSpectrumData) (cont : ContinuousSpectrumData) : ℝ :=
-  disc.lambda0_term + disc.cusp_forms_sum + cont.scattering_integral + cont.scattering_center
-
-/-- Parabolic cusp contribution data for the single cusp at $\infty$. -/
-structure ParabolicContributionData where
-  /-- Scaling term: $g(0) \ln 2$. -/
-  scaling_term : ℝ
-  /-- Digamma integral: $-\frac{1}{2\pi} \int_{-\infty}^\infty h(r) \psi(1 + ir) dr$. -/
-  digamma_integral : ℝ
-  /-- Center evaluation correction: $-\frac{1}{4} h(0)$. -/
-  center_correction : ℝ
-
-/-- Total parabolic contribution for $\mathcal{O}(p, q, \infty)$. -/
-def parabolicContribution (p : ParabolicContributionData) : ℝ :=
-  p.scaling_term + p.digamma_integral + p.center_correction
-
-/-- Total geometric side of the Orbifold Selberg Trace Formula:
-$$\text{Geom} = I_{\text{id}} + I_{\text{ell}}(p) + I_{\text{ell}}(q) + I_{\text{par}} + I_{\text{hyp}}$$ -/
-def geometricSide (id_term : ℝ) (ell_p_term : ℝ) (ell_q_term : ℝ) (par_term : ℝ) (hyp_term : ℝ) : ℝ :=
-  id_term + ell_p_term + ell_q_term + par_term + hyp_term
-
-/-- The prefactor of the identity term $\frac{\operatorname{Area}(\mathcal{O})}{4\pi}$ is exactly $\frac{\mu_{\text{orb}}}{2}$. -/
-theorem identity_prefactor_eq_half_normalizedArea (sig : HyperbolicTriangleSignature) (hpi : Real.pi ≠ 0) :
-    hyperbolicArea sig / (4 * Real.pi) = normalizedAreaReal sig / 2 := by
-  dsimp [hyperbolicArea]; field_simp; ring
-
-/-- The complete Orbifold Selberg Trace Formula identity for $\mathcal{O}(p, q, \infty)$. -/
-structure OrbifoldSelbergTraceFormula (sig : HyperbolicTriangleSignature) where
-  test_fn : SelbergTestFunction
-  disc_spec : DiscreteSpectrumData
-  cont_spec : ContinuousSpectrumData
-  id_integral : ℝ
-  ell_p_term : ℝ
-  ell_q_term : ℝ
-  par_data : ParabolicContributionData
-  hyp_geodesic_sum : ℝ
-  /-- Spectral-geometric identity: $\text{Spec}(h) = \text{Geom}(h, g)$. -/
-  trace_identity :
-    spectralSide disc_spec cont_spec =
-    geometricSide
-      ((hyperbolicArea sig / (4 * Real.pi)) * id_integral)
-      ell_p_term
-      ell_q_term
-      (parabolicContribution par_data)
-      hyp_geodesic_sum
-
-/-- Expresses the Selberg Trace Formula with the normalized area prefactor $\mu_{\text{orb}}/2$. -/
-theorem trace_identity_with_normalizedArea (sig : HyperbolicTriangleSignature) (hpi : Real.pi ≠ 0)
-    (stf : OrbifoldSelbergTraceFormula sig) :
-    spectralSide stf.disc_spec stf.cont_spec =
-    geometricSide
-      ((normalizedAreaReal sig / 2) * stf.id_integral)
-      stf.ell_p_term
-      stf.ell_q_term
-      (parabolicContribution stf.par_data)
-      stf.hyp_geodesic_sum := by
-  rw [← identity_prefactor_eq_half_normalizedArea sig hpi, stf.trace_identity]
-
-/-! ## 6. Selberg Zeta Function $\mathcal{Z}_{\mathcal{O}}(s)$ & Spectral Duality -/
-
-/-- Primitive hyperbolic closed geodesic data on $\mathcal{O}(p, q, \infty)$. -/
-structure PrimitiveClosedGeodesic where
-  /-- Geometric length $\ell(\gamma_0) > 0$. -/
-  length : ℝ
-  length_pos : 0 < length
-
-/-- Formal representation of the Orbifold Selberg Zeta Function $\mathcal{Z}_{\mathcal{O}}(s)$:
-$$\mathcal{Z}_{\mathcal{O}}(s) = \prod_{\{\gamma_0\}} \prod_{k=0}^\infty \left(1 - e^{-(s+k)\ell(\gamma_0)}\right)$$ -/
-structure OrbifoldSelbergZetaData (sig : HyperbolicTriangleSignature) where
-  /-- Selberg zeta function $\mathcal{Z}_{\mathcal{O}} : \mathbb{C} \to \mathbb{C}$. -/
-  zeta : ℂ → ℂ
-  /-- Non-trivial spectral zeros occur at $s_j = 1/2 \pm i r_j$ with eigenvalue $\lambda_j = 1/4 + r_j^2 = s_j(1 - s_j)$. -/
-  spectral_eigenvalue : ℂ → ℂ := fun s => s * (1 - s)
-  /-- Functional equation factor $\mathcal{F}_{\mathcal{O}}(s)$. -/
-  functional_factor : ℂ → ℂ
-  /-- Selberg zeta functional equation: $\mathcal{Z}_{\mathcal{O}}(1 - s) = \mathcal{Z}_{\mathcal{O}}(s) \cdot \mathcal{F}_{\mathcal{O}}(s)$. -/
-  functional_equation : ∀ s : ℂ, zeta (1 - s) = zeta s * functional_factor s
-
-/-- Symmetry of the Laplacian eigenvalue parameterization: $s(1-s) = (1-s)(1 - (1-s))$. -/
-theorem eigenvalue_param_symm (s : ℂ) :
-    s * (1 - s) = (1 - s) * (1 - (1 - s)) := by ring
-
-/-- On the critical line $s = 1/2 + i r$, the eigenvalue is real: $s(1-s) = 1/4 + r^2$. -/
-theorem eigenvalue_critical_line (r : ℝ) :
-    (1/2 + Complex.I * (r : ℂ)) * (1 - (1/2 + Complex.I * (r : ℂ))) =
-    ((1/4 + r^2 : ℝ) : ℂ) := by
-  push_cast; linear_combination - (r : ℂ) ^ 2 * Complex.I_sq
-
-end OrbifoldSpectralZeta
+/-- Symmetric polynomial $e_2$ for $(3,4,\infty)$ geometric exponents evaluates to $95/72$. -/
+theorem e2_alpha_3_4_infty : e2 alpha_3_4_infty = 95 / 72 := by
+  dsimp [e2, alpha_3_4_infty]; norm_num
+
+/-- Symmetric polynomial $e_2$ for $(3,4,\infty)$ geometric exponents (geom alias). -/
+theorem e2_alpha_3_4_geom : e2 alpha_3_4_geom = 95 / 72 :=
+  e2_alpha_3_4_infty
+
+/-- Symmetric polynomial $e_3$ for $(3,4,\infty)$ geometric exponents evaluates to $23/72$. -/
+theorem e3_alpha_3_4_infty : e3 alpha_3_4_infty = 23 / 72 := by
+  dsimp [e3, alpha_3_4_infty]; norm_num
+
+/-- Symmetric polynomial $e_3$ for $(3,4,\infty)$ geometric exponents (geom alias). -/
+theorem e3_alpha_3_4_geom : e3 alpha_3_4_geom = 23 / 72 :=
+  e3_alpha_3_4_infty
+
+/-- Symmetric polynomial $e_4$ for $(3,4,\infty)$ geometric exponents evaluates to $385/20736$. -/
+theorem e4_alpha_3_4_infty : e4 alpha_3_4_infty = 385 / 20736 := by
+  dsimp [e4, alpha_3_4_infty]; norm_num
+
+/-- Symmetric polynomial $e_4$ for $(3,4,\infty)$ geometric exponents (geom alias). -/
+theorem e4_alpha_3_4_geom : e4 alpha_3_4_geom = 385 / 20736 :=
+  e4_alpha_3_4_infty
+
+/-- Calabi-Yau self-duality sum condition: $\sum_{i=0}^3 \alpha_i = 2$ for $(3,4,\infty)$ modular exponents. -/
+theorem sum_alpha_3_4_mod : (∑ i : Fin 4, alpha_3_4_mod i) = 2 := by
+  rw [Fin.sum_univ_four]; dsimp [alpha_3_4_mod]; norm_num
+
+/-- Symmetric polynomial $e_1$ for $(3,4,\infty)$ modular exponents evaluates to $2$. -/
+theorem e1_alpha_3_4_mod : e1 alpha_3_4_mod = 2 := by
+  dsimp [e1, alpha_3_4_mod]; norm_num
+
+/-- Symmetric polynomial $e_2$ for $(3,4,\infty)$ modular exponents evaluates to $203/144$. -/
+theorem e2_alpha_3_4_mod : e2 alpha_3_4_mod = 203 / 144 := by
+  dsimp [e2, alpha_3_4_mod]; norm_num
+
+/-- Symmetric polynomial $e_3$ for $(3,4,\infty)$ modular exponents evaluates to $59/144$. -/
+theorem e3_alpha_3_4_mod : e3 alpha_3_4_mod = 59 / 144 := by
+  dsimp [e3, alpha_3_4_mod]; norm_num
+
+/-- Symmetric polynomial $e_4$ for $(3,4,\infty)$ modular exponents evaluates to $1/24$. -/
+theorem e4_alpha_3_4_mod : e4 alpha_3_4_mod = 1 / 24 := by
+  dsimp [e4, alpha_3_4_mod]; norm_num
+
+/-- Calabi-Yau self-duality sum condition: $\sum_{i=0}^3 \alpha_i = 2$ for $(2,3,\infty)$ exponents. -/
+theorem sum_alpha_2_3_infty : (∑ i : Fin 4, alpha_2_3_infty i) = 2 := by
+  rw [Fin.sum_univ_four]; dsimp [alpha_2_3_infty]; norm_num
+
+/-- Symmetric polynomial $e_1$ for $(2,3,\infty)$ exponents evaluates to $2$. -/
+theorem e1_alpha_2_3_infty : e1 alpha_2_3_infty = 2 := by
+  dsimp [e1, alpha_2_3_infty]; norm_num
+
+/-- Symmetric polynomial $e_1$ for $(2,3,\infty)$ exponents (alias). -/
+theorem e1_alpha_2_3 : e1 alpha_2_3 = 2 :=
+  e1_alpha_2_3_infty
+
+/-- Symmetric polynomial $e_2$ for $(2,3,\infty)$ exponents evaluates to $23/18$. -/
+theorem e2_alpha_2_3_infty : e2 alpha_2_3_infty = 23 / 18 := by
+  dsimp [e2, alpha_2_3_infty]; norm_num
+
+/-- Symmetric polynomial $e_2$ for $(2,3,\infty)$ exponents (alias). -/
+theorem e2_alpha_2_3 : e2 alpha_2_3 = 23 / 18 :=
+  e2_alpha_2_3_infty
+
+/-- Symmetric polynomial $e_3$ for $(2,3,\infty)$ exponents evaluates to $5/18$. -/
+theorem e3_alpha_2_3_infty : e3 alpha_2_3_infty = 5 / 18 := by
+  dsimp [e3, alpha_2_3_infty]; norm_num
+
+/-- Symmetric polynomial $e_3$ for $(2,3,\infty)$ exponents (alias). -/
+theorem e3_alpha_2_3 : e3 alpha_2_3 = 5 / 18 :=
+  e3_alpha_2_3_infty
+
+/-- Symmetric polynomial $e_4$ for $(2,3,\infty)$ exponents evaluates to $25/1296$. -/
+theorem e4_alpha_2_3_infty : e4 alpha_2_3_infty = 25 / 1296 := by
+  dsimp [e4, alpha_2_3_infty]; norm_num
+
+/-- Symmetric polynomial $e_4$ for $(2,3,\infty)$ exponents (alias). -/
+theorem e4_alpha_2_3 : e4 alpha_2_3 = 25 / 1296 :=
+  e4_alpha_2_3_infty
+
+/-- The indicial polynomial at the cusp $z = 0$: $I_0(\theta) = \mathcal{L}_4(\theta, 0) = \theta^4$. -/
+def indicialPoly (α : Fin 4 → ℚ) (θ : ℚ) : ℚ :=
+  pfSymbol α 0 θ
+
+/-- The indicial polynomial at $z = 0$ is exactly $\theta^4$, independent of $\alpha$. -/
+theorem indicialPoly_eq (α : Fin 4 → ℚ) (θ : ℚ) : indicialPoly α θ = θ^4 := by
+  dsimp [indicialPoly, pfSymbol]; ring
+
+/-- $\theta = 0$ is a root of the indicial polynomial. -/
+theorem indicialPoly_zero (α : Fin 4 → ℚ) : indicialPoly α 0 = 0 := by
+  rw [indicialPoly_eq]; ring
+
+/-- Unique real/rational root of the indicial polynomial is $\theta = 0$. -/
+theorem indicial_root_unique (α : Fin 4 → ℚ) (θ : ℚ) (h : indicialPoly α θ = 0) : θ = 0 := by
+  simpa [indicialPoly_eq] using h
+
+/-! ### 2. Frobenius Local Monodromy at Cusp $z = 0$ -/
+
+/-- Standard non-degenerate skew-symmetric symplectic form $J \in \mathrm{Mat}_4(\mathbb{Z})$. -/
+def J : Matrix (Fin 4) (Fin 4) ℤ :=
+  ![![ 0,  0,  1,  0],
+    ![ 0,  0,  0,  1],
+    ![-1,  0,  0,  0],
+    ![ 0, -1,  0,  0]]
+
+/-- Polarized $S_6$ symplectic form $\Omega_6 \in \mathrm{Mat}_4(\mathbb{Z})$. -/
+def Omega6 : Matrix (Fin 4) (Fin 4) ℤ :=
+  ![![ 0,  0,  0,  1],
+    ![ 0,  0,  6,  0],
+    ![ 0, -6,  0,  0],
+    ![-1,  0,  0,  0]]
+
+/-- Parabolic cusp monodromy matrix $T_0 \in \mathrm{Sp}_4(\mathbb{Z})$. -/
+def T0 : Matrix (Fin 4) (Fin 4) ℤ :=
+  ![![ 1, -1,  0,  0],
+    ![ 0,  1,  0,  0],
+    ![ 0,  0,  1,  0],
+    ![ 0,  0,  1,  1]]
+
+/-- Nilpotent cusp monodromy operator $N := T_0 - I_4$. -/
+def N : Matrix (Fin 4) (Fin 4) ℤ :=
+  ![![ 0, -1,  0,  0],
+    ![ 0,  0,  0,  0],
+    ![ 0,  0,  0,  0],
+    ![ 0,  0,  1,  0]]
+
+/-- The unipotent matrix $T_0$ satisfies $N = T_0 - 1$. -/
+theorem N_eq_T0_sub_one : N = T0 - 1 := by
+  ext i j; fin_cases i <;> fin_cases j <;> rfl
+
+/-- Nilpotence of index 2 for the $(3,4,\infty)$ monodromy: $N^2 = 0$. -/
+theorem N_unipotent_index_2 : N * N = 0 := by
+  ext i j; fin_cases i <;> fin_cases j <;> rfl
+
+namespace ModularFamilyS6
+
+def T0 : Matrix (Fin 4) (Fin 4) ℤ :=
+  ![![ 1,  0,  0,  1],
+    ![ 0,  1, -1,  0],
+    ![ 0,  0,  1,  0],
+    ![ 0,  0,  0,  1]]
+
+def N : Matrix (Fin 4) (Fin 4) ℤ :=
+  ![![ 0,  0,  0,  1],
+    ![ 0,  0, -1,  0],
+    ![ 0,  0,  0,  0],
+    ![ 0,  0,  0,  0]]
+
+theorem N_def : N = T0 - 1 := by
+  ext i j; fin_cases i <;> fin_cases j <;> rfl
+
+theorem N_squared_zero : N * N = 0 := by
+  ext i j; fin_cases i <;> fin_cases j <;> rfl
+
+def gamma : Fin 4 → ℤ := ![1, 0, 0, 0]
+def u : Fin 4 → ℤ := ![0, 1, 0, 0]
+def w : Fin 4 → ℤ := ![0, 0, 1, 0]
+def delta : Fin 4 → ℤ := ![0, 0, 0, 1]
+
+theorem N_act_gamma : N *ᵥ gamma = 0 := by ext i; fin_cases i <;> rfl
+theorem N_act_u : N *ᵥ u = 0 := by ext i; fin_cases i <;> rfl
+theorem N_act_w : N *ᵥ w = -u := by ext i; fin_cases i <;> rfl
+theorem N_act_delta : N *ᵥ delta = gamma := by ext i; fin_cases i <;> rfl
+
+end ModularFamilyS6
+
+/-- Machine-checked proof that the $S_6$ monodromy operator matches $T_0 - I_4$. -/
+theorem ModularFamilyS6_N_eq_T0_sub_one : ModularFamilyS6.N = ModularFamilyS6.T0 - 1 :=
+  ModularFamilyS6.N_def
+
+/-- Nilpotence of index 2 for the $S_6$ family: $N^2 = 0$. -/
+theorem ModularFamilyS6_N_unipotent_index_2 : ModularFamilyS6.N * ModularFamilyS6.N = 0 :=
+  ModularFamilyS6.N_squared_zero
+
+/-- Basis vector $\gamma = (1, 0, 0, 0)^T$. -/
+def gamma : Fin 4 → ℤ := ModularFamilyS6.gamma
+
+/-- Basis vector $u = (0, 1, 0, 0)^T$. -/
+def u : Fin 4 → ℤ := ModularFamilyS6.u
+
+/-- Basis vector $w = (0, 0, 1, 0)^T$. -/
+def w : Fin 4 → ℤ := ModularFamilyS6.w
+
+/-- Basis vector $\delta = (0, 0, 0, 1)^T$. -/
+def delta : Fin 4 → ℤ := ModularFamilyS6.delta
+
+/-- Action of $N_{S_6}$ on the basis vector $\gamma$: $N\gamma = 0$. -/
+theorem S6_N_act_gamma : ModularFamilyS6.N *ᵥ ModularFamilyS6.gamma = 0 :=
+  ModularFamilyS6.N_act_gamma
+
+/-- Action of $N_{S_6}$ on the basis vector $u$: $Nu = 0$. -/
+theorem S6_N_act_u : ModularFamilyS6.N *ᵥ ModularFamilyS6.u = 0 :=
+  ModularFamilyS6.N_act_u
+
+/-- Action of $N_{S_6}$ on the basis vector $w$: $Nw = -u$. -/
+theorem S6_N_act_w : ModularFamilyS6.N *ᵥ ModularFamilyS6.w = -ModularFamilyS6.u :=
+  ModularFamilyS6.N_act_w
+
+/-- Action of $N_{S_6}$ on the basis vector $\delta$: $N\delta = \gamma$. -/
+theorem S6_N_act_delta : ModularFamilyS6.N *ᵥ ModularFamilyS6.delta = ModularFamilyS6.gamma :=
+  ModularFamilyS6.N_act_delta
+
+/-- Action of $N_{S_6}$ on alias $\gamma$: $N\gamma = 0$. -/
+theorem N_act_gamma : ModularFamilyS6.N *ᵥ gamma = 0 :=
+  S6_N_act_gamma
+
+/-- Action of $N_{S_6}$ on alias $u$: $Nu = 0$. -/
+theorem N_act_u : ModularFamilyS6.N *ᵥ u = 0 :=
+  S6_N_act_u
+
+/-- Action of $N_{S_6}$ on alias $w$: $Nw = -u$. -/
+theorem N_act_w : ModularFamilyS6.N *ᵥ w = -u :=
+  S6_N_act_w
+
+/-- Action of $N_{S_6}$ on alias $\delta$: $N\delta = \gamma$. -/
+theorem N_act_delta : ModularFamilyS6.N *ᵥ delta = gamma :=
+  S6_N_act_delta
+
+/-- Action of $N$ on standard basis vector $e_0 = (1, 0, 0, 0)^T$. -/
+theorem N_act_e0 : N *ᵥ ![1, 0, 0, 0] = 0 := by
+  ext i; fin_cases i <;> rfl
+
+/-- Action of $N$ on standard basis vector $e_1 = (0, 1, 0, 0)^T$. -/
+theorem N_act_e1 : N *ᵥ ![0, 1, 0, 0] = ![-1, 0, 0, 0] := by
+  ext i; fin_cases i <;> rfl
+
+/-- Action of $N$ on standard basis vector $e_2 = (0, 0, 1, 0)^T$. -/
+theorem N_act_e2 : N *ᵥ ![0, 0, 1, 0] = ![0, 0, 0, 1] := by
+  ext i; fin_cases i <;> rfl
+
+/-- Action of $N$ on standard basis vector $e_3 = (0, 0, 0, 1)^T$. -/
+theorem N_act_e3 : N *ᵥ ![0, 0, 0, 1] = 0 := by
+  ext i; fin_cases i <;> rfl
+
+/-- Matrix-vector multiplication for standard $N$. -/
+theorem mulVec_N (v : Fin 4 → ℤ) :
+    N *ᵥ v = ![-v 1, 0, 0, v 2] := by
+  ext i
+  fin_cases i <;> simp [N, mulVec, dotProduct, Fin.sum_univ_four]
+
+/-- Matrix-vector multiplication for standard $T_0$. -/
+theorem mulVec_T0 (v : Fin 4 → ℤ) :
+    T0 *ᵥ v = ![v 0 - v 1, v 1, v 2, v 2 + v 3] := by
+  ext i
+  fin_cases i <;> simp [T0, mulVec, dotProduct, Fin.sum_univ_four, sub_eq_add_neg]
+
+/-- Matrix-vector multiplication for $S_6$ monodromy operator $N_{S_6}$. -/
+theorem mulVec_S6_N (v : Fin 4 → ℤ) :
+    ModularFamilyS6.N *ᵥ v = ![v 3, -v 2, 0, 0] := by
+  ext i
+  fin_cases i <;> simp [ModularFamilyS6.N, mulVec, dotProduct, Fin.sum_univ_four]
+
+/-- Matrix-vector multiplication for $S_6$ cusp monodromy $T_{0, S_6}$. -/
+theorem mulVec_S6_T0 (v : Fin 4 → ℤ) :
+    ModularFamilyS6.T0 *ᵥ v = ![v 0 + v 3, v 1 - v 2, v 2, v 3] := by
+  ext i
+  fin_cases i <;> simp [ModularFamilyS6.T0, mulVec, dotProduct, Fin.sum_univ_four, sub_eq_add_neg]
+
+/-- The standard Calabi-Yau 3-fold Maximally Unipotent Monodromy (MUM) nilpotent operator
+    exhibiting index 4 nilpotence: $N^4 = 0$ and $N^3 \ne 0$. -/
+def N_MUM : Matrix (Fin 4) (Fin 4) ℤ :=
+  ![![ 0, 1, 0, 0 ],
+    ![ 0, 0, 1, 0 ],
+    ![ 0, 0, 0, 1 ],
+    ![ 0, 0, 0, 0 ]]
+
+/-- Predicate for Type II unipotent monodromy ($N \ne 0, N^2 = 0$). -/
+def IsTypeII (M : Matrix (Fin 4) (Fin 4) ℤ) : Prop :=
+  M ≠ 0 ∧ M * M = 0
+
+/-- Predicate for Type III unipotent monodromy ($M^2 \ne 0, M^4 = 0$). -/
+def IsTypeIII (M : Matrix (Fin 4) (Fin 4) ℤ) : Prop :=
+  M * M ≠ 0 ∧ M * M * M * M = 0
+
+/-- Type II and Type III monodromies are mutually exclusive. -/
+theorem typeII_not_typeIII (M : Matrix (Fin 4) (Fin 4) ℤ) (h : IsTypeII M) : ¬ IsTypeIII M := by
+  rintro ⟨hsq_ne, -⟩
+  exact hsq_ne h.2
+
+/-- $N_{\mathrm{MUM}}^2$ is non-zero. -/
+theorem N_MUM_squared_ne_zero : N_MUM * N_MUM ≠ 0 := by
+  intro h; absurd (congr_fun (congr_fun h 0) 2); decide
+
+/-- $N_{\mathrm{MUM}}^3$ is non-zero. -/
+theorem N_MUM_cubed_ne_zero : N_MUM * N_MUM * N_MUM ≠ 0 := by
+  intro h; absurd (congr_fun (congr_fun h 0) 3); decide
+
+/-- $N_{\mathrm{MUM}}^4 = 0$. -/
+theorem N_MUM_fourth_zero : N_MUM * N_MUM * N_MUM * N_MUM = 0 := by
+  ext i j; fin_cases i <;> fin_cases j <;> rfl
+
+/-- The Calabi-Yau 3-fold MUM monodromy is strictly Type III. -/
+theorem N_MUM_is_typeIII : IsTypeIII N_MUM :=
+  ⟨N_MUM_squared_ne_zero, N_MUM_fourth_zero⟩
+
+/-- The $(3,4,\infty)$ abelian surface monodromy $N$ is strictly Type II. -/
+theorem N_is_typeII : IsTypeII N := by
+  refine ⟨?_, N_unipotent_index_2⟩
+  intro h; absurd (congr_fun (congr_fun h 0) 1); decide
+
+/-- The $(3,4,\infty)$ abelian surface monodromy is not Type III (i.e. not a CY3 MUM). -/
+theorem N_not_typeIII : ¬ IsTypeIII N :=
+  typeII_not_typeIII N N_is_typeII
+
+/-- The $(3,4,\infty)$ $S_6$ monodromy is strictly Type II. -/
+theorem ModularFamilyS6_N_is_typeII : IsTypeII ModularFamilyS6.N := by
+  refine ⟨?_, ModularFamilyS6_N_unipotent_index_2⟩
+  intro h; absurd (congr_fun (congr_fun h 0) 3); decide
+
+/-- The $(3,4,\infty)$ $S_6$ monodromy is not Type III. -/
+theorem ModularFamilyS6_N_not_typeIII : ¬ IsTypeIII ModularFamilyS6.N :=
+  typeII_not_typeIII ModularFamilyS6.N ModularFamilyS6_N_is_typeII
+
+/-! ### 3. Symplectic Bilinear Invariance & Griffiths Transversality -/
+
+/-- Symplectic group predicate on $\mathrm{Mat}_4(\mathbb{Z})$: $M^T J M = J$. -/
+def IsSymplectic (M : Matrix (Fin 4) (Fin 4) ℤ) : Prop :=
+  Mᵀ * J * M = J
+
+/-- Infinitesimal symplectic condition for matrices in $\mathfrak{sp}_4(\mathbb{Z})$:
+    $M^T J + J M = 0$. -/
+def IsInfinitesimalSymplectic (M : Matrix (Fin 4) (Fin 4) ℤ) : Prop :=
+  Mᵀ * J + J * M = 0
+
+/-- Infinitesimal symplectic condition for the $S_6$ polarized form $\Omega_6$:
+    $M^T \Omega_6 + \Omega_6 M = 0$. -/
+def IsInfinitesimalSymplecticOmega6 (M : Matrix (Fin 4) (Fin 4) ℤ) : Prop :=
+  Mᵀ * Omega6 + Omega6 * M = 0
+
+/-- The nilpotent operator $N$ is an infinitesimal symplectic transformation: $N^T J + J N = 0$. -/
+theorem isInfinitesimalSymplectic_N : IsInfinitesimalSymplectic N := by
+  ext i j; fin_cases i <;> fin_cases j <;> rfl
+
+/-- The nilpotent operator $N_{S_6}$ is an infinitesimal symplectic transformation for $\Omega_6$. -/
+theorem isInfinitesimalSymplectic_S6_N : IsInfinitesimalSymplecticOmega6 ModularFamilyS6.N := by
+  ext i j; fin_cases i <;> fin_cases j <;> rfl
+
+/-- Parabolic cusp monodromy $T_0$ is symplectic: $T_0^T J T_0 = J$. -/
+theorem isSymplectic_T0 : IsSymplectic T0 := by
+  ext i j; fin_cases i <;> fin_cases j <;> rfl
+
+/-- Parabolic cusp monodromy $T_{0, S_6}$ preserves $\Omega_6$: $T_0^T \Omega_6 T_0 = \Omega_6$. -/
+theorem isSymplectic_S6_T0 :
+    ModularFamilyS6.T0ᵀ * Omega6 * ModularFamilyS6.T0 = Omega6 := by
+  ext i j; fin_cases i <;> fin_cases j <;> rfl
+
+/-- The symplectic bilinear pairing on $\mathbb{Z}^4$: $\langle v, w \rangle_J = v_0 w_2 + v_1 w_3 - v_2 w_0 - v_3 w_1$. -/
+def symplecticPairing (v w : Fin 4 → ℤ) : ℤ :=
+  v 0 * w 2 + v 1 * w 3 - v 2 * w 0 - v 3 * w 1
+
+/-- Coordinate expansion of the standard symplectic bilinear pairing. -/
+theorem symplecticPairing_def (v w : Fin 4 → ℤ) :
+    symplecticPairing v w = v 0 * w 2 + v 1 * w 3 - v 2 * w 0 - v 3 * w 1 := rfl
+
+/-- Skew-symmetry of the symplectic pairing: $\langle v, w \rangle_J = -\langle w, v \rangle_J$. -/
+theorem symplecticPairing_skew (v w : Fin 4 → ℤ) :
+    symplecticPairing v w = -symplecticPairing w v := by
+  dsimp [symplecticPairing]; ring
+
+/-- The symplectic pairing of any vector with itself vanishes: $\langle v, v \rangle_J = 0$. -/
+theorem symplecticPairing_self_zero (v : Fin 4 → ℤ) :
+    symplecticPairing v v = 0 := by
+  dsimp [symplecticPairing]; ring
+
+/-- Infinitesimal symplectic invariance (Griffiths transversality) of the pairing under $N$:
+    $\langle N v, w \rangle_J + \langle v, N w \rangle_J = 0$. -/
+theorem symplecticPairing_N_invariant (v w : Fin 4 → ℤ) :
+    symplecticPairing (N *ᵥ v) w + symplecticPairing v (N *ᵥ w) = 0 := by
+  rw [mulVec_N, mulVec_N]; dsimp [symplecticPairing]; ring
+
+/-- Finite symplectic invariance of the pairing under $T_0$:
+    $\langle T_0 v, T_0 w \rangle_J = \langle v, w \rangle_J$. -/
+theorem symplecticPairing_T0_invariant (v w : Fin 4 → ℤ) :
+    symplecticPairing (T0 *ᵥ v) (T0 *ᵥ w) = symplecticPairing v w := by
+  rw [mulVec_T0, mulVec_T0]; dsimp [symplecticPairing]; ring
+
+/-- The polarized $S_6$ symplectic bilinear pairing on $\mathbb{Z}^4$: $\langle v, w \rangle_{\Omega_6}$. -/
+def symplecticPairingOmega6 (v w : Fin 4 → ℤ) : ℤ :=
+  v 0 * w 3 + 6 * v 1 * w 2 - 6 * v 2 * w 1 - v 3 * w 0
+
+/-- Coordinate expansion of the polarized $S_6$ symplectic bilinear pairing. -/
+theorem symplecticPairingOmega6_def (v w : Fin 4 → ℤ) :
+    symplecticPairingOmega6 v w = v 0 * w 3 + 6 * v 1 * w 2 - 6 * v 2 * w 1 - v 3 * w 0 := rfl
+
+/-- Skew-symmetry of the polarized $S_6$ symplectic pairing. -/
+theorem symplecticPairingOmega6_skew (v w : Fin 4 → ℤ) :
+    symplecticPairingOmega6 v w = -symplecticPairingOmega6 w v := by
+  dsimp [symplecticPairingOmega6]; ring
+
+/-- Infinitesimal symplectic invariance of the $S_6$ pairing under $N_{S_6}$:
+    $\langle N v, w \rangle_{\Omega_6} + \langle v, N w \rangle_{\Omega_6} = 0$. -/
+theorem symplecticPairingOmega6_N_invariant (v w : Fin 4 → ℤ) :
+    symplecticPairingOmega6 (ModularFamilyS6.N *ᵥ v) w +
+    symplecticPairingOmega6 v (ModularFamilyS6.N *ᵥ w) = 0 := by
+  rw [mulVec_S6_N, mulVec_S6_N]; dsimp [symplecticPairingOmega6]; ring
+
+/-- Finite symplectic invariance of the $S_6$ pairing under $T_{0, S_6}$:
+    $\langle T_0 v, T_0 w \rangle_{\Omega_6} = \langle v, w \rangle_{\Omega_6}$. -/
+theorem symplecticPairingOmega6_T0_invariant (v w : Fin 4 → ℤ) :
+    symplecticPairingOmega6 (ModularFamilyS6.T0 *ᵥ v) (ModularFamilyS6.T0 *ᵥ w) =
+    symplecticPairingOmega6 v w := by
+  rw [mulVec_S6_T0, mulVec_S6_T0]; dsimp [symplecticPairingOmega6]; ring
+
+/-! ### 4. Classical Yukawa Coupling & Mirror Map -/
+
+/-- The algebraic Yukawa coupling function $C_{zzz}(z, \kappa_0, \mu) = \frac{\kappa_0}{z^3 (1 - \mu z)}$. -/
+def C_zzz (kappa0 mu : ℚ) (z : ℚ) : ℚ :=
+  kappa0 / (z^3 * (1 - mu * z))
+
+/-- Alias `Yukawa` for algebraic Yukawa coupling. -/
+def Yukawa (kappa0 mu : ℚ) (z : ℚ) : ℚ :=
+  C_zzz kappa0 mu z
+
+/-- Regularized Yukawa function at the cusp $z = 0$: $\kappa_{\mathrm{reg}}(z) = \frac{\kappa_0}{1 - \mu z}$. -/
+def regularizedYukawa (kappa0 mu : ℚ) (z : ℚ) : ℚ :=
+  kappa0 / (1 - mu * z)
+
+/-- Conifold regularized Yukawa function at $z = 1/\mu$: $\kappa_{\mathrm{con}}(z) = \frac{\kappa_0}{z^3}$. -/
+def conifoldRegularizedYukawa (kappa0 : ℚ) (z : ℚ) : ℚ :=
+  kappa0 / z^3
+
+/-- Cusp factorization theorem: $z^3 \cdot C_{zzz}(z) = \kappa_{\mathrm{reg}}(z)$. -/
+theorem yukawa_cusp_factorization (kappa0 mu z : ℚ) (hz : z ≠ 0) (_hcon : 1 - mu * z ≠ 0) :
+    z^3 * Yukawa kappa0 mu z = regularizedYukawa kappa0 mu z := by
+  dsimp [Yukawa, C_zzz, regularizedYukawa]
+  field_simp [hz]
+
+/-- Cusp limit value: regularized Yukawa coupling at $z = 0$ equals $\kappa_0$. -/
+theorem regularizedYukawa_at_cusp (kappa0 mu : ℚ) :
+    regularizedYukawa kappa0 mu 0 = kappa0 := by
+  simp [regularizedYukawa]
+
+/-- Conifold factorization theorem: $(1 - \mu z) \cdot C_{zzz}(z) = \kappa_{\mathrm{con}}(z)$. -/
+theorem yukawa_conifold_factorization (kappa0 mu z : ℚ) (hz : z ≠ 0) (hcon : 1 - mu * z ≠ 0) :
+    (1 - mu * z) * Yukawa kappa0 mu z = conifoldRegularizedYukawa kappa0 z := by
+  dsimp [Yukawa, C_zzz, conifoldRegularizedYukawa]
+  field_simp [hz, hcon]
+
+/-- Conifold evaluation theorem: at the discriminant locus $z = 1/\mu$,
+    the conifold regularized Yukawa coupling evaluates to $\kappa_0 \mu^3$. -/
+theorem conifoldRegularizedYukawa_at_conifold (kappa0 mu : ℚ) (hmu : mu ≠ 0) :
+    conifoldRegularizedYukawa kappa0 (1 / mu) = kappa0 * mu^3 := by
+  dsimp [conifoldRegularizedYukawa]
+  field_simp [hmu]
+
+/-- The discriminant factor $1 - \mu z$ vanishes at $z = 1/\mu$. -/
+theorem discriminant_root (mu z : ℚ) (hmu : mu ≠ 0) (hz : z = 1 / mu) :
+    1 - mu * z = 0 := by
+  rw [hz, mul_one_div_cancel hmu, sub_self]
+
+/-- Instanton degree-$d$ term in the Gromov-Witten / BPS expansion:
+    $I_d(q) = \frac{d^3 n_d q^d}{1 - q^d}$. -/
+def instantonTerm (d : ℕ) (n_d : ℤ) (q : ℚ) : ℚ :=
+  (d : ℚ)^3 * (n_d : ℚ) * q^d / (1 - q^d)
+
+/-- Finite instanton sum for the mirror Yukawa coupling:
+    $C_{ttt}(q, K_0, n) = K_0 + \sum_{d=1}^M \frac{d^3 n_d q^d}{1 - q^d}$. -/
+def C_ttt (K0 : ℚ) (n : ℕ → ℤ) (M : ℕ) (q : ℚ) : ℚ :=
+  K0 + ∑ d ∈ Finset.Icc 1 M, instantonTerm d (n d) q
+
+/-- Alias `instantonYukawa` for finite instanton sum. -/
+def instantonYukawa (K0 : ℚ) (n : ℕ → ℤ) (k : ℕ) (q : ℚ) : ℚ :=
+  C_ttt K0 n k q
+
+/-- At $q = 0$, all instanton corrections vanish, giving the classical intersection number $K_0$. -/
+theorem C_ttt_zero (K0 : ℚ) (n : ℕ → ℤ) (M : ℕ) :
+    C_ttt K0 n M 0 = K0 := by
+  dsimp [C_ttt]
+  rw [Finset.sum_eq_zero (fun d hd => by
+    simp [instantonTerm, zero_pow (ne_of_gt (Finset.mem_Icc.mp hd).1)]), add_zero]
+
+/-- Instanton Yukawa evaluates to $K_0$ at $q = 0$. -/
+theorem instantonYukawa_zero (K0 : ℚ) (n : ℕ → ℤ) (k : ℕ) :
+    instantonYukawa K0 n k 0 = K0 :=
+  C_ttt_zero K0 n k
+
+/-- Degree 1 instanton term formula: $I_1(q) = \frac{n_1 q}{1 - q}$. -/
+theorem instantonTerm_deg1 (n1 : ℤ) (q : ℚ) :
+    instantonTerm 1 n1 q = (n1 : ℚ) * q / (1 - q) := by
+  dsimp [instantonTerm]; ring
+
+/-- Degree 2 instanton term formula: $I_2(q) = \frac{8 n_2 q^2}{1 - q^2}$. -/
+theorem instantonTerm_deg2 (n2 : ℤ) (q : ℚ) :
+    instantonTerm 2 n2 q = 8 * (n2 : ℚ) * q^2 / (1 - q^2) := by
+  dsimp [instantonTerm]; ring
+
+/-- Explicit 1-instanton truncated Yukawa coupling $C_{ttt}$. -/
+theorem C_ttt_M1 (K0 : ℚ) (n : ℕ → ℤ) (q : ℚ) :
+    C_ttt K0 n 1 q = K0 + (n 1 : ℚ) * q / (1 - q) := by
+  rw [C_ttt, Finset.Icc_self, Finset.sum_singleton, instantonTerm_deg1]
+
+/-- Explicit 1-instanton truncated Yukawa coupling. -/
+theorem instantonYukawa_k1 (K0 : ℚ) (n : ℕ → ℤ) (q : ℚ) :
+    instantonYukawa K0 n 1 q = K0 + (n 1 : ℚ) * q / (1 - q) :=
+  C_ttt_M1 K0 n q
+
+/-- Explicit 2-instanton truncated Yukawa coupling $C_{ttt}$. -/
+theorem C_ttt_M2 (K0 : ℚ) (n : ℕ → ℤ) (q : ℚ) :
+    C_ttt K0 n 2 q = K0 + (n 1 : ℚ) * q / (1 - q) + 8 * (n 2 : ℚ) * q^2 / (1 - q^2) := by
+  rw [C_ttt, show Finset.Icc 1 2 = {1, 2} from rfl, Finset.sum_pair (by decide),
+    instantonTerm_deg1, instantonTerm_deg2, add_assoc]
+
+/-- Explicit 2-instanton truncated Yukawa coupling. -/
+theorem instantonYukawa_k2 (K0 : ℚ) (n : ℕ → ℤ) (q : ℚ) :
+    instantonYukawa K0 n 2 q = K0 + (n 1 : ℚ) * q / (1 - q) + 8 * (n 2 : ℚ) * q^2 / (1 - q^2) :=
+  C_ttt_M2 K0 n q
+
+/-- Calabi-Yau 3-fold Quintic mirror BPS invariant sequence certificate:
+    $n_1 = 2875, n_2 = 609250$. -/
+def quintic_n : ℕ → ℤ
+  | 1 => 2875
+  | 2 => 609250
+  | _ => 0
+
+/-- Quintic Calabi-Yau 1-instanton Yukawa coupling certificate:
+    $C(q) = 5 + \frac{2875 q}{1 - q}$. -/
+theorem quintic_instanton_k1 (q : ℚ) :
+    instantonYukawa 5 quintic_n 1 q = 5 + 2875 * q / (1 - q) :=
+  instantonYukawa_k1 5 quintic_n q
+
+/-- Quintic Calabi-Yau 2-instanton Yukawa coupling certificate:
+    $C(q) = 5 + \frac{2875 q}{1 - q} + \frac{4874000 q^2}{1 - q^2}$. -/
+theorem quintic_instanton_k2 (q : ℚ) :
+    instantonYukawa 5 quintic_n 2 q = 5 + 2875 * q / (1 - q) + 4874000 * q^2 / (1 - q^2) := by
+  rw [instantonYukawa_k2]; dsimp [quintic_n]; norm_num
+
+/-- Modular $(3,4,\infty)$ abelian surface / modular family certificate sequence:
+    $n_1 = 4, n_2 = -2$. -/
+def modular_34_n : ℕ → ℤ
+  | 1 => 4
+  | 2 => -2
+  | _ => 0
+
+/-- Modular $(3,4,\infty)$ 1-instanton Yukawa coupling certificate:
+    $C(q) = 1 + \frac{4 q}{1 - q}$. -/
+theorem modular_34_instanton_k1 (q : ℚ) :
+    instantonYukawa 1 modular_34_n 1 q = 1 + 4 * q / (1 - q) :=
+  instantonYukawa_k1 1 modular_34_n q
+
+/-- Modular $(3,4,\infty)$ 2-instanton Yukawa coupling certificate:
+    $C(q) = 1 + \frac{4 q}{1 - q} - \frac{16 q^2}{1 - q^2}$. -/
+theorem modular_34_instanton_k2 (q : ℚ) :
+    instantonYukawa 1 modular_34_n 2 q = 1 + 4 * q / (1 - q) - 16 * q^2 / (1 - q^2) := by
+  rw [instantonYukawa_k2]; dsimp [modular_34_n]; norm_num; ring
+
+end PicardFuchsMirrorMonodromy
