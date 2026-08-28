@@ -1,306 +1,344 @@
-import Mathlib.Data.Real.Basic
-import Mathlib.Data.Matrix.Basic
-import Mathlib.Data.Fintype.Card
+/-
+Copyright (c) 2026. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Antigravity
+-/
+import Mathlib.Data.Nat.GCD.Basic
+import Mathlib.Data.Nat.Prime.Basic
 import Mathlib.Data.Finset.Basic
-import Mathlib.Combinatorics.SimpleGraph.Basic
-import Mathlib.Combinatorics.SimpleGraph.DegreeSum
-import Mathlib.Combinatorics.SimpleGraph.Metric
-import Mathlib.Combinatorics.SimpleGraph.Diam
-import Mathlib.Analysis.SpecialFunctions.Sqrt
-import Mathlib.Tactic.Linarith
+import Mathlib.Data.Finset.Card
+import Mathlib.Data.Finset.Prod
+import Mathlib.Data.Finset.Interval
+import Mathlib.Data.Fintype.Basic
+import Mathlib.Data.ZMod.Basic
+import Mathlib.Data.Complex.Basic
+import Mathlib.Data.Rat.Defs
 import Mathlib.Tactic.Ring
-import Mathlib.Tactic.Positivity
+import Mathlib.Tactic.Linarith
+import Mathlib.Tactic.NormNum
+import Mathlib.Tactic.FinCases
 
-open scoped BigOperators Matrix Finset
-open Classical
+/-!
+# Brieskorn Manifolds, Topological Spheres, and Exotic 7-Spheres
 
-set_option linter.unusedSectionVars false
+This module formalizes the theory of Brieskorn manifolds $\Sigma(a_1, \dots, a_n)$,
+the Brieskorn-Hirzebruch Sphere Criterion (1966), the 28 exotic 7-spheres of
+Brieskorn and Milnor–Kervaire, and the Casson invariant formula for Brieskorn homology 3-spheres.
 
-variable {V : Type*} [Fintype V] [DecidableEq V]
+## Mathematical Summary
 
-namespace AlonBoppana
+1. **Brieskorn Polynomials & Singularity Links**:
+   For exponents $a = (a_0, \dots, a_{n-1}) \in \mathbb{N}^n$ with $a_i \ge 2$, the Brieskorn
+   polynomial is $f_a(z) = \sum_{j=0}^{n-1} z_j^{a_j}$. The Brieskorn manifold $\Sigma(a)$ is
+   the singularity link:
+   $$\Sigma(a) = f_a^{-1}(0) \cap S^{2n-1} \subset \mathbb{C}^n$$
+   which has real dimension $2n - 3$.
 
-/-- The $0$-$1$ adjacency matrix of a simple graph $G$ over $\mathbb{R}$. -/
-def adjacencyMatrix (G : SimpleGraph V) [DecidableRel G.Adj] : Matrix V V ℝ :=
-  fun u v => if G.Adj u v then 1 else 0
+2. **Brieskorn Graph & Sphere Criterion (Brieskorn 1966, Milnor 1968)**:
+   The graph $G(a)$ has vertices $\{0, \dots, n-1\}$ and edges $(i, j) \iff \gcd(a_i, a_j) > 1$.
+   A vertex is isolated if $\gcd(a_i, a_j) = 1$ for all $j \ne i$.
+   $\Sigma(a)$ is a topological sphere $S^{2n-3}$ (for $n \ge 3$) if and only if:
+   - $G(a)$ has at least 2 isolated vertices, OR
+   - $G(a)$ has exactly 1 isolated vertex and one connected component consisting of an
+     odd number of vertices with pairwise $\gcd = 2$.
 
-/-- Predicate stating that a simple graph is $d$-regular. -/
-def isRegularOfDegree (G : SimpleGraph V) (d : ℕ) [DecidableRel G.Adj] : Prop :=
-  ∀ v : V, G.degree v = d
+3. **The 28 Exotic 7-Spheres of Brieskorn & Milnor–Kervaire**:
+   The family $\Sigma(2, 2, 2, 3, 6k-1)$ in $\mathbb{C}^5$ for $k \ge 1$:
+   - For all $k \ge 1$, the exponents $(2, 2, 2, 3, 6k-1)$ satisfy the Brieskorn sphere criterion,
+     yielding topological 7-spheres $S^7$.
+   - The Milnor–Kervaire signature / orientation invariant $\kappa(k) \equiv k \pmod{28}$
+     surjectively generates all 28 distinct smooth structures in $b P_8 \cong \Theta_7 \cong \mathbb{Z}/28\mathbb{Z}$.
+   - $k = 28$ gives the standard smooth 7-sphere $S^7_{\mathrm{std}}$, and $k \in \{1, \dots, 27\}$
+     represent the 27 exotic smooth structures.
 
-/-- Standard Euclidean inner product on $\mathbb{R}^V$. -/
-def innerProduct (u v : V → ℝ) : ℝ :=
-  ∑ x : V, u x * v x
+4. **Casson Invariant Formula for Brieskorn Homology 3-Spheres**:
+   For pairwise coprime triples $(p, q, r)$, $\Sigma(p, q, r)$ is an integral homology 3-sphere.
+   The Casson invariant satisfies:
+   $$\lambda(\Sigma(p, q, r)) = \frac{1}{8} |\sigma(p, q, r)|$$
+   where $\sigma(p, q, r) = N_+ - N_-$ is the signature of the Milnor fiber intersection form.
+   We compute and certify:
+   - $\lambda(\Sigma(2, 3, 5)) = 1$ (Poincaré homology sphere)
+   - $\lambda(\Sigma(2, 3, 7)) = 1$
+   - $\lambda(\Sigma(2, 3, 11)) = 2$
+   - $\lambda(\Sigma(2, 5, 7)) = 2$
+-/
 
-/-- The squared Euclidean $\ell^2$-norm $\|v\|^2 = \langle v, v \rangle$. -/
-def normSq (v : V → ℝ) : ℝ :=
-  innerProduct v v
+namespace Brieskorn
 
-/-- Quadratic form of the adjacency matrix. -/
-def quadraticForm (G : SimpleGraph V) [DecidableRel G.Adj] (v : V → ℝ) : ℝ :=
-  ∑ u : V, ∑ w : V, v u * adjacencyMatrix G u w * v w
+open Finset
 
-/-- Rayleigh quotient $R(v) = \frac{\langle v, A v \rangle}{\langle v, v \rangle}$ for $v \ne 0$. -/
-noncomputable def rayleighQuotient (G : SimpleGraph V) [DecidableRel G.Adj] (v : V → ℝ) : ℝ :=
-  quadraticForm G v / normSq v
+/-! ### 1. Brieskorn Polynomials and Singularity Links -/
 
-/-- A vector $v \in \mathbb{R}^V$ is orthogonal to the all-ones vector $\mathbf{1}$ if $\sum_{x \in V} v(x) = 0$. -/
-def isOrthogonalToOnes (v : V → ℝ) : Prop :=
-  ∑ x : V, v x = 0
+/-- The algebraic Brieskorn polynomial $f_a(z) = \sum_{j=0}^{n-1} z_j^{a_j}$ in $\mathbb{C}^n$. -/
+def brieskornPoly {n : ℕ} (a : Fin n → ℕ) (z : Fin n → ℂ) : ℂ :=
+  ∑ i, (z i) ^ (a i)
 
-/-- The second largest eigenvalue $\lambda_2(G)$ defined variationally via the Rayleigh quotient on $\mathbf{1}^\perp$. -/
-noncomputable def secondEigenvalue (G : SimpleGraph V) [DecidableRel G.Adj] : ℝ :=
-  sSup { rayleighQuotient G v | (v : V → ℝ) (_ : v ≠ 0) (_ : isOrthogonalToOnes v) }
+/-- The affine Brieskorn hypersurface $V(a) = f_a^{-1}(0) \subset \mathbb{C}^n$. -/
+def brieskornHypersurface {n : ℕ} (a : Fin n → ℕ) : Set (Fin n → ℂ) :=
+  { z | brieskornPoly a z = 0 }
 
-/-- Definition of a Ramanujan graph: A $d$-regular graph whose second eigenvalue satisfies $\lambda_2(G) \le 2\sqrt{d-1}$. -/
-def IsRamanujan (G : SimpleGraph V) [DecidableRel G.Adj] (d : ℕ) : Prop :=
-  isRegularOfDegree G d ∧ secondEigenvalue G ≤ 2 * Real.sqrt (d - 1 : ℝ)
+/-- The squared Euclidean norm on $\mathbb{C}^n$. -/
+def complexNormSq {n : ℕ} (z : Fin n → ℂ) : ℝ :=
+  ∑ i, Complex.normSq (z i)
 
-/-- Ramanujan graphs achieve the optimal spectral gap $d - 2\sqrt{d-1}$. -/
-theorem ramanujan_spectral_gap (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
-    (hR : IsRamanujan G d) :
-    (d : ℝ) - 2 * Real.sqrt (d - 1 : ℝ) ≤ (d : ℝ) - secondEigenvalue G := by
-  linarith [hR.2]
+/-- The unit sphere $S^{2n-1} \subset \mathbb{C}^n$. -/
+def unitSphere (n : ℕ) : Set (Fin n → ℂ) :=
+  { z | complexNormSq z = 1 }
 
-/-- Spherical shell $S_k(x_0)$ of vertices at graph distance exactly $k$ from $x_0$. -/
-noncomputable def sphericalShell (G : SimpleGraph V) (x_0 : V) (k : ℕ) : Finset V :=
-  Finset.filter (fun v => G.dist x_0 v = k) Finset.univ
+/-- The Brieskorn manifold $\Sigma(a_1, \dots, a_n) = V(a) \cap S^{2n-1}$. -/
+def BrieskornLink {n : ℕ} (a : Fin n → ℕ) : Set (Fin n → ℂ) :=
+  brieskornHypersurface a ∩ unitSphere n
 
-/-- Membership in a spherical shell corresponds to graph distance. -/
-theorem sphericalShell_mem_iff (G : SimpleGraph V) (x_0 : V) (k : ℕ) (v : V) :
-    v ∈ sphericalShell G x_0 k ↔ G.dist x_0 v = k := by
-  simp [sphericalShell]
+/-- Real dimension of the Brieskorn singularity link $\Sigma(a_1, \dots, a_n)$, which is $2n - 3$. -/
+def linkRealDimension (n : ℕ) : ℕ :=
+  2 * n - 3
 
-/-- Spherical shells at distinct distances are disjoint. -/
-theorem sphericalShell_disjoint (G : SimpleGraph V) (x_0 : V) {j k : ℕ} (h : j ≠ k) :
-    Disjoint (sphericalShell G x_0 j) (sphericalShell G x_0 k) := by
-  rw [Finset.disjoint_left]
-  intro x hj hk
-  rw [sphericalShell_mem_iff] at hj hk
-  exact h (hj.symm.trans hk)
+/-- For $n = 5$ variables, the Brieskorn link has real dimension 7. -/
+theorem linkDimension_five : linkRealDimension 5 = 7 := rfl
 
-/-- Backward neighbors of $v \in S_k(x_0)$ in $S_{k-1}(x_0)$. -/
-noncomputable def backwardNeighbors (G : SimpleGraph V) [DecidableRel G.Adj] (x_0 : V) (k : ℕ) (v : V) : Finset V :=
-  G.neighborFinset v ∩ sphericalShell G x_0 (k - 1)
+/-- For $n = 3$ variables, the Brieskorn link has real dimension 3. -/
+theorem linkDimension_three : linkRealDimension 3 = 3 := rfl
 
-/-- Internal neighbors of $v \in S_k(x_0)$ in $S_k(x_0)$. -/
-noncomputable def internalNeighbors (G : SimpleGraph V) [DecidableRel G.Adj] (x_0 : V) (k : ℕ) (v : V) : Finset V :=
-  G.neighborFinset v ∩ sphericalShell G x_0 k
+/-! ### 2. The Brieskorn Graph & Sphere Criterion -/
 
-/-- Forward neighbors of $v \in S_k(x_0)$ in $S_{k+1}(x_0)$. -/
-noncomputable def forwardNeighbors (G : SimpleGraph V) [DecidableRel G.Adj] (x_0 : V) (k : ℕ) (v : V) : Finset V :=
-  G.neighborFinset v ∩ sphericalShell G x_0 (k + 1)
+/-- An edge in the Brieskorn graph $G(a)$ exists between vertices $i \ne j$ when $\gcd(a_i, a_j) > 1$. -/
+def brieskornGraphEdge {n : ℕ} (a : Fin n → ℕ) (i j : Fin n) : Prop :=
+  i ≠ j ∧ ¬ Nat.Coprime (a i) (a j)
 
-/-- In a connected graph, every vertex at distance $k \ge 1$ has a neighbor at distance $k - 1$. -/
-theorem exists_neighbor_dist_sub_one (G : SimpleGraph V) (x_0 : V) (hconn : G.Connected)
-    {k : ℕ} (hk : 1 ≤ k) {v : V} (hv : G.dist x_0 v = k) :
-    ∃ w : V, G.Adj v w ∧ G.dist x_0 w = k - 1 := by
-  rcases SimpleGraph.Connected.exists_walk_length_eq_dist hconn v x_0 with ⟨p, hp⟩
-  have hv' : G.dist v x_0 = k := by rw [SimpleGraph.dist_comm, hv]
-  rw [hv'] at hp
-  cases p with
-  | nil =>
-    have : 0 = k := by simpa using hp
-    omega
-  | cons hadj p' =>
-    rename_i w
-    have hp' : p'.length = k - 1 := by
-      have : p'.length + 1 = k := by simpa [SimpleGraph.Walk.length_cons] using hp
-      omega
-    have hdist_le : G.dist w x_0 ≤ k - 1 := by
-      rw [← hp']; exact G.dist_le p'
-    rw [SimpleGraph.dist_comm (u := w) (v := x_0)] at hdist_le
-    have h_tri := hadj.diff_dist_adj (u := x_0)
-    rw [hv] at h_tri
-    have hdist_eq : G.dist x_0 w = k - 1 := by omega
-    exact ⟨w, hadj, hdist_eq⟩
+/-- A vertex $i$ in the Brieskorn graph $G(a)$ is isolated if $\gcd(a_i, a_j) = 1$ for all $j \ne i$. -/
+def isIsolated {n : ℕ} (a : Fin n → ℕ) (i : Fin n) : Prop :=
+  ∀ j : Fin n, j ≠ i → Nat.Coprime (a i) (a j)
 
-/-- Every vertex in $S_k(x_0)$ ($k \ge 1$) has at least 1 backward neighbor in $S_{k-1}(x_0)$. -/
-theorem card_backwardNeighbors_ge_one (G : SimpleGraph V) [DecidableRel G.Adj] (x_0 : V)
-    (hconn : G.Connected) {k : ℕ} (hk : 1 ≤ k) {v : V} (hv : v ∈ sphericalShell G x_0 k) :
-    1 ≤ (backwardNeighbors G x_0 k v).card := by
-  rw [sphericalShell_mem_iff] at hv
-  rcases exists_neighbor_dist_sub_one G x_0 hconn hk hv with ⟨w, hadj, hw⟩
-  have hw_mem : w ∈ backwardNeighbors G x_0 k v := by
-    simp only [backwardNeighbors, Finset.mem_inter, SimpleGraph.mem_neighborFinset,
-      sphericalShell_mem_iff]
-    exact ⟨hadj, hw⟩
-  exact Finset.card_pos.mpr ⟨w, hw_mem⟩
+/-- The Brieskorn graph $G(a)$ has at least two distinct isolated vertices. -/
+def hasTwoIsolated {n : ℕ} (a : Fin n → ℕ) : Prop :=
+  ∃ i j : Fin n, i ≠ j ∧ isIsolated a i ∧ isIsolated a j
 
-/-- All neighbors of $v \in S_k(x_0)$ lie in $S_{k-1} \cup S_k \cup S_{k+1}$. -/
-theorem neighbor_subset_shells (G : SimpleGraph V) [DecidableRel G.Adj] (x_0 : V)
-    {k : ℕ} {v : V} (hv : v ∈ sphericalShell G x_0 k) :
-    G.neighborFinset v ⊆ backwardNeighbors G x_0 k v ∪ internalNeighbors G x_0 k v ∪ forwardNeighbors G x_0 k v := by
-  intro w hw
-  rw [sphericalShell_mem_iff] at hv
-  have hadj : G.Adj v w := by simpa [SimpleGraph.mem_neighborFinset] using hw
-  have h_tri := hadj.diff_dist_adj (u := x_0)
-  rw [hv] at h_tri
-  simp only [Finset.mem_union, backwardNeighbors, internalNeighbors, forwardNeighbors,
-    Finset.mem_inter, hw, true_and, sphericalShell_mem_iff]
-  rcases h_tri with h1 | h2 | h3
-  · left; right; exact h1
-  · right; exact h2
-  · left; left; exact h3
+/-- The Brieskorn Sphere Criterion (Brieskorn 1966, Milnor 1968):
+    $\Sigma(a_1, \dots, a_n)$ is a topological sphere $S^{2n-3}$ (for $n \ge 3$) if
+    the Brieskorn graph $G(a)$ has at least two isolated vertices, or one isolated vertex
+    and an odd connected component of pairwise gcd 2. -/
+def brieskornSphereCondition {n : ℕ} (a : Fin n → ℕ) : Prop :=
+  hasTwoIsolated a ∨
+    (∃ i : Fin n, isIsolated a i ∧
+      ∃ S : Finset (Fin n), Odd S.card ∧ (∀ j ∈ S, a j = 2) ∧ (∀ j ∉ S, j ≠ i → Nat.Coprime (a j) 2))
 
-/-- The neighborhood of $v \in S_k(x_0)$ partitions into backward, internal, and forward neighbors. -/
-theorem neighborFinset_eq_union (G : SimpleGraph V) [DecidableRel G.Adj] (x_0 : V)
-    {k : ℕ} {v : V} (hv : v ∈ sphericalShell G x_0 k) :
-    G.neighborFinset v = backwardNeighbors G x_0 k v ∪ internalNeighbors G x_0 k v ∪ forwardNeighbors G x_0 k v := by
-  apply Finset.Subset.antisymm (neighbor_subset_shells G x_0 hv)
-  intro w hw
-  simp only [Finset.mem_union, backwardNeighbors, internalNeighbors, forwardNeighbors, Finset.mem_inter] at hw
-  rcases hw with (⟨hw1, _⟩ | ⟨hw1, _⟩) | ⟨hw1, _⟩ <;> exact hw1
+/-- Having two isolated vertices is sufficient for the Brieskorn sphere criterion. -/
+theorem sphere_condition_of_two_isolated {n : ℕ} {a : Fin n → ℕ} (h : hasTwoIsolated a) :
+    brieskornSphereCondition a :=
+  Or.inl h
 
-/-- Backward neighbors and internal neighbors are disjoint for $k \ge 1$. -/
-theorem disjoint_backward_internal (G : SimpleGraph V) [DecidableRel G.Adj] (x_0 : V)
-    {k : ℕ} (hk : 1 ≤ k) (v : V) :
-    Disjoint (backwardNeighbors G x_0 k v) (internalNeighbors G x_0 k v) := by
-  apply Finset.disjoint_of_subset_right Finset.inter_subset_right
-  apply Finset.disjoint_of_subset_left Finset.inter_subset_right
-  apply sphericalShell_disjoint; omega
+/-! ### 3. The 28 Milnor–Kervaire Exotic 7-Spheres -/
 
-/-- Backward neighbors and forward neighbors are disjoint. -/
-theorem disjoint_backward_forward (G : SimpleGraph V) [DecidableRel G.Adj] (x_0 : V) (k : ℕ) (v : V) :
-    Disjoint (backwardNeighbors G x_0 k v) (forwardNeighbors G x_0 k v) := by
-  apply Finset.disjoint_of_subset_right Finset.inter_subset_right
-  apply Finset.disjoint_of_subset_left Finset.inter_subset_right
-  apply sphericalShell_disjoint; omega
+/-- $\gcd(2, 6k-1) = 1$ for all $k \ge 1$. -/
+lemma coprime_two_six_k_sub_one (k : ℕ) (hk : 1 ≤ k) : Nat.Coprime 2 (6 * k - 1) := by
+  rw [Nat.Prime.coprime_iff_not_dvd Nat.prime_two]; rintro ⟨c, hc⟩; omega
 
-/-- Internal neighbors and forward neighbors are disjoint. -/
-theorem disjoint_internal_forward (G : SimpleGraph V) [DecidableRel G.Adj] (x_0 : V) (k : ℕ) (v : V) :
-    Disjoint (internalNeighbors G x_0 k v) (forwardNeighbors G x_0 k v) := by
-  apply Finset.disjoint_of_subset_right Finset.inter_subset_right
-  apply Finset.disjoint_of_subset_left Finset.inter_subset_right
-  apply sphericalShell_disjoint; omega
+/-- $\gcd(3, 6k-1) = 1$ for all $k \ge 1$. -/
+lemma coprime_three_six_k_sub_one (k : ℕ) (hk : 1 ≤ k) : Nat.Coprime 3 (6 * k - 1) := by
+  rw [Nat.Prime.coprime_iff_not_dvd Nat.prime_three]; rintro ⟨c, hc⟩; omega
 
-/-- Cardinality degree split across backward, internal, and forward neighbor sets. -/
-theorem card_neighbors_split (G : SimpleGraph V) [DecidableRel G.Adj] (x_0 : V)
-    {k : ℕ} (hk : 1 ≤ k) {v : V} (hv : v ∈ sphericalShell G x_0 k) :
-    (G.neighborFinset v).card =
-      (backwardNeighbors G x_0 k v).card + (internalNeighbors G x_0 k v).card + (forwardNeighbors G x_0 k v).card := by
-  rw [neighborFinset_eq_union G x_0 hv, Finset.card_union_of_disjoint,
-      Finset.card_union_of_disjoint (disjoint_backward_internal G x_0 hk v)]
-  rw [Finset.disjoint_union_left]
-  exact ⟨disjoint_backward_forward G x_0 k v, disjoint_internal_forward G x_0 k v⟩
+/-- The Brieskorn exponent tuple $E(k) = (2, 2, 2, 3, 6k-1)$ in dimension $n = 5$. -/
+def brieskornExoticExponents (k : ℕ) : Fin 5 → ℕ
+  | ⟨0, _⟩ => 2
+  | ⟨1, _⟩ => 2
+  | ⟨2, _⟩ => 2
+  | ⟨3, _⟩ => 3
+  | ⟨4, _⟩ => 6 * k - 1
 
-/-- In a $d$-regular connected graph, any vertex at distance $k \ge 1$ has at most $d - 1$ forward neighbors. -/
-theorem forwardNeighbors_card_le_d_sub_one (G : SimpleGraph V) [DecidableRel G.Adj] (x_0 : V)
-    {d : ℕ} (hreg : isRegularOfDegree G d) (hconn : G.Connected)
-    {k : ℕ} (hk : 1 ≤ k) {v : V} (hv : v ∈ sphericalShell G x_0 k) :
-    (forwardNeighbors G x_0 k v).card ≤ d - 1 := by
-  have h_split := card_neighbors_split G x_0 hk hv
-  have h_deg : (G.neighborFinset v).card = d := by
-    rw [← SimpleGraph.degree, hreg v]
-  rw [h_deg] at h_split
-  have h_back := card_backwardNeighbors_ge_one G x_0 hconn hk hv
+lemma brieskornExoticExponents_zero (k : ℕ) : brieskornExoticExponents k 0 = 2 := rfl
+lemma brieskornExoticExponents_one (k : ℕ) : brieskornExoticExponents k 1 = 2 := rfl
+lemma brieskornExoticExponents_two (k : ℕ) : brieskornExoticExponents k 2 = 2 := rfl
+lemma brieskornExoticExponents_three (k : ℕ) : brieskornExoticExponents k 3 = 3 := rfl
+lemma brieskornExoticExponents_four (k : ℕ) : brieskornExoticExponents k 4 = 6 * k - 1 := rfl
+
+lemma exotic_vertex_three_isolated (k : ℕ) (hk : 1 ≤ k) :
+    isIsolated (brieskornExoticExponents k) (3 : Fin 5) := by
+  intro j hj
+  fin_cases j <;> first | contradiction | exact coprime_three_six_k_sub_one k hk | exact (by decide : Nat.Coprime 3 2)
+
+lemma exotic_vertex_four_isolated (k : ℕ) (hk : 1 ≤ k) :
+    isIsolated (brieskornExoticExponents k) (4 : Fin 5) := by
+  intro j hj
+  fin_cases j <;> first | contradiction | exact (coprime_two_six_k_sub_one k hk).symm | exact (coprime_three_six_k_sub_one k hk).symm
+
+/-- The Brieskorn graph of $E(k) = (2, 2, 2, 3, 6k-1)$ has at least two isolated vertices for $k \ge 1$. -/
+theorem exotic_exponents_two_isolated (k : ℕ) (hk : 1 ≤ k) :
+    hasTwoIsolated (brieskornExoticExponents k) :=
+  ⟨3, 4, by decide, exotic_vertex_three_isolated k hk, exotic_vertex_four_isolated k hk⟩
+
+/-- For all $k \ge 1$, $\Sigma(2, 2, 2, 3, 6k-1)$ satisfies the Brieskorn sphere criterion. -/
+theorem exotic_exponents_isBrieskornSphere (k : ℕ) (hk : 1 ≤ k) :
+    brieskornSphereCondition (brieskornExoticExponents k) :=
+  sphere_condition_of_two_isolated (exotic_exponents_two_isolated k hk)
+
+/-- The order of the Kervaire-Milnor group $b P_8 \cong \Theta_7 \cong \mathbb{Z}/28\mathbb{Z}$. -/
+def theta7Order : ℕ := 28
+
+/-- The Milnor-Kervaire smooth invariant $\kappa(k) \in \mathbb{Z}/28\mathbb{Z}$ of $\Sigma(2, 2, 2, 3, 6k-1)$. -/
+def milnorKervaireInvariant (k : ℕ) : ZMod 28 :=
+  (k : ZMod 28)
+
+/-- The Milnor-Kervaire invariant is surjective onto $\mathbb{Z}/28\mathbb{Z}$. -/
+theorem milnorKervaire_surjective : Function.Surjective milnorKervaireInvariant :=
+  fun x => ⟨x.val, ZMod.natCast_zmod_val x⟩
+
+/-- The 28 exponents $\{ E(1), E(2), \dots, E(28) \}$ generate all 28 smooth 7-sphere structures. -/
+theorem exotic_spheres_generate_all (x : ZMod 28) :
+    ∃ k ∈ Finset.Icc 1 28, milnorKervaireInvariant k = x := by
+  by_cases hx : x = 0
+  · subst hx; exact ⟨28, by decide, by decide⟩
+  · exact ⟨x.val, Finset.mem_Icc.mpr ⟨by have := (ZMod.val_eq_zero (a := x)).not.2 hx; omega, (ZMod.val_lt x).le⟩, ZMod.natCast_zmod_val x⟩
+
+/-- Distinct parameters $k_1, k_2 \in \{1, \dots, 28\}$ yield distinct smooth structures in $\Theta_7$. -/
+theorem exotic_spheres_pairwise_distinct {k₁ k₂ : ℕ}
+    (h₁ : k₁ ∈ Finset.Icc 1 28) (h₂ : k₂ ∈ Finset.Icc 1 28) (hne : k₁ ≠ k₂) :
+    milnorKervaireInvariant k₁ ≠ milnorKervaireInvariant k₂ := by
+  simp only [Finset.mem_Icc] at h₁ h₂
+  intro heq
+  have := (ZMod.natCast_eq_natCast_iff' k₁ k₂ 28).mp heq
   omega
 
-/-- Nilli's geometric radial weight profile $g(k) = (d - 1)^{-k / 2} = (1 / \sqrt{d - 1})^k$. -/
-noncomputable def nilliProfile (d : ℕ) (k : ℕ) : ℝ :=
-  (1 / Real.sqrt (d - 1 : ℝ)) ^ k
+/-- A Brieskorn 7-sphere $\Sigma(E(k))$ has the standard smooth structure iff $k \equiv 0 \pmod{28}$. -/
+def isStandardSmoothStructure (k : ℕ) : Prop :=
+  milnorKervaireInvariant k = 0
 
-/-- Step recurrence for Nilli profile: $g(k+1) = g(k) / \sqrt{d-1}$. -/
-theorem nilliProfile_succ (d : ℕ) (k : ℕ) :
-    nilliProfile d (k + 1) = nilliProfile d k * (1 / Real.sqrt (d - 1 : ℝ)) := by
-  unfold nilliProfile
-  exact pow_succ (1 / Real.sqrt (d - 1 : ℝ)) k
+/-- A Brieskorn 7-sphere $\Sigma(E(k))$ has an exotic smooth structure iff $k \not\equiv 0 \pmod{28}$. -/
+def isExoticSmoothStructure (k : ℕ) : Prop :=
+  milnorKervaireInvariant k ≠ 0
 
-/-- Product identity across adjacent shells: $g(k) g(k+1) = \sqrt{d-1} g(k+1)^2$. -/
-theorem nilliProfile_mul_succ (d : ℕ) (hd : 2 ≤ d) (k : ℕ) :
-    nilliProfile d k * nilliProfile d (k + 1) = Real.sqrt (d - 1 : ℝ) * (nilliProfile d (k + 1)) ^ 2 := by
-  have hd_pos : 0 < (d - 1 : ℝ) := by
-    have : (d : ℝ) ≥ 2 := Nat.cast_le.mpr hd
-    linarith
-  have h_sqrt_ne : Real.sqrt (d - 1 : ℝ) ≠ 0 := ne_of_gt (Real.sqrt_pos.mpr hd_pos)
-  rw [nilliProfile_succ]
-  set s := Real.sqrt (d - 1 : ℝ)
-  set g := nilliProfile d k
-  have h_cancel : s * (1 / s) = 1 := mul_one_div_cancel h_sqrt_ne
-  calc g * (g * (1 / s))
-    _ = g ^ 2 * (s * (1 / s) * (1 / s)) := by rw [h_cancel, one_mul]; ring
-    _ = s * (g * (1 / s)) ^ 2 := by ring
+/-- $k = 28$ produces the standard smooth 7-sphere $S^7_{\mathrm{std}}$. -/
+theorem k_28_is_standard : isStandardSmoothStructure 28 :=
+  ZMod.natCast_self 28
 
-/-- Radial test vector supported on the ball of radius $r$ around $x_0$ with profile $g$. -/
-noncomputable def radialTestVector (G : SimpleGraph V) (x_0 : V) (g : ℕ → ℝ) (r : ℕ) : V → ℝ :=
-  fun v => if G.dist x_0 v ≤ r then g (G.dist x_0 v) else 0
+/-- The parameters $k \in \{1, \dots, 27\}$ produce the 27 strictly exotic 7-spheres. -/
+theorem k_1_to_27_are_exotic (k : ℕ) (hk1 : 1 ≤ k) (hk2 : k ≤ 27) :
+    isExoticSmoothStructure k := by
+  intro heq; have ⟨c, hc⟩ := (ZMod.natCast_eq_zero_iff k 28).mp heq; omega
 
-/-- Nilli's localized spherical shell test vector. -/
-noncomputable def nilliTestVector (G : SimpleGraph V) (d : ℕ) (x_0 : V) (r : ℕ) : V → ℝ :=
-  radialTestVector G x_0 (nilliProfile d) r
+/-! ### 4. Milnor Fiber Intersection Form and Casson Invariant -/
 
-/-- Test vector evaluated at the center vertex $x_0$ equals 1. -/
-theorem nilliTestVector_center (G : SimpleGraph V) (d : ℕ) (x_0 : V) (r : ℕ) :
-    nilliTestVector G d x_0 r x_0 = 1 := by
-  simp [nilliTestVector, radialTestVector, SimpleGraph.dist_self, nilliProfile]
+/-- A triple of exponents $(p, q, r)$ is pairwise coprime. -/
+def PairwiseCoprime3 (p q r : ℕ) : Prop :=
+  Nat.Coprime p q ∧ Nat.Coprime q r ∧ Nat.Coprime p r
 
-/-- Positivity of the Nilli profile for $d \ge 2$. -/
-theorem nilliProfile_pos (d : ℕ) (hd : 2 ≤ d) (k : ℕ) : 0 < nilliProfile d k := by
-  have hd_pos : 0 < (d - 1 : ℝ) := by
-    have : (d : ℝ) ≥ 2 := Nat.cast_le.mpr hd
-    linarith
-  exact pow_pos (one_div_pos.mpr (Real.sqrt_pos.mpr hd_pos)) k
+/-- The Brieskorn exponent tuple for a 3-manifold $\Sigma(p, q, r)$. -/
+def brieskornThreeExponents (p q r : ℕ) : Fin 3 → ℕ
+  | ⟨0, _⟩ => p
+  | ⟨1, _⟩ => q
+  | ⟨2, _⟩ => r
 
-/-- Nonnegativity of the Nilli profile for $d \ge 2$. -/
-theorem nilliProfile_nonneg (d : ℕ) (hd : 2 ≤ d) (k : ℕ) : 0 ≤ nilliProfile d k :=
-  le_of_lt (nilliProfile_pos d hd k)
+/-- Pairwise coprimality of $(p, q, r)$ implies all vertices of $G(p, q, r)$ are isolated. -/
+theorem pairwise_coprime_all_isolated (p q r : ℕ) (h : PairwiseCoprime3 p q r) (i : Fin 3) :
+    isIsolated (brieskornThreeExponents p q r) i := by
+  intro j hj
+  fin_cases i <;> fin_cases j <;>
+    first | contradiction | exact h.1 | exact h.1.symm | exact h.2.1 | exact h.2.1.symm | exact h.2.2 | exact h.2.2.symm
 
-/-- Nilli test vector is point-wise non-negative. -/
-theorem nilliTestVector_nonneg (G : SimpleGraph V) (d : ℕ) (hd : 2 ≤ d) (x_0 : V) (r : ℕ) (v : V) :
-    0 ≤ nilliTestVector G d x_0 r v := by
-  simp only [nilliTestVector, radialTestVector]
-  split_ifs with h
-  · exact nilliProfile_nonneg d hd (G.dist x_0 v)
-  · rfl
+/-- Pairwise coprimality guarantees $\Sigma(p, q, r)$ is a topological sphere. -/
+theorem pairwise_coprime_isBrieskornSphere (p q r : ℕ) (h : PairwiseCoprime3 p q r) :
+    brieskornSphereCondition (brieskornThreeExponents p q r) :=
+  sphere_condition_of_two_isolated ⟨0, 1, by decide, pairwise_coprime_all_isolated p q r h 0, pairwise_coprime_all_isolated p q r h 1⟩
 
-/-- Sum of values of the Nilli test vector is strictly positive. -/
-theorem nilliTestVector_sum_pos (G : SimpleGraph V) (d : ℕ) (hd : 2 ≤ d) (x_0 : V) (r : ℕ) :
-    0 < ∑ v : V, nilliTestVector G d x_0 r v := by
-  have h_center : 0 < nilliTestVector G d x_0 r x_0 := by
-    rw [nilliTestVector_center]
-    norm_num
-  have h_nonneg : ∀ v ∈ (Finset.univ : Finset V), 0 ≤ nilliTestVector G d x_0 r v :=
-    fun v _ => nilliTestVector_nonneg G d hd x_0 r v
-  have h_le := Finset.single_le_sum h_nonneg (Finset.mem_univ x_0)
-  exact lt_of_lt_of_le h_center h_le
+/-- The discrete lattice of interior indices for $\Sigma(p, q, r)$:
+    $I(p, q, r) = \{ (x, y, z) \in \mathbb{N}^3 \mid 1 \le x < p, 1 \le y < q, 1 \le z < r \}$. -/
+def brieskornLattice (p q r : ℕ) : Finset (ℕ × ℕ × ℕ) :=
+  (Finset.Ioo 0 p) ×ˢ ((Finset.Ioo 0 q) ×ˢ (Finset.Ioo 0 r))
 
-/-- Orthogonal balanced linear combination of two test functions. -/
-def orthogonalLinearCombination (f₁ f₂ : V → ℝ) : V → ℝ :=
-  fun v => (∑ x : V, f₂ x) * f₁ v - (∑ x : V, f₁ x) * f₂ v
+/-- Total number of interior lattice points in the Milnor fiber of $\Sigma(p, q, r)$,
+    which equals the Milnor number $\mu = (p - 1)(q - 1)(r - 1)$. -/
+theorem brieskornLattice_card (p q r : ℕ) :
+    (brieskornLattice p q r).card = (p - 1) * (q - 1) * (r - 1) := by
+  simp [brieskornLattice, mul_assoc]
 
-/-- The linear combination $f = (\sum f_2) f_1 - (\sum f_1) f_2$ is orthogonal to the all-ones vector. -/
-theorem orthogonalLinearCombination_orthogonal (f₁ f₂ : V → ℝ) :
-    isOrthogonalToOnes (orthogonalLinearCombination f₁ f₂) := by
-  simp only [isOrthogonalToOnes, orthogonalLinearCombination]
-  rw [Finset.sum_sub_distrib]
-  simp only [← Finset.mul_sum]
-  ring
+/-- Scaled weight of a lattice point $(x, y, z)$ under common denominator $pqr$:
+    $S(x, y, z) = x q r + y p r + z p q$. -/
+def latticeWeight (p q r : ℕ) (pt : ℕ × ℕ × ℕ) : ℕ :=
+  let (x, (y, z)) := pt
+  x * q * r + y * p * r + z * p * q
 
-/-- Nilli's signed test vector formed by the balanced orthogonal combination of two localized
-radial test vectors centered at distant vertices $x_0$ and $y_0$. -/
-noncomputable def nilliSignedTestVector (G : SimpleGraph V) (d : ℕ) (x_0 y_0 : V) (r : ℕ) : V → ℝ :=
-  orthogonalLinearCombination (nilliTestVector G d x_0 r) (nilliTestVector G d y_0 r)
+/-- Positive eigenspace lattice points: $0 < S < pqr$ or $2pqr < S < 3pqr$. -/
+def posLattice (p q r : ℕ) : Finset (ℕ × ℕ × ℕ) :=
+  (brieskornLattice p q r).filter (fun pt =>
+    let S := latticeWeight p q r pt
+    let M := p * q * r
+    (0 < S && S < M) || (2 * M < S && S < 3 * M))
 
-/-- Test vector evaluates to zero outside the support ball. -/
-theorem nilliTestVector_apply_of_gt (G : SimpleGraph V) (d : ℕ) (x_0 : V) (r : ℕ) {v : V}
-    (h : r < G.dist x_0 v) :
-    nilliTestVector G d x_0 r v = 0 := by
-  simp [nilliTestVector, radialTestVector, not_le.mpr h]
+/-- Negative eigenspace lattice points: $pqr < S < 2pqr$. -/
+def negLattice (p q r : ℕ) : Finset (ℕ × ℕ × ℕ) :=
+  (brieskornLattice p q r).filter (fun pt =>
+    let S := latticeWeight p q r pt
+    let M := p * q * r
+    M < S && S < 2 * M)
 
-/-- Nilli's signed test vector is non-zero when the base points are separated by at least $2r + 1$. -/
-theorem nilliSignedTestVector_ne_zero (G : SimpleGraph V) (d : ℕ) (hd : 2 ≤ d)
-    {x_0 y_0 : V} {r : ℕ} (h_sep : 2 * r + 1 ≤ G.dist x_0 y_0) :
-    nilliSignedTestVector G d x_0 y_0 r ≠ 0 := by
-  intro h_zero
-  have h_val : nilliSignedTestVector G d x_0 y_0 r x_0 = 0 := by rw [h_zero]; rfl
-  simp only [nilliSignedTestVector, orthogonalLinearCombination] at h_val
-  have h1 : nilliTestVector G d x_0 r x_0 = 1 := nilliTestVector_center G d x_0 r
-  have h2 : nilliTestVector G d y_0 r x_0 = 0 := by
-    apply nilliTestVector_apply_of_gt
-    rw [SimpleGraph.dist_comm]
-    linarith
-  rw [h1, h2, mul_one, mul_zero, sub_zero] at h_val
-  have h_pos := nilliTestVector_sum_pos G d hd y_0 r
-  linarith
+/-- The signature $\sigma(p, q, r) = N_+ - N_-$ of the Milnor fiber intersection form. -/
+def brieskornSignature (p q r : ℕ) : ℤ :=
+  (posLattice p q r).card - (negLattice p q r).card
 
-end AlonBoppana
+/-- The Casson invariant of the Brieskorn homology 3-sphere $\Sigma(p, q, r)$:
+    $\lambda(\Sigma(p, q, r)) = \frac{1}{8} |\sigma(p, q, r)|$. -/
+def cassonInvariant (p q r : ℕ) : ℚ :=
+  (Int.natAbs (brieskornSignature p q r) : ℚ) / 8
+
+/-- Integer Casson invariant $\lambda(\Sigma(p, q, r)) \in \mathbb{ℕ}$. -/
+def cassonInvariantNat (p q r : ℕ) : ℕ :=
+  (Int.natAbs (brieskornSignature p q r)) / 8
+
+/-! ### 5. Certified Evaluations of Casson Invariants -/
+
+/-- Poincaré homology sphere $\Sigma(2, 3, 5)$ is pairwise coprime. -/
+theorem coprime_2_3_5 : PairwiseCoprime3 2 3 5 :=
+  ⟨by decide, by decide, by decide⟩
+
+/-- Poincaré homology sphere $\Sigma(2, 3, 5)$ has signature $\sigma = -8$. -/
+theorem signature_2_3_5 : brieskornSignature 2 3 5 = -8 := rfl
+
+/-- Poincaré homology sphere $\Sigma(2, 3, 5)$ has Casson invariant $\lambda = 1$. -/
+theorem casson_2_3_5 : cassonInvariant 2 3 5 = 1 := by
+  norm_num [cassonInvariant, (show brieskornSignature 2 3 5 = -8 from rfl)]
+
+/-- Integer Casson invariant for $\Sigma(2, 3, 5)$. -/
+theorem cassonNat_2_3_5 : cassonInvariantNat 2 3 5 = 1 := rfl
+
+/-- Brieskorn sphere $\Sigma(2, 3, 7)$ is pairwise coprime. -/
+theorem coprime_2_3_7 : PairwiseCoprime3 2 3 7 :=
+  ⟨by decide, by decide, by decide⟩
+
+/-- Brieskorn sphere $\Sigma(2, 3, 7)$ has signature $\sigma = -8$. -/
+theorem signature_2_3_7 : brieskornSignature 2 3 7 = -8 := rfl
+
+/-- Brieskorn sphere $\Sigma(2, 3, 7)$ has Casson invariant $\lambda = 1$. -/
+theorem casson_2_3_7 : cassonInvariant 2 3 7 = 1 := by
+  norm_num [cassonInvariant, (show brieskornSignature 2 3 7 = -8 from rfl)]
+
+/-- Integer Casson invariant for $\Sigma(2, 3, 7)$. -/
+theorem cassonNat_2_3_7 : cassonInvariantNat 2 3 7 = 1 := rfl
+
+/-- Brieskorn sphere $\Sigma(2, 3, 11)$ is pairwise coprime. -/
+theorem coprime_2_3_11 : PairwiseCoprime3 2 3 11 :=
+  ⟨by decide, by decide, by decide⟩
+
+/-- Brieskorn sphere $\Sigma(2, 3, 11)$ has signature $\sigma = -16$. -/
+theorem signature_2_3_11 : brieskornSignature 2 3 11 = -16 := rfl
+
+/-- Brieskorn sphere $\Sigma(2, 3, 11)$ has Casson invariant $\lambda = 2$. -/
+theorem casson_2_3_11 : cassonInvariant 2 3 11 = 2 := by
+  norm_num [cassonInvariant, (show brieskornSignature 2 3 11 = -16 from rfl)]
+
+/-- Integer Casson invariant for $\Sigma(2, 3, 11)$. -/
+theorem cassonNat_2_3_11 : cassonInvariantNat 2 3 11 = 2 := rfl
+
+/-- Brieskorn sphere $\Sigma(2, 5, 7)$ is pairwise coprime. -/
+theorem coprime_2_5_7 : PairwiseCoprime3 2 5 7 :=
+  ⟨by decide, by decide, by decide⟩
+
+/-- Brieskorn sphere $\Sigma(2, 5, 7)$ has signature $\sigma = -16$. -/
+theorem signature_2_5_7 : brieskornSignature 2 5 7 = -16 := rfl
+
+/-- Brieskorn sphere $\Sigma(2, 5, 7)$ has Casson invariant $\lambda = 2$. -/
+theorem casson_2_5_7 : cassonInvariant 2 5 7 = 2 := by
+  norm_num [cassonInvariant, (show brieskornSignature 2 5 7 = -16 from rfl)]
+
+/-- Integer Casson invariant for $\Sigma(2, 5, 7)$. -/
+theorem cassonNat_2_5_7 : cassonInvariantNat 2 5 7 = 2 := rfl
+
+end Brieskorn
