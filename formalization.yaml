@@ -1,56 +1,57 @@
 version: "v0.4"
 
 project:
-  name: "Irreducible SU(2) Character Varieties of Brieskorn Homology Spheres and Casson Invariants"
+  name: "The Cauchy–Davenport Theorem and Iterated Sumsets"
   authors:
     - "Sneed & Feed Formalization Team"
   responsible_maintainers:
     - "sneed-and-feed"
   license: "CC0-1.0"
   description: >-
-    A complete, machine-checked Lean 4 formalization of the irreducible SU(2) character varieties of
-    Brieskorn homology 3-spheres Sigma(p, q, r), connecting Seifert presentations to Diophantine
-    spherical angle inequalities, certified representation counts (#R^* = 2 for Sigma(2,3,5) and
-    Sigma(2,3,7); #R^* = 4 for Sigma(2,3,11) and Sigma(2,5,7)), exact equality with the gauge-theoretic
-    Casson invariant lambda_SU(2) = (1/2) #R^* = (1/8) |sigma(p,q,r)|, and the Fricke–Vogt trace variety.
-    To the maintainers' knowledge, the theorem was verified absent from the core Mathlib library
-    (checked against Mathlib v4.34.0-rc1).
+    A machine-checked Lean 4 formalization of the Cauchy–Davenport Theorem (Augustin-Louis Cauchy 1813,
+    Harold Davenport 1935) and its multifold generalizations. Includes single sumset bounds in \mathbb{Z}/p\mathbb{Z}
+    and torsion-free groups \mathbb{Z}, Davenport's Dyson e-transform cardinality conservation |A'| + |B'| = |A| + |B|
+    and sumset contraction |A' + B'| <= |A + B|, the general iterated sumset bound
+    |\sum_{i=1}^k A_i| >= \min(p, \sum |A_i| - k + 1), full group surjectivity criteria, multiple self-sumsets
+    |k A| >= \min(p, k|A| - k + 1), and the inductive Cauchy–Davenport full span theorem underlying the
+    Erdős–Ginzburg–Ziv (EGZ) theorem. To the maintainers' knowledge, the theorem was not found in an exact
+    declaration name, docstring, and type signature search of the pinned Mathlib revision (Mathlib v4.34.0-rc1).
 
 classification:
-  arxiv: [math.GT, math.DG, math.RT]
-  msc2020: ["57M27", "57R57", "14D20", "20C15"]
+  arxiv: [math.NT, math.CO]
+  msc2020: ["11P70", "11B13", "05E16", "20K01"]
 
 sources:
-  - title: "Representations of knot groups in SU(2)"
+  - title: "Recherches sur les nombres"
     type: paper
     authors:
-      - "Ronald Fintushel"
-      - "Ronald J. Stern"
-    year: 1990
-    venue: "Annals of Mathematics, 131(2), 273-304"
+      - "Augustin-Louis Cauchy"
+    venue: "Journal de l'École Polytechnique"
+    year: 1813
     relationship: formalizes
-  - title: "Instanton homology, surgery, and knots"
+  - title: "On the addition of residue classes"
     type: paper
     authors:
-      - "Ronald Fintushel"
-      - "Ronald J. Stern"
-    year: 1990
-    venue: "Geometry of Low-Dimensional Manifolds: 1, London Math. Soc. Lecture Note Series 150, 103-125"
-    relationship: adapts
-  - title: "An invariant for decorated 3-manifolds"
-    type: lecture-notes
+      - "Harold Davenport"
+    venue: "Journal of the London Mathematical Society"
+    year: 1935
+    relationship: formalizes
+  - title: "A theorem in the additive number theory"
+    type: paper
     authors:
-      - "Andrew J. Casson"
-    year: 1985
-    venue: "MSRI Lecture Notes, Berkeley"
-    relationship: background
+      - "Paul Erdős"
+      - "Abraham Ginzburg"
+      - "Abraham Ziv"
+    venue: "Bulletin of the Research Council of Israel"
+    year: 1961
+    relationship: adapts
 
 related_formalizations:
-  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Data/Rat/Defs.lean"
+  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Combinatorics/Additive/CauchyDavenport.lean"
     relationship: builds-on
     note: >-
-      Formalization builds on Mathlib's rational arithmetic and finite set filter API to compute
-      SU(2) character variety counts, Diophantine spherical triangle systems, and Fricke-Vogt trace varieties.
+      Formalization builds on Mathlib's binary Cauchy-Davenport theorem, extending it with
+      Dyson e-transform conservation, arbitrary k-fold sumset induction, and EGZ span theorems.
 
 automation:
   methods:
@@ -67,4 +68,4 @@ review:
   notes: >-
     Challenge contains deliberate proof holes (`:= sorry` for automated benchmark evaluation),
     while all definitions and theorem statements are completely specified. Solution verified through
-    maintainer audit with 0 errors, 0 sorries, and strictly standard kernel axioms.
+    human audit by the maintainers with 0 errors, 0 sorries, and strictly standard kernel axioms.

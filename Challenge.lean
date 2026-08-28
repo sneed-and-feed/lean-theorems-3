@@ -1,224 +1,143 @@
-import Mathlib.Data.Rat.Defs
+import Mathlib.Data.ZMod.Basic
 import Mathlib.Data.Finset.Basic
 import Mathlib.Data.Finset.Card
-import Mathlib.Data.Finset.Interval
+import Mathlib.Algebra.Group.Pointwise.Finset.Basic
+import Mathlib.Algebra.Group.Action.Pointwise.Finset
+import Mathlib.Algebra.BigOperators.Group.Finset.Basic
+import Mathlib.Algebra.BigOperators.Fin
+import Mathlib.Combinatorics.Additive.CauchyDavenport
+import Mathlib.Combinatorics.Additive.ETransform
+import Mathlib.GroupTheory.Order.Min
+import Mathlib.Tactic.Positivity
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Linarith
-import Mathlib.Tactic.NormNum
-import Mathlib.Tactic.FinCases
 
-namespace Brieskorn
+open scoped Pointwise BigOperators
+open Classical
 
-open Finset
+set_option linter.unusedSectionVars false
+set_option linter.unusedVariables false
 
-def brieskornLattice (p q r : ℕ) : Finset (ℕ × ℕ × ℕ) :=
-  (Finset.Ioo 0 p) ×ˢ ((Finset.Ioo 0 q) ×ˢ (Finset.Ioo 0 r))
+/-!
+# The Cauchy–Davenport Theorem and Iterated Sumset Bounds
 
-def latticeWeight (p q r : ℕ) (pt : ℕ × ℕ × ℕ) : ℕ :=
-  let (x, (y, z)) := pt
-  x * q * r + y * p * r + z * p * q
+This module formalizes the **Cauchy–Davenport Theorem** (Augustin-Louis Cauchy 1813, Harold Davenport 1935),
+its extensions to iterated sumsets $\sum_{i=1}^k A_i$, Dyson $e$-transforms, and the full span lemma
+for the Erdős–Ginzburg–Ziv theorem.
 
-def posLattice (p q r : ℕ) : Finset (ℕ × ℕ × ℕ) :=
-  (brieskornLattice p q r).filter (fun pt =>
-    let S := latticeWeight p q r pt
-    let M := p * q * r
-    (0 < S && S < M) || (2 * M < S && S < 3 * M))
+## Mathematical Overview
 
-def negLattice (p q r : ℕ) : Finset (ℕ × ℕ × ℕ) :=
-  (brieskornLattice p q r).filter (fun pt =>
-    let S := latticeWeight p q r pt
-    let M := p * q * r
-    M < S && S < 2 * M)
+1. **Prime Cyclic Groups $\mathbb{Z}/p\mathbb{Z}$**:
+   $$|A + B| \ge \min(p, |A| + |B| - 1)$$
+2. **Torsion-Free Groups & Integers $\mathbb{Z}$**:
+   $$|A + B| \ge |A| + |B| - 1$$
+3. **Iterated Sumsets**:
+   $$\left| \sum_{i=1}^k A_i \right| \ge \min\left(p, \sum_{i=1}^k |A_i| - k + 1\right)$$
+4. **Full Group Surjectivity**:
+   If $\sum_{i=1}^k |A_i| \ge p + k - 1$, then $\sum_{i=1}^k A_i = \mathbb{Z}/p\mathbb{Z}$.
+5. **Dyson $e$-transforms**: Conservation $|A'| + |B'| = |A| + |B|$ and sumset inclusion $A' + B' \subseteq A + B$.
 
-def brieskornSignature (p q r : ℕ) : ℤ :=
-  (posLattice p q r).card - (negLattice p q r).card
+## References
 
-def cassonInvariant (p q r : ℕ) : ℚ :=
-  (Int.natAbs (brieskornSignature p q r) : ℚ) / 8
+- Cauchy, A.-L. (1813). *Recherches sur les nombres*. Journal de l'École Polytechnique, 9, 99–123.
+- Davenport, H. (1935). *On the addition of residue classes*. Journal of the London Mathematical Society, 10, 30–32.
+- Erdős, P., Ginzburg, A., & Ziv, A. (1961). *A theorem in the additive number theory*. Bull. Res. Council Israel, 10F, 41–43.
+-/
 
-def cassonInvariantNat (p q r : ℕ) : ℕ :=
-  (Int.natAbs (brieskornSignature p q r)) / 8
+namespace CauchyDavenport
 
-theorem signature_2_3_5 : brieskornSignature 2 3 5 = -8 := sorry
-theorem casson_2_3_5 : cassonInvariant 2 3 5 = 1 := sorry
+variable {G : Type*} [DecidableEq G]
 
-theorem signature_2_3_7 : brieskornSignature 2 3 7 = -8 := sorry
-theorem casson_2_3_7 : cassonInvariant 2 3 7 = 1 := sorry
+/-- The first component of the Dyson transform: $A' = A \cup (e +ᵥ B)$. -/
+def dysonTransformFst [AddCommGroup G] (e : G) (A B : Finset G) : Finset G :=
+  A ∪ (e +ᵥ B)
 
-theorem signature_2_3_11 : brieskornSignature 2 3 11 = -16 := sorry
-theorem casson_2_3_11 : cassonInvariant 2 3 11 = 2 := sorry
+/-- The second component of the Dyson transform: $B' = B \cap (-e +ᵥ A)$. -/
+def dysonTransformSnd [AddCommGroup G] (e : G) (A B : Finset G) : Finset G :=
+  B ∩ (-e +ᵥ A)
 
-theorem signature_2_5_7 : brieskornSignature 2 5 7 = -16 := sorry
-theorem casson_2_5_7 : cassonInvariant 2 5 7 = 2 := sorry
+/--
+**The Cauchy–Davenport Theorem (Single Sumset over $\mathbb{Z}/p\mathbb{Z}$)**:
+For any prime $p$ and non-empty subsets $A, B \subseteq \mathbb{Z}/p\mathbb{Z}$:
+$$|A + B| \ge \min(p, |A| + |B| - 1)$$
+-/
+theorem cauchy_davenport {p : ℕ} (hp : Nat.Prime p)
+    (A B : Finset (ZMod p)) (hA : A.Nonempty) (hB : B.Nonempty) :
+    min p (A.card + B.card - 1) ≤ (A + B).card := by
+  sorry
 
-end Brieskorn
+/--
+**Cauchy–Davenport on Integers**:
+For non-empty finite subsets $A, B \subseteq \mathbb{Z}$, $|A + B| \ge |A| + |B| - 1$.
+-/
+theorem cauchy_davenport_integers (A B : Finset ℤ) (hA : A.Nonempty) (hB : B.Nonempty) :
+    A.card + B.card - 1 ≤ (A + B).card := by
+  sorry
 
-namespace BrieskornSU2
+/--
+**Cardinality Conservation of the Dyson $e$-Transform**:
+$$|A'| + |B'| = |A| + |B|$$
+-/
+theorem dysonTransform_card [AddCommGroup G] (e : G) (A B : Finset G) :
+    (dysonTransformFst e A B).card + (dysonTransformSnd e A B).card = A.card + B.card := by
+  sorry
 
-open Finset
+/--
+**Sumset Size Contraction under the Dyson $e$-Transform**:
+$$|A' + B'| \le |A + B|$$
+-/
+theorem dysonTransform_sumset_card_le [AddCommGroup G] (e : G) (A B : Finset G) :
+    (dysonTransformFst e A B + dysonTransformSnd e A B).card ≤ (A + B).card := by
+  sorry
 
-/-! ### 1. Diophantine Angle Triples & Spherical Inequalities -/
+/--
+**The Iterated Cauchy–Davenport Theorem**:
+For any prime $p$, integer $k \ge 1$, and non-empty subsets $A_1, \dots, A_k \subseteq \mathbb{Z}/p\mathbb{Z}$:
+$$\left| \sum_{i=1}^k A_i \right| \ge \min\left(p, \sum_{i=1}^k |A_i| - k + 1\right)$$
+-/
+theorem cauchy_davenport_iterated {p : ℕ} (hp : Nat.Prime p) {k : ℕ} (hk : 1 ≤ k)
+    (As : Fin k → Finset (ZMod p)) (h_nonempty : ∀ i, (As i).Nonempty) :
+    min p ((∑ i : Fin k, (As i).card) - k + 1) ≤
+      (∑ i : Fin k, As i).card := by
+  sorry
 
-/-- Normalized rational angle $k/n \in \mathbb{Q}$. -/
-def angleQ (k n : ℕ) : ℚ :=
-  (k : ℚ) / (n : ℚ)
+/--
+**Full Group Surjectivity**:
+If the sum of cardinalities satisfies $\sum_{i=1}^k |A_i| \ge p + k - 1$,
+then the iterated sumset $\sum_{i=1}^k A_i$ equals the entire group $\mathbb{Z}/p\mathbb{Z}$.
+-/
+theorem iterated_sumset_eq_univ_of_card_ge {p : ℕ} (hp : Nat.Prime p) {k : ℕ} (hk : 1 ≤ k)
+    (As : Fin k → Finset (ZMod p)) (h_nonempty : ∀ i, (As i).Nonempty)
+    (h_sum : p + k - 1 ≤ ∑ i : Fin k, (As i).card) :
+    (∑ i : Fin k, As i).card = p := by
+  sorry
 
-/-- Strict spherical triangle angle inequalities in $\mathbb{Q}$ for $(a/p, b/q, c/r)$. -/
-def sphericalTriangleInequalitiesQ (p q r a b c : ℕ) : Prop :=
-  angleQ a p + angleQ b q > angleQ c r ∧
-  angleQ a p + angleQ c r > angleQ b q ∧
-  angleQ b q + angleQ c r > angleQ a p ∧
-  angleQ a p + angleQ b q + angleQ c r < 2
+/--
+**Multiple Self-Sumset Bound ($k A$)**:
+For any $k \ge 1$ and non-empty subset $A \subseteq \mathbb{Z}/p\mathbb{Z}$:
+$$|k A| \ge \min(p, k |A| - k + 1)$$
+-/
+theorem cauchy_davenport_self_iterated {p : ℕ} (hp : Nat.Prime p) {k : ℕ} (hk : 1 ≤ k)
+    (A : Finset (ZMod p)) (hA : A.Nonempty) :
+    min p (k * A.card - k + 1) ≤ (∑ i : Fin k, A).card := by
+  sorry
 
-/-- Cross-multiplied integer spherical triangle inequalities in $\mathbb{N}$. -/
-def sphericalTriangleInequalitiesNat (p q r a b c : ℕ) : Prop :=
-  a * q * r + b * p * r > c * p * q ∧
-  a * q * r + c * p * q > b * p * r ∧
-  b * p * r + c * p * q > a * q * r ∧
-  a * q * r + b * p * r + c * p * q < 2 * (p * q * r)
+/--
+**Iterated Cauchy–Davenport Full Span for EGZ**:
+Given $p - 1$ non-zero differences $d_0, \dots, d_{p-2} \in \mathbb{Z}/p\mathbb{Z}$,
+the sum of the 2-element sets $A_i = \{0, d_i\}$ spans the whole of $\mathbb{Z}/p\mathbb{Z}$.
+-/
+theorem egz_cauchy_davenport_span {p : ℕ} (hp : Nat.Prime p)
+    (d : Fin (p - 1) → ZMod p) (hd : ∀ i, d i ≠ 0) :
+    (∑ i : Fin (p - 1), ({0, d i} : Finset (ZMod p))).card = p := by
+  sorry
 
-/-- A triple of integers $(a, b, c)$ is odd in each component. -/
-def isOddTriple (a b c : ℕ) : Prop :=
-  a % 2 = 1 ∧ b % 2 = 1 ∧ c % 2 = 1
+/--
+**Identical Elements Case**:
+$p$ copies of any element $x \in \mathbb{Z}/p\mathbb{Z}$ sum to $0$.
+-/
+theorem egz_identical_sum_zero {p : ℕ} (hp : Nat.Prime p) (x : ZMod p) :
+    (∑ i : Fin p, x) = 0 := by
+  sorry
 
-/-- Decidable parity check for a triple of integers. -/
-def isOddTripleBool (a b c : ℕ) : Bool :=
-  (a % 2 == 1) && (b % 2 == 1) && (c % 2 == 1)
-
-/-- A triple $(a, b, c)$ is a spherical angle triple for $\Sigma(p, q, r)$ -/
-def IsSphericalAngleTriple (p q r a b c : ℕ) : Prop :=
-  1 ≤ a ∧ a < p ∧
-  1 ≤ b ∧ b < q ∧
-  1 ≤ c ∧ c < r ∧
-  a % 2 = 1 ∧ b % 2 = 1 ∧ c % 2 = 1 ∧
-  a * q * r + b * p * r > c * p * q ∧
-  a * q * r + c * p * q > b * p * r ∧
-  b * p * r + c * p * q > a * q * r ∧
-  a * q * r + b * p * r + c * p * q < 2 * (p * q * r)
-
-abbrev IsDiophantineAngleTriple (p q r a b c : ℕ) : Prop :=
-  IsSphericalAngleTriple p q r a b c
-
-instance (p q r a b c : ℕ) : Decidable (IsSphericalAngleTriple p q r a b c) := by
-  dsimp [IsSphericalAngleTriple]
-  infer_instance
-
-def isSphericalAngleBool (p q r : ℕ) (pt : ℕ × ℕ × ℕ) : Bool :=
-  let (a, (b, c)) := pt
-  let M := p * q * r
-  let Sa := a * q * r
-  let Sb := b * p * r
-  let Sc := c * p * q
-  (a % 2 == 1) && (b % 2 == 1) && (c % 2 == 1) &&
-  (Sa + Sb > Sc) &&
-  (Sa + Sc > Sb) &&
-  (Sb + Sc > Sa) &&
-  (Sa + Sb + Sc < 2 * M)
-
-/-- For even $p = 2$ and odd $q, r$, any spherical angle triple satisfies the odd sum condition. -/
-theorem sphericalAngleTriple_odd_sum {p q r a b c : ℕ} (hp : p = 2) (hq : q % 2 = 1) (hr : r % 2 = 1)
-    (h : IsSphericalAngleTriple p q r a b c) :
-    (a * q * r + b * p * r + c * p * q) % 2 = 1 := sorry
-
-/-! ### 2. Finset of Irreducible SU(2) Representations -/
-
-def candidateRepFinset (p q r : ℕ) : Finset (ℕ × ℕ × ℕ) :=
-  Finset.Ico 1 p ×ˢ (Finset.Ico 1 q ×ˢ Finset.Ico 1 r)
-
-theorem candidateRepFinset_card (p q r : ℕ) :
-    (candidateRepFinset p q r).card = (p - 1) * (q - 1) * (r - 1) := sorry
-
-def IrredSU2RepSet (p q r : ℕ) : Finset (ℕ × ℕ × ℕ) :=
-  (candidateRepFinset p q r).filter (fun pt => isSphericalAngleBool p q r pt)
-
-def irredRepCount (p q r : ℕ) : ℕ :=
-  (IrredSU2RepSet p q r).card
-
-/-! ### 3. Certified Irreducible Representation Counts -/
-
-theorem card_irred_su2_2_3_5 : (IrredSU2RepSet 2 3 5).card = 2 := sorry
-theorem card_irredRepSet_2_3_5 : (IrredSU2RepSet 2 3 5).card = 2 := sorry
-theorem card_irred_su2_2_3_7 : (IrredSU2RepSet 2 3 7).card = 2 := sorry
-theorem card_irredRepSet_2_3_7 : (IrredSU2RepSet 2 3 7).card = 2 := sorry
-theorem card_irred_su2_2_3_11 : (IrredSU2RepSet 2 3 11).card = 4 := sorry
-theorem card_irredRepSet_2_3_11 : (IrredSU2RepSet 2 3 11).card = 4 := sorry
-theorem card_irred_su2_2_5_7 : (IrredSU2RepSet 2 5 7).card = 4 := sorry
-theorem card_irredRepSet_2_5_7 : (IrredSU2RepSet 2 5 7).card = 4 := sorry
-
-/-! ### 4. Casson Invariant Identification -/
-
-def cassonSU2 (p q r : ℕ) : ℕ :=
-  (IrredSU2RepSet p q r).card / 2
-
-def cassonFromSU2 (p q r : ℕ) : ℕ :=
-  cassonSU2 p q r
-
-def cassonFromSU2Rat (p q r : ℕ) : ℚ :=
-  ((IrredSU2RepSet p q r).card : ℚ) / 2
-
-theorem cassonSU2_2_3_5 : cassonSU2 2 3 5 = 1 := sorry
-theorem cassonSU2_2_3_7 : cassonSU2 2 3 7 = 1 := sorry
-theorem cassonSU2_2_3_11 : cassonSU2 2 3 11 = 2 := sorry
-theorem cassonSU2_2_5_7 : cassonSU2 2 5 7 = 2 := sorry
-
-theorem casson_su2_eq_brieskorn_2_3_5 :
-    cassonSU2 2 3 5 = Brieskorn.cassonInvariantNat 2 3 5 := sorry
-
-theorem casson_su2_eq_brieskorn_2_3_7 :
-    cassonSU2 2 3 7 = Brieskorn.cassonInvariantNat 2 3 7 := sorry
-
-theorem casson_su2_eq_brieskorn_2_3_11 :
-    cassonSU2 2 3 11 = Brieskorn.cassonInvariantNat 2 3 11 := sorry
-
-theorem casson_su2_eq_brieskorn_2_5_7 :
-    cassonSU2 2 5 7 = Brieskorn.cassonInvariantNat 2 5 7 := sorry
-
-theorem cassonRat_su2_eq_brieskorn_2_3_5 :
-    cassonFromSU2Rat 2 3 5 = Brieskorn.cassonInvariant 2 3 5 := sorry
-
-theorem cassonRat_su2_eq_brieskorn_2_3_7 :
-    cassonFromSU2Rat 2 3 7 = Brieskorn.cassonInvariant 2 3 7 := sorry
-
-theorem cassonRat_su2_eq_brieskorn_2_3_11 :
-    cassonFromSU2Rat 2 3 11 = Brieskorn.cassonInvariant 2 3 11 := sorry
-
-theorem cassonRat_su2_eq_brieskorn_2_5_7 :
-    cassonFromSU2Rat 2 5 7 = Brieskorn.cassonInvariant 2 5 7 := sorry
-
-/-! ### 5. Fricke-Vogt Trace Variety & SU(2) Central Relation -/
-
-def frickeVogtPoly {R : Type*} [CommRing R] (tx ty tz : R) : R :=
-  tx ^ 2 + ty ^ 2 + tz ^ 2 + tx * ty * tz - 4
-
-theorem frickeVogtPoly_perm_xy {R : Type*} [CommRing R] (tx ty tz : R) :
-    frickeVogtPoly tx ty tz = frickeVogtPoly ty tx tz := sorry
-
-theorem frickeVogtPoly_perm_yz {R : Type*} [CommRing R] (tx ty tz : R) :
-    frickeVogtPoly tx ty tz = frickeVogtPoly tx tz ty := sorry
-
-theorem frickeVogtPoly_perm_xz {R : Type*} [CommRing R] (tx ty tz : R) :
-    frickeVogtPoly tx ty tz = frickeVogtPoly tz ty tx := sorry
-
-theorem frickeVogtPoly_cyclic {R : Type*} [CommRing R] (tx ty tz : R) :
-    frickeVogtPoly tx ty tz = frickeVogtPoly ty tz tx := sorry
-
-theorem frickeVogt_discriminant_identity {R : Type*} [CommRing R] (tx ty tz : R) :
-    (2 * tz + tx * ty) ^ 2 - (4 - tx ^ 2) * (4 - ty ^ 2) = 4 * frickeVogtPoly tx ty tz := sorry
-
-theorem frickeVogt_boundary_zero_rat (tx ty tz : ℚ)
-    (h : (2 * tz + tx * ty) ^ 2 = (4 - tx ^ 2) * (4 - ty ^ 2)) :
-    frickeVogtPoly tx ty tz = 0 := sorry
-
-theorem frickeVogt_order2_specialization {R : Type*} [CommRing R] (ty tz : R) :
-    frickeVogtPoly 0 ty tz = ty ^ 2 + tz ^ 2 - 4 := sorry
-
-theorem frickeVogt_order2_boundary_circle {R : Type*} [CommRing R] (ty tz : R)
-    (h : ty ^ 2 + tz ^ 2 = 4) :
-    frickeVogtPoly 0 ty tz = 0 := sorry
-
-def centralFiberTrace : ℤ := -2
-
-theorem central_fiber_odd_power (b : ℕ) (hb : b % 2 = 1) :
-    (-1 : ℤ) ^ b = -1 := sorry
-
-end BrieskornSU2
+end CauchyDavenport

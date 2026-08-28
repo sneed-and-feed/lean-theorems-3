@@ -1,373 +1,232 @@
-/-
-Copyright (c) 2026. All rights reserved.
-Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Antigravity
--/
-import Mathlib.Data.Rat.Defs
+import Mathlib.Data.ZMod.Basic
 import Mathlib.Data.Finset.Basic
 import Mathlib.Data.Finset.Card
-import Mathlib.Data.Finset.Interval
+import Mathlib.Algebra.Group.Pointwise.Finset.Basic
+import Mathlib.Algebra.Group.Action.Pointwise.Finset
+import Mathlib.Algebra.BigOperators.Group.Finset.Basic
+import Mathlib.Algebra.BigOperators.Fin
+import Mathlib.Combinatorics.Additive.CauchyDavenport
+import Mathlib.Combinatorics.Additive.ETransform
+import Mathlib.GroupTheory.Order.Min
+import Mathlib.Tactic.Positivity
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Linarith
-import Mathlib.Tactic.NormNum
-import Mathlib.Tactic.FinCases
 
-/-!
-# SU(2) Character Varieties, Diophantine Angles & Casson Invariant
+open scoped Pointwise BigOperators
+open Classical
 
-This module formalizes the theory of irreducible $SU(2)$ character varieties for
-Brieskorn homology 3-spheres $\Sigma(p, q, r)$, connecting Seifert sphere presentations
-to Diophantine spherical angle inequalities, certified representation counts,
-the Casson invariant identification, and the Fricke-Vogt trace variety.
+set_option linter.unusedSectionVars false
+set_option linter.unusedVariables false
+set_option linter.style.haveILetI false
 
-## Mathematical Summary
+namespace CauchyDavenport
 
-1. **Seifert Presentation & Central Fiber Monodromy**:
-   For pairwise coprime exponents $p, q, r \ge 2$, the Brieskorn manifold $\Sigma(p, q, r)$
-   is an integral homology 3-sphere with fundamental group:
-   $$\pi_1(\Sigma(p, q, r)) = \langle x, y, z, h \mid [x,h]=[y,h]=[z,h]=1, x^p h^{\alpha_1} = 1, y^q h^{\alpha_2} = 1, z^r h^{\alpha_3} = 1, xyz = h^b \rangle$$
-   Irreducible representations $\rho : \pi_1 \to SU(2)$ necessarily map the central fiber
-   generator $h \mapsto -I$.
+variable {G : Type*} [DecidableEq G]
 
-2. **Diophantine Spherical Angle Triples**:
-   The relation $\rho(xyz) = \rho(h)^b = -I$ reduces to strict spherical triangle angle
-   inequalities on rotation parameters $(a/p, b/q, c/r) \in (0, 1)^3$:
-   - $1 \le a < p, 1 \le b < q, 1 \le c < r$ with $a, b, c$ odd;
-   - $a/p + b/q > c/r$;
-   - $a/p + c/r > b/q$;
-   - $b/q + c/r > a/p$;
-   - $a/p + b/q + c/r < 2$.
-   In cross-multiplied integer form:
-   - $a q r + b p r > c p q$;
-   - $a q r + c p q > b p r$;
-   - $b p r + c p q > a q r$;
-   - $a q r + b p r + c p q < 2 p q r$.
+/-- The first component of the Dyson transform: $A' = A \cup (e +ᵥ B)$. -/
+def dysonTransformFst [AddCommGroup G] (e : G) (A B : Finset G) : Finset G :=
+  A ∪ (e +ᵥ B)
 
-3. **Certified Representation Counts**:
-   The finite set of irreducible $SU(2)$ representations $\mathcal{R}^*(\Sigma(p, q, r))$
-   is explicitly computed and certified:
-   - $\#\mathcal{R}^*(\Sigma(2, 3, 5)) = 2$ (Poincaré homology sphere)
-   - $\#\mathcal{R}^*(\Sigma(2, 3, 7)) = 2$
-   - $\#\mathcal{R}^*(\Sigma(2, 3, 11)) = 4$
-   - $\#\mathcal{R}^*(\Sigma(2, 5, 7)) = 4$
+/-- The second component of the Dyson transform: $B' = B \cap (-e +ᵥ A)$. -/
+def dysonTransformSnd [AddCommGroup G] (e : G) (A B : Finset G) : Finset G :=
+  B ∩ (-e +ᵥ A)
 
-4. **Casson Invariant Identification**:
-   The gauge-theoretic / character variety Casson invariant is given by:
-   $$\lambda_{SU(2)}(\Sigma(p, q, r)) = \frac{1}{2} \#\mathcal{R}^*(\Sigma(p, q, r))$$
-   We prove that $\lambda_{SU(2)}$ coincides exactly with the Milnor fiber signature formula
-   $\lambda(\Sigma(p, q, r)) = \frac{1}{8} |\sigma(p, q, r)|$ from `Formalization.BrieskornManifolds`:
-   - $\lambda(\Sigma(2, 3, 5)) = 1$
-   - $\lambda(\Sigma(2, 3, 7)) = 1$
-   - $\lambda(\Sigma(2, 3, 11)) = 2$
-   - $\lambda(\Sigma(2, 5, 7)) = 2$
-
-5. **Fricke-Vogt Trace Variety & Central Fiber**:
-   Under trace coordinates $(t_x, t_y, t_z) = (\operatorname{tr}(X), \operatorname{tr}(Y), \operatorname{tr}(Z))$
-   with $XYZ = -I$, the representations lie on the Fricke-Vogt hypersurface:
-   $$t_x^2 + t_y^2 + t_z^2 + t_x t_y t_z - 4 = 0$$
+/--
+**The Cauchy–Davenport Theorem (Single Sumset over $\mathbb{Z}/p\mathbb{Z}$)**:
+For any prime $p$ and non-empty subsets $A, B \subseteq \mathbb{Z}/p\mathbb{Z}$:
+$$|A + B| \ge \min(p, |A| + |B| - 1)$$
 -/
-
-
-namespace Brieskorn
-
-open Finset
-
-def brieskornLattice (p q r : ℕ) : Finset (ℕ × ℕ × ℕ) :=
-  (Finset.Ioo 0 p) ×ˢ ((Finset.Ioo 0 q) ×ˢ (Finset.Ioo 0 r))
-
-def latticeWeight (p q r : ℕ) (pt : ℕ × ℕ × ℕ) : ℕ :=
-  let (x, (y, z)) := pt
-  x * q * r + y * p * r + z * p * q
-
-def posLattice (p q r : ℕ) : Finset (ℕ × ℕ × ℕ) :=
-  (brieskornLattice p q r).filter (fun pt =>
-    let S := latticeWeight p q r pt
-    let M := p * q * r
-    (0 < S && S < M) || (2 * M < S && S < 3 * M))
-
-def negLattice (p q r : ℕ) : Finset (ℕ × ℕ × ℕ) :=
-  (brieskornLattice p q r).filter (fun pt =>
-    let S := latticeWeight p q r pt
-    let M := p * q * r
-    M < S && S < 2 * M)
-
-def brieskornSignature (p q r : ℕ) : ℤ :=
-  (posLattice p q r).card - (negLattice p q r).card
-
-def cassonInvariant (p q r : ℕ) : ℚ :=
-  (Int.natAbs (brieskornSignature p q r) : ℚ) / 8
-
-def cassonInvariantNat (p q r : ℕ) : ℕ :=
-  (Int.natAbs (brieskornSignature p q r)) / 8
-
-theorem signature_2_3_5 : brieskornSignature 2 3 5 = -8 := rfl
-theorem casson_2_3_5 : cassonInvariant 2 3 5 = 1 := by
-  norm_num [cassonInvariant, (show brieskornSignature 2 3 5 = -8 from rfl)]
-
-theorem signature_2_3_7 : brieskornSignature 2 3 7 = -8 := rfl
-theorem casson_2_3_7 : cassonInvariant 2 3 7 = 1 := by
-  norm_num [cassonInvariant, (show brieskornSignature 2 3 7 = -8 from rfl)]
-
-theorem signature_2_3_11 : brieskornSignature 2 3 11 = -16 := rfl
-theorem casson_2_3_11 : cassonInvariant 2 3 11 = 2 := by
-  norm_num [cassonInvariant, (show brieskornSignature 2 3 11 = -16 from rfl)]
-
-theorem signature_2_5_7 : brieskornSignature 2 5 7 = -16 := rfl
-theorem casson_2_5_7 : cassonInvariant 2 5 7 = 2 := by
-  norm_num [cassonInvariant, (show brieskornSignature 2 5 7 = -16 from rfl)]
-
-end Brieskorn
-
-namespace BrieskornSU2
-
-open Finset
-
-/-! ### 1. Diophantine Angle Triples & Spherical Inequalities -/
-
-/-- Normalized rational angle $k/n \in \mathbb{Q}$. -/
-def angleQ (k n : ℕ) : ℚ :=
-  (k : ℚ) / (n : ℚ)
-
-/-- Strict spherical triangle angle inequalities in $\mathbb{Q}$ for $(a/p, b/q, c/r)$. -/
-def sphericalTriangleInequalitiesQ (p q r a b c : ℕ) : Prop :=
-  angleQ a p + angleQ b q > angleQ c r ∧
-  angleQ a p + angleQ c r > angleQ b q ∧
-  angleQ b q + angleQ c r > angleQ a p ∧
-  angleQ a p + angleQ b q + angleQ c r < 2
-
-/-- Cross-multiplied integer spherical triangle inequalities in $\mathbb{N}$. -/
-def sphericalTriangleInequalitiesNat (p q r a b c : ℕ) : Prop :=
-  a * q * r + b * p * r > c * p * q ∧
-  a * q * r + c * p * q > b * p * r ∧
-  b * p * r + c * p * q > a * q * r ∧
-  a * q * r + b * p * r + c * p * q < 2 * (p * q * r)
-
-/-- A triple of integers $(a, b, c)$ is odd in each component. -/
-def isOddTriple (a b c : ℕ) : Prop :=
-  a % 2 = 1 ∧ b % 2 = 1 ∧ c % 2 = 1
-
-/-- Decidable parity check for a triple of integers. -/
-def isOddTripleBool (a b c : ℕ) : Bool :=
-  (a % 2 == 1) && (b % 2 == 1) && (c % 2 == 1)
-
-/-- A triple $(a, b, c)$ is a spherical angle triple for $\Sigma(p, q, r)$ if it lies
-    in the range $1 \le a < p$, $1 \le b < q$, $1 \le c < r$, has odd components,
-    and satisfies the strict spherical triangle inequalities. -/
-def IsSphericalAngleTriple (p q r a b c : ℕ) : Prop :=
-  1 ≤ a ∧ a < p ∧
-  1 ≤ b ∧ b < q ∧
-  1 ≤ c ∧ c < r ∧
-  a % 2 = 1 ∧ b % 2 = 1 ∧ c % 2 = 1 ∧
-  a * q * r + b * p * r > c * p * q ∧
-  a * q * r + c * p * q > b * p * r ∧
-  b * p * r + c * p * q > a * q * r ∧
-  a * q * r + b * p * r + c * p * q < 2 * (p * q * r)
-
-/-- Alias for Diophantine spherical angle triple. -/
-abbrev IsDiophantineAngleTriple (p q r a b c : ℕ) : Prop :=
-  IsSphericalAngleTriple p q r a b c
-
-instance (p q r a b c : ℕ) : Decidable (IsSphericalAngleTriple p q r a b c) := by
-  dsimp [IsSphericalAngleTriple]
-  infer_instance
-
-/-- Decidable boolean filter for spherical angle triples under cross-multiplication. -/
-def isSphericalAngleBool (p q r : ℕ) (pt : ℕ × ℕ × ℕ) : Bool :=
-  let (a, (b, c)) := pt
-  let M := p * q * r
-  let Sa := a * q * r
-  let Sb := b * p * r
-  let Sc := c * p * q
-  (a % 2 == 1) && (b % 2 == 1) && (c % 2 == 1) &&
-  (Sa + Sb > Sc) &&
-  (Sa + Sc > Sb) &&
-  (Sb + Sc > Sa) &&
-  (Sa + Sb + Sc < 2 * M)
-
-/-- For even $p = 2$ and odd $q, r$, any spherical angle triple satisfies the odd sum condition. -/
-theorem sphericalAngleTriple_odd_sum {p q r a b c : ℕ} (hp : p = 2) (hq : q % 2 = 1) (hr : r % 2 = 1)
-    (h : IsSphericalAngleTriple p q r a b c) :
-    (a * q * r + b * p * r + c * p * q) % 2 = 1 := by
-  have : a = 1 := by linarith [h.1, h.2.1, hp]
-  rw [hp, this, show 1 * q * r + b * 2 * r + c * 2 * q = q * r + (b * r + c * q) * 2 by ring,
-    Nat.add_mul_mod_self_right, Nat.mul_mod, hq, hr]
-
-/-! ### 2. Finset of Irreducible SU(2) Representations -/
-
-/-- The finite search space $\prod_{i=1}^3 [1, p_i - 1]$ of candidate representation parameters. -/
-def candidateRepFinset (p q r : ℕ) : Finset (ℕ × ℕ × ℕ) :=
-  Finset.Ico 1 p ×ˢ (Finset.Ico 1 q ×ˢ Finset.Ico 1 r)
-
-/-- The total number of candidate tuples before angle and parity filtering. -/
-theorem candidateRepFinset_card (p q r : ℕ) :
-    (candidateRepFinset p q r).card = (p - 1) * (q - 1) * (r - 1) := by
-  simp [candidateRepFinset, mul_assoc]
-
-/-- The finite set of irreducible $SU(2)$ representations $\mathcal{R}^*(\Sigma(p, q, r))$,
-    identified with the Diophantine spherical angle solution set. -/
-def IrredSU2RepSet (p q r : ℕ) : Finset (ℕ × ℕ × ℕ) :=
-  (candidateRepFinset p q r).filter (fun pt => isSphericalAngleBool p q r pt)
-
-/-- The number of irreducible $SU(2)$ representations of $\Sigma(p, q, r)$. -/
-def irredRepCount (p q r : ℕ) : ℕ :=
-  (IrredSU2RepSet p q r).card
-
-/-! ### 3. Certified Irreducible Representation Counts -/
-
-/-- Poincaré homology sphere $\Sigma(2, 3, 5)$ has exactly 2 irreducible $SU(2)$ representations. -/
-theorem card_irred_su2_2_3_5 : (IrredSU2RepSet 2 3 5).card = 2 := rfl
-
-/-- Alias for Poincaré homology sphere representation count. -/
-theorem card_irredRepSet_2_3_5 : (IrredSU2RepSet 2 3 5).card = 2 := rfl
-
-/-- Brieskorn sphere $\Sigma(2, 3, 7)$ has exactly 2 irreducible $SU(2)$ representations. -/
-theorem card_irred_su2_2_3_7 : (IrredSU2RepSet 2 3 7).card = 2 := rfl
-
-/-- Alias for $\Sigma(2, 3, 7)$ representation count. -/
-theorem card_irredRepSet_2_3_7 : (IrredSU2RepSet 2 3 7).card = 2 := rfl
-
-/-- Brieskorn sphere $\Sigma(2, 3, 11)$ has exactly 4 irreducible $SU(2)$ representations. -/
-theorem card_irred_su2_2_3_11 : (IrredSU2RepSet 2 3 11).card = 4 := rfl
-
-/-- Alias for $\Sigma(2, 3, 11)$ representation count. -/
-theorem card_irredRepSet_2_3_11 : (IrredSU2RepSet 2 3 11).card = 4 := rfl
-
-/-- Brieskorn sphere $\Sigma(2, 5, 7)$ has exactly 4 irreducible $SU(2)$ representations. -/
-theorem card_irred_su2_2_5_7 : (IrredSU2RepSet 2 5 7).card = 4 := rfl
-
-/-- Alias for $\Sigma(2, 5, 7)$ representation count. -/
-theorem card_irredRepSet_2_5_7 : (IrredSU2RepSet 2 5 7).card = 4 := rfl
-
-/-! ### 4. Casson Invariant Identification -/
-
-/-- Integer Casson invariant computed from the $SU(2)$ character variety:
-    $\lambda_{SU(2)}(\Sigma(p, q, r)) = \frac{1}{2} \#\mathcal{R}^*(\Sigma(p, q, r))$. -/
-def cassonSU2 (p q r : ℕ) : ℕ :=
-  (IrredSU2RepSet p q r).card / 2
-
-/-- Alias for integer Casson invariant from $SU(2)$. -/
-def cassonFromSU2 (p q r : ℕ) : ℕ :=
-  cassonSU2 p q r
-
-/-- Rational Casson invariant computed from the $SU(2)$ character variety. -/
-def cassonFromSU2Rat (p q r : ℕ) : ℚ :=
-  ((IrredSU2RepSet p q r).card : ℚ) / 2
-
-/-- Character variety Casson invariant for $\Sigma(2, 3, 5)$ is 1. -/
-theorem cassonSU2_2_3_5 : cassonSU2 2 3 5 = 1 := rfl
-
-/-- Character variety Casson invariant for $\Sigma(2, 3, 7)$ is 1. -/
-theorem cassonSU2_2_3_7 : cassonSU2 2 3 7 = 1 := rfl
-
-/-- Character variety Casson invariant for $\Sigma(2, 3, 11)$ is 2. -/
-theorem cassonSU2_2_3_11 : cassonSU2 2 3 11 = 2 := rfl
-
-/-- Character variety Casson invariant for $\Sigma(2, 5, 7)$ is 2. -/
-theorem cassonSU2_2_5_7 : cassonSU2 2 5 7 = 2 := rfl
-
-/-- Integer agreement between $SU(2)$ character variety Casson invariant and
-    Milnor fiber signature Casson invariant for $\Sigma(2, 3, 5)$. -/
-theorem casson_su2_eq_brieskorn_2_3_5 :
-    cassonSU2 2 3 5 = Brieskorn.cassonInvariantNat 2 3 5 := rfl
-
-/-- Integer agreement between $SU(2)$ character variety Casson invariant and
-    Milnor fiber signature Casson invariant for $\Sigma(2, 3, 7)$. -/
-theorem casson_su2_eq_brieskorn_2_3_7 :
-    cassonSU2 2 3 7 = Brieskorn.cassonInvariantNat 2 3 7 := rfl
-
-/-- Integer agreement between $SU(2)$ character variety Casson invariant and
-    Milnor fiber signature Casson invariant for $\Sigma(2, 3, 11)$. -/
-theorem casson_su2_eq_brieskorn_2_3_11 :
-    cassonSU2 2 3 11 = Brieskorn.cassonInvariantNat 2 3 11 := rfl
-
-/-- Integer agreement between $SU(2)$ character variety Casson invariant and
-    Milnor fiber signature Casson invariant for $\Sigma(2, 5, 7)$. -/
-theorem casson_su2_eq_brieskorn_2_5_7 :
-    cassonSU2 2 5 7 = Brieskorn.cassonInvariantNat 2 5 7 := rfl
-
-/-- Rational agreement between $SU(2)$ character variety Casson invariant and
-    Milnor fiber signature Casson invariant for $\Sigma(2, 3, 5)$. -/
-theorem cassonRat_su2_eq_brieskorn_2_3_5 :
-    cassonFromSU2Rat 2 3 5 = Brieskorn.cassonInvariant 2 3 5 := by
-  norm_num [cassonFromSU2Rat, card_irred_su2_2_3_5, Brieskorn.casson_2_3_5]
-
-/-- Rational agreement between $SU(2)$ character variety Casson invariant and
-    Milnor fiber signature Casson invariant for $\Sigma(2, 3, 7)$. -/
-theorem cassonRat_su2_eq_brieskorn_2_3_7 :
-    cassonFromSU2Rat 2 3 7 = Brieskorn.cassonInvariant 2 3 7 := by
-  norm_num [cassonFromSU2Rat, card_irred_su2_2_3_7, Brieskorn.casson_2_3_7]
-
-/-- Rational agreement between $SU(2)$ character variety Casson invariant and
-    Milnor fiber signature Casson invariant for $\Sigma(2, 3, 11)$. -/
-theorem cassonRat_su2_eq_brieskorn_2_3_11 :
-    cassonFromSU2Rat 2 3 11 = Brieskorn.cassonInvariant 2 3 11 := by
-  norm_num [cassonFromSU2Rat, card_irred_su2_2_3_11, Brieskorn.casson_2_3_11]
-
-/-- Rational agreement between $SU(2)$ character variety Casson invariant and
-    Milnor fiber signature Casson invariant for $\Sigma(2, 5, 7)$. -/
-theorem cassonRat_su2_eq_brieskorn_2_5_7 :
-    cassonFromSU2Rat 2 5 7 = Brieskorn.cassonInvariant 2 5 7 := by
-  norm_num [cassonFromSU2Rat, card_irred_su2_2_5_7, Brieskorn.casson_2_5_7]
-
-/-! ### 5. Fricke-Vogt Trace Variety & SU(2) Central Relation -/
-
-/-- The Fricke-Vogt trace polynomial for representations satisfying $XYZ = -I$:
-    $\Phi(t_x, t_y, t_z) = t_x^2 + t_y^2 + t_z^2 + t_x t_y t_z - 4$. -/
-def frickeVogtPoly {R : Type*} [CommRing R] (tx ty tz : R) : R :=
-  tx ^ 2 + ty ^ 2 + tz ^ 2 + tx * ty * tz - 4
-
-/-- Permutation symmetry of the Fricke-Vogt polynomial under $t_x \leftrightarrow t_y$. -/
-theorem frickeVogtPoly_perm_xy {R : Type*} [CommRing R] (tx ty tz : R) :
-    frickeVogtPoly tx ty tz = frickeVogtPoly ty tx tz := by
-  dsimp [frickeVogtPoly]; ring
-
-/-- Permutation symmetry of the Fricke-Vogt polynomial under $t_y \leftrightarrow t_z$. -/
-theorem frickeVogtPoly_perm_yz {R : Type*} [CommRing R] (tx ty tz : R) :
-    frickeVogtPoly tx ty tz = frickeVogtPoly tx tz ty := by
-  dsimp [frickeVogtPoly]; ring
-
-/-- Permutation symmetry of the Fricke-Vogt polynomial under $t_x \leftrightarrow t_z$. -/
-theorem frickeVogtPoly_perm_xz {R : Type*} [CommRing R] (tx ty tz : R) :
-    frickeVogtPoly tx ty tz = frickeVogtPoly tz ty tx := by
-  dsimp [frickeVogtPoly]; ring
-
-/-- Cyclic permutation symmetry of the Fricke-Vogt polynomial. -/
-theorem frickeVogtPoly_cyclic {R : Type*} [CommRing R] (tx ty tz : R) :
-    frickeVogtPoly tx ty tz = frickeVogtPoly ty tz tx := by
-  dsimp [frickeVogtPoly]; ring
-
-/-- The discriminant identity for the Fricke-Vogt trace variety:
-    $(2 t_z + t_x t_y)^2 - (4 - t_x^2)(4 - t_y^2) = 4 \Phi(t_x, t_y, t_z)$. -/
-theorem frickeVogt_discriminant_identity {R : Type*} [CommRing R] (tx ty tz : R) :
-    (2 * tz + tx * ty) ^ 2 - (4 - tx ^ 2) * (4 - ty ^ 2) = 4 * frickeVogtPoly tx ty tz := by
-  dsimp [frickeVogtPoly]; ring
-
-/-- Rational boundary vanishing: if $(2 t_z + t_x t_y)^2 = (4 - t_x^2)(4 - t_y^2) over $\mathbb{Q}$,
-    then the Fricke-Vogt polynomial vanishes: $t_x^2 + t_y^2 + t_z^2 + t_x t_y t_z - 4 = 0$. -/
-theorem frickeVogt_boundary_zero_rat (tx ty tz : ℚ)
-    (h : (2 * tz + tx * ty) ^ 2 = (4 - tx ^ 2) * (4 - ty ^ 2)) :
-    frickeVogtPoly tx ty tz = 0 := by
-  linarith [frickeVogt_discriminant_identity (R := ℚ) tx ty tz, h]
-
-/-- Specialization to order-2 generator $x$ ($p = 2 \implies t_x = 0$):
-    $\Phi(0, t_y, t_z) = t_y^2 + t_z^2 - 4$. -/
-theorem frickeVogt_order2_specialization {R : Type*} [CommRing R] (ty tz : R) :
-    frickeVogtPoly 0 ty tz = ty ^ 2 + tz ^ 2 - 4 := by
-  dsimp [frickeVogtPoly]; ring
-
-/-- Order-2 boundary circle relation: when $t_y^2 + t_z^2 = 4$, the Fricke-Vogt relation vanishes. -/
-theorem frickeVogt_order2_boundary_circle {R : Type*} [CommRing R] (ty tz : R)
-    (h : ty ^ 2 + tz ^ 2 = 4) :
-    frickeVogtPoly 0 ty tz = 0 := by
-  rw [frickeVogt_order2_specialization, h, sub_self]
-
-/-- Central fiber property: the central element $h \in \pi_1(\Sigma(p,q,r))$ is mapped
-    to $-I \in SU(2)$, which has trace $-2$. -/
-def centralFiberTrace : ℤ := -2
-
-/-- Central fiber relation: $\rho(xyz) = \rho(h)^b = (-I)^b = -I$ for odd Seifert exponent $b$. -/
-theorem central_fiber_odd_power (b : ℕ) (hb : b % 2 = 1) :
-    (-1 : ℤ) ^ b = -1 :=
-  Odd.neg_one_pow (Nat.odd_iff.mpr hb)
-
-end BrieskornSU2
+theorem cauchy_davenport {p : ℕ} (hp : Nat.Prime p)
+    (A B : Finset (ZMod p)) (hA : A.Nonempty) (hB : B.Nonempty) :
+    min p (A.card + B.card - 1) ≤ (A + B).card :=
+  ZMod.cauchy_davenport hp hA hB
+
+/--
+**Cauchy–Davenport in Torsion-Free Groups**:
+In any torsion-free additive group (such as $\mathbb{Z}$), $|A + B| \ge |A| + |B| - 1$.
+-/
+theorem cauchy_davenport_of_isAddTorsionFree [AddGroup G] [IsAddTorsionFree G]
+    {A B : Finset G} (hA : A.Nonempty) (hB : B.Nonempty) :
+    A.card + B.card - 1 ≤ (A + B).card :=
+  _root_.cauchy_davenport_of_isAddTorsionFree hA hB
+
+/--
+**Cauchy–Davenport on Integers**:
+For non-empty finite subsets $A, B \subseteq \mathbb{Z}$, $|A + B| \ge |A| + |B| - 1$.
+-/
+theorem cauchy_davenport_integers (A B : Finset ℤ) (hA : A.Nonempty) (hB : B.Nonempty) :
+    A.card + B.card - 1 ≤ (A + B).card :=
+  cauchy_davenport_of_isAddTorsionFree hA hB
+
+/--
+**Cardinality Conservation of the Dyson $e$-Transform**:
+$$|A'| + |B'| = |A| + |B|$$
+-/
+theorem dysonTransform_card [AddCommGroup G] (e : G) (A B : Finset G) :
+    (dysonTransformFst e A B).card + (dysonTransformSnd e A B).card = A.card + B.card := by
+  have h := Finset.addDysonETransform.card e (A, B)
+  exact h
+
+/--
+**Sumset Inclusion of the Dyson $e$-Transform**:
+$$A' + B' \subseteq A + B$$
+-/
+theorem dysonTransform_sumset_subset [AddCommGroup G] (e : G) (A B : Finset G) :
+    dysonTransformFst e A B + dysonTransformSnd e A B ⊆ A + B := by
+  have h := Finset.addDysonETransform.subset e (A, B)
+  exact h
+
+/--
+**Sumset Size Contraction under the Dyson $e$-Transform**:
+$$|A' + B'| \le |A + B|$$
+-/
+theorem dysonTransform_sumset_card_le [AddCommGroup G] (e : G) (A B : Finset G) :
+    (dysonTransformFst e A B + dysonTransformSnd e A B).card ≤ (A + B).card :=
+  Finset.card_le_card (dysonTransform_sumset_subset e A B)
+
+/--
+Helper lemma on the monotonicity of min-addition arithmetic:
+If $1 \le b$ and $\min(p, X) \le a$, then $\min(p, X + b - 1) \le \min(p, a + b - 1)$.
+-/
+lemma min_add_sub_one_le {p a b X : ℕ} (hb : 1 ≤ b) (ha : min p X ≤ a) :
+    min p (X + b - 1) ≤ min p (a + b - 1) := by
+  rcases le_or_gt p a with hpa | hpa
+  · have : p ≤ a + b - 1 := by omega
+    rw [min_eq_left this]
+    exact min_le_left _ _
+  · have hX : X ≤ a := by
+      have : min p X = X := min_eq_right (by omega)
+      rwa [this] at ha
+    have : X + b - 1 ≤ a + b - 1 := by omega
+    exact min_le_min_left p this
+
+/--
+Helper induction on $m$ for $k = m + 1$ non-empty sets in $\mathbb{Z}/p\mathbb{Z}$.
+-/
+theorem cauchy_davenport_iterated_succ {p : ℕ} (hp : Nat.Prime p) (m : ℕ)
+    (As : Fin (m + 1) → Finset (ZMod p)) (h_nonempty : ∀ i, (As i).Nonempty) :
+    min p ((∑ i : Fin (m + 1), (As i).card) - (m + 1) + 1) ≤
+      (∑ i : Fin (m + 1), As i).card := by
+  induction m with
+  | zero =>
+    rw [Fin.sum_univ_one, Fin.sum_univ_one]
+    have : (As 0).card - 1 + 1 = (As 0).card := by
+      have := (h_nonempty 0).card_pos
+      omega
+    rw [this]
+    exact min_le_right p (As 0).card
+  | succ n ih =>
+    have h_ne_prev : ∀ i : Fin (n + 1), (As (Fin.castSucc i)).Nonempty := fun i => h_nonempty (Fin.castSucc i)
+    have ih_step := ih (fun i => As (Fin.castSucc i)) h_ne_prev
+    have h_card_ge : n + 1 ≤ ∑ i : Fin (n + 1), (As (Fin.castSucc i)).card := by
+      have h_each : ∀ i : Fin (n + 1), 1 ≤ (As (Fin.castSucc i)).card := fun i => (h_ne_prev i).card_pos
+      have h_le_sum : (∑ i : Fin (n + 1), 1) ≤ ∑ i : Fin (n + 1), (As (Fin.castSucc i)).card :=
+        Finset.sum_le_sum (fun (i : Fin (n + 1)) (_ : i ∈ (Finset.univ : Finset (Fin (n + 1)))) => h_each i)
+      have h_sum_ones : (∑ i : Fin (n + 1), 1) = n + 1 := by
+        simp only [Finset.sum_const, Finset.card_univ, Fintype.card_fin, smul_eq_mul, mul_one]
+      rwa [h_sum_ones] at h_le_sum
+    have h_prev_pos : 1 ≤ (∑ i : Fin (n + 1), (As (Fin.castSucc i)).card) - (n + 1) + 1 := by omega
+    have h_min_pos : 1 ≤ min p ((∑ i : Fin (n + 1), (As (Fin.castSucc i)).card) - (n + 1) + 1) :=
+      le_min hp.pos h_prev_pos
+    have hS_ne : (∑ i : Fin (n + 1), As (Fin.castSucc i)).Nonempty :=
+      Finset.card_pos.mp (h_min_pos.trans ih_step)
+    have hB_ne : (As (Fin.last (n + 1))).Nonempty := h_nonempty (Fin.last (n + 1))
+    have hB_pos : 1 ≤ (As (Fin.last (n + 1))).card := hB_ne.card_pos
+    have hCD : min p ((∑ i : Fin (n + 1), As (Fin.castSucc i)).card + (As (Fin.last (n + 1))).card - 1) ≤
+        ((∑ i : Fin (n + 1), As (Fin.castSucc i)) + As (Fin.last (n + 1))).card :=
+      cauchy_davenport hp (∑ i : Fin (n + 1), As (Fin.castSucc i)) (As (Fin.last (n + 1))) hS_ne hB_ne
+    have h_min := min_add_sub_one_le hB_pos ih_step
+    rw [Fin.sum_univ_castSucc (fun i => As i)]
+    rw [Fin.sum_univ_castSucc (fun i => (As i).card)]
+    have h_arith : ((∑ i : Fin (n + 1), (As (Fin.castSucc i)).card) - (n + 1) + 1) + (As (Fin.last (n + 1))).card - 1 =
+        ((∑ i : Fin (n + 1), (As (Fin.castSucc i)).card) + (As (Fin.last (n + 1))).card) - (n + 2) + 1 := by
+      omega
+    rw [h_arith] at h_min
+    exact h_min.trans hCD
+
+/--
+**The Iterated Cauchy–Davenport Theorem**:
+For any prime $p$, integer $k \ge 1$, and non-empty subsets $A_1, \dots, A_k \subseteq \mathbb{Z}/p\mathbb{Z}$:
+$$\left| \sum_{i=1}^k A_i \right| \ge \min\left(p, \sum_{i=1}^k |A_i| - k + 1\right)$$
+-/
+theorem cauchy_davenport_iterated {p : ℕ} (hp : Nat.Prime p) {k : ℕ} (hk : 1 ≤ k)
+    (As : Fin k → Finset (ZMod p)) (h_nonempty : ∀ i, (As i).Nonempty) :
+    min p ((∑ i : Fin k, (As i).card) - k + 1) ≤
+      (∑ i : Fin k, As i).card := by
+  obtain ⟨m, rfl⟩ : ∃ m, k = m + 1 := Nat.exists_eq_succ_of_ne_zero (by omega)
+  exact cauchy_davenport_iterated_succ hp m As h_nonempty
+
+/--
+**Full Group Surjectivity**:
+If the sum of cardinalities satisfies $\sum_{i=1}^k |A_i| \ge p + k - 1$,
+then the iterated sumset $\sum_{i=1}^k A_i$ equals the entire group $\mathbb{Z}/p\mathbb{Z}$.
+-/
+theorem iterated_sumset_eq_univ_of_card_ge {p : ℕ} (hp : Nat.Prime p) {k : ℕ} (hk : 1 ≤ k)
+    (As : Fin k → Finset (ZMod p)) (h_nonempty : ∀ i, (As i).Nonempty)
+    (h_sum : p + k - 1 ≤ ∑ i : Fin k, (As i).card) :
+    (∑ i : Fin k, As i).card = p := by
+  haveI : NeZero p := ⟨hp.ne_zero⟩
+  have h_bound := cauchy_davenport_iterated hp hk As h_nonempty
+  have h_le : p ≤ (∑ i : Fin k, (As i).card) - k + 1 := by omega
+  rw [min_eq_left h_le] at h_bound
+  have h_top : (∑ i : Fin k, As i).card ≤ p := by
+    have : (∑ i : Fin k, As i) ⊆ (Finset.univ : Finset (ZMod p)) := Finset.subset_univ _
+    have h_card := Finset.card_le_card this
+    have h_univ : (Finset.univ : Finset (ZMod p)).card = p := ZMod.card p
+    rw [h_univ] at h_card
+    exact h_card
+  exact le_antisymm h_top h_bound
+
+/--
+**Multiple Self-Sumset Bound ($k A$)**:
+For any $k \ge 1$ and non-empty subset $A \subseteq \mathbb{Z}/p\mathbb{Z}$:
+$$|k A| \ge \min(p, k |A| - k + 1)$$
+-/
+theorem cauchy_davenport_self_iterated {p : ℕ} (hp : Nat.Prime p) {k : ℕ} (hk : 1 ≤ k)
+    (A : Finset (ZMod p)) (hA : A.Nonempty) :
+    min p (k * A.card - k + 1) ≤ (∑ i : Fin k, A).card := by
+  have h := cauchy_davenport_iterated hp hk (fun (_ : Fin k) => A) (fun _ => hA)
+  have h_card_sum : (∑ i : Fin k, A.card) = k * A.card := by
+    rw [Finset.sum_const, Finset.card_univ, Fintype.card_fin, smul_eq_mul]
+  rwa [h_card_sum] at h
+
+/--
+**Iterated Cauchy–Davenport Full Span for EGZ**:
+Given $p - 1$ non-zero differences $d_0, \dots, d_{p-2} \in \mathbb{Z}/p\mathbb{Z}$,
+the sum of the 2-element sets $A_i = \{0, d_i\}$ spans the whole of $\mathbb{Z}/p\mathbb{Z}$.
+-/
+theorem egz_cauchy_davenport_span {p : ℕ} (hp : Nat.Prime p)
+    (d : Fin (p - 1) → ZMod p) (hd : ∀ i, d i ≠ 0) :
+    (∑ i : Fin (p - 1), ({0, d i} : Finset (ZMod p))).card = p := by
+  haveI : NeZero p := ⟨hp.ne_zero⟩
+  have hp2 : 2 ≤ p := hp.two_le
+  have hk : 1 ≤ p - 1 := by omega
+  have h_ne : ∀ i : Fin (p - 1), ({0, d i} : Finset (ZMod p)).Nonempty := by
+    intro i
+    simp only [Finset.insert_nonempty]
+  have h_card : ∀ i : Fin (p - 1), ({0, d i} : Finset (ZMod p)).card = 2 := by
+    intro i
+    rw [Finset.card_pair (hd i).symm]
+  have h_sum : p + (p - 1) - 1 ≤ ∑ i : Fin (p - 1), ({0, d i} : Finset (ZMod p)).card := by
+    have h_each : (∑ i : Fin (p - 1), ({0, d i} : Finset (ZMod p)).card) = (p - 1) * 2 := by
+      have : (∑ i : Fin (p - 1), ({0, d i} : Finset (ZMod p)).card) = (∑ i : Fin (p - 1), 2) := by
+        apply Finset.sum_congr rfl
+        intro i _
+        exact h_card i
+      rw [this]
+      simp only [Finset.sum_const, Finset.card_univ, Fintype.card_fin, smul_eq_mul]
+    rw [h_each]
+    omega
+  exact iterated_sumset_eq_univ_of_card_ge hp hk (fun i => {0, d i}) h_ne h_sum
+
+/--
+**Identical Elements Case**:
+$p$ copies of any element $x \in \mathbb{Z}/p\mathbb{Z}$ sum to $0$.
+-/
+theorem egz_identical_sum_zero {p : ℕ} (hp : Nat.Prime p) (x : ZMod p) :
+    (∑ i : Fin p, x) = 0 := by
+  simp only [Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul]
+  have : (p : ZMod p) = 0 := ZMod.natCast_self p
+  rw [this, zero_mul]
+
+end CauchyDavenport
