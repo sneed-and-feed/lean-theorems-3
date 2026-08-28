@@ -1,143 +1,171 @@
-import Mathlib.Data.ZMod.Basic
+import Mathlib.Data.Real.Basic
+import Mathlib.Data.Matrix.Basic
+import Mathlib.Data.Fintype.Card
 import Mathlib.Data.Finset.Basic
 import Mathlib.Data.Finset.Card
-import Mathlib.Algebra.Group.Pointwise.Finset.Basic
-import Mathlib.Algebra.Group.Action.Pointwise.Finset
-import Mathlib.Algebra.BigOperators.Group.Finset.Basic
-import Mathlib.Algebra.BigOperators.Fin
-import Mathlib.Combinatorics.Additive.CauchyDavenport
-import Mathlib.Combinatorics.Additive.ETransform
-import Mathlib.GroupTheory.Order.Min
-import Mathlib.Tactic.Positivity
-import Mathlib.Tactic.Ring
+import Mathlib.Combinatorics.SimpleGraph.Basic
+import Mathlib.Combinatorics.SimpleGraph.DegreeSum
+import Mathlib.Analysis.SpecialFunctions.Pow.Real
+import Mathlib.Analysis.SpecialFunctions.Sqrt
 import Mathlib.Tactic.Linarith
+import Mathlib.Tactic.Ring
+import Mathlib.Tactic.Positivity
 
-open scoped Pointwise BigOperators
+open scoped BigOperators Matrix Finset
 open Classical
 
 set_option linter.unusedSectionVars false
-set_option linter.unusedVariables false
+
+variable {V : Type*} [Fintype V] [DecidableEq V]
+
+namespace DiscreteCheeger
 
 /-!
-# The Cauchy–Davenport Theorem and Iterated Sumset Bounds
+# The Discrete Cheeger Inequality for Regular Graphs
 
-This module formalizes the **Cauchy–Davenport Theorem** (Augustin-Louis Cauchy 1813, Harold Davenport 1935),
-its extensions to iterated sumsets $\sum_{i=1}^k A_i$, Dyson $e$-transforms, and the full span lemma
-for the Erdős–Ginzburg–Ziv theorem.
+This module formalizes the **Discrete Cheeger Inequality** (Noga Alon and Vitali Milman 1985;
+Jozef Dodziuk 1984; Alistair Sinclair and Mark Jerrum 1989) relating the combinatorial edge
+expansion (Cheeger isoperimetric constant $h(G)$) of a $d$-regular graph to its algebraic
+spectral gap $\Delta = d - \lambda_2(G)$.
 
 ## Mathematical Overview
 
-1. **Prime Cyclic Groups $\mathbb{Z}/p\mathbb{Z}$**:
-   $$|A + B| \ge \min(p, |A| + |B| - 1)$$
-2. **Torsion-Free Groups & Integers $\mathbb{Z}$**:
-   $$|A + B| \ge |A| + |B| - 1$$
-3. **Iterated Sumsets**:
-   $$\left| \sum_{i=1}^k A_i \right| \ge \min\left(p, \sum_{i=1}^k |A_i| - k + 1\right)$$
-4. **Full Group Surjectivity**:
-   If $\sum_{i=1}^k |A_i| \ge p + k - 1$, then $\sum_{i=1}^k A_i = \mathbb{Z}/p\mathbb{Z}$.
-5. **Dyson $e$-transforms**: Conservation $|A'| + |B'| = |A| + |B|$ and sumset inclusion $A' + B' \subseteq A + B$.
+Let $G = (V, E)$ be a finite, connected, $d$-regular simple graph on $n = |V|$ vertices.
+The Cheeger isoperimetric constant $h(G)$ is the minimum cut ratio:
+$$h(G) = \min_{\substack{S \subset V \\ 0 < |S| \le n/2}} \frac{e(S, S^c)}{|S|}$$
+
+### The Discrete Cheeger Inequality
+$$\frac{d - \lambda_2(G)}{2} \le h(G) \le \sqrt{2d(d - \lambda_2(G))}$$
 
 ## References
 
-- Cauchy, A.-L. (1813). *Recherches sur les nombres*. Journal de l'École Polytechnique, 9, 99–123.
-- Davenport, H. (1935). *On the addition of residue classes*. Journal of the London Mathematical Society, 10, 30–32.
-- Erdős, P., Ginzburg, A., & Ziv, A. (1961). *A theorem in the additive number theory*. Bull. Res. Council Israel, 10F, 41–43.
+- Alon, N., & Milman, V. D. (1985). *$\lambda_1$, isoperimetric inequalities for graphs, and superconcentrators*. J. Comb. Theory Ser. B, 38(1), 73–88.
+- Dodziuk, J. (1984). *Difference equations, isoperimetric inequality and transience of certain random walks*. Trans. Amer. Math. Soc., 284(2), 787–794.
+- Sinclair, A., & Jerrum, M. (1989). *Approximate counting, uniform generation and rapidly mixing Markov chains*. Information and Computation, 82(1), 93–133.
 -/
 
-namespace CauchyDavenport
+/-- The $0$-$1$ adjacency matrix of a simple graph $G$ over $\mathbb{R}$. -/
+def adjacencyMatrix (G : SimpleGraph V) [DecidableRel G.Adj] : Matrix V V ℝ :=
+  fun u v => if G.Adj u v then 1 else 0
 
-variable {G : Type*} [DecidableEq G]
+/-- Predicate stating that a simple graph is $d$-regular. -/
+def isRegularOfDegree (G : SimpleGraph V) (d : ℕ) [DecidableRel G.Adj] : Prop :=
+  ∀ v : V, G.degree v = d
 
-/-- The first component of the Dyson transform: $A' = A \cup (e +ᵥ B)$. -/
-def dysonTransformFst [AddCommGroup G] (e : G) (A B : Finset G) : Finset G :=
-  A ∪ (e +ᵥ B)
+/-- Standard Euclidean inner product on $\mathbb{R}^V$. -/
+def innerProduct (u v : V → ℝ) : ℝ :=
+  ∑ x : V, u x * v x
 
-/-- The second component of the Dyson transform: $B' = B \cap (-e +ᵥ A)$. -/
-def dysonTransformSnd [AddCommGroup G] (e : G) (A B : Finset G) : Finset G :=
-  B ∩ (-e +ᵥ A)
+/-- The squared Euclidean $\ell^2$-norm $\|v\|^2 = \langle v, v \rangle$. -/
+def normSq (v : V → ℝ) : ℝ :=
+  innerProduct v v
+
+/-- A vector $v \in \mathbb{R}^V$ is orthogonal to $\mathbf{1}$ if its coordinate sum is zero. -/
+def isOrthogonalToOnes (v : V → ℝ) : Prop :=
+  ∑ x : V, v x = 0
+
+/-- Adjacency quadratic form: $\langle v, A v \rangle = \sum_{u, w} v(u) A_{u, w} v(w)$. -/
+def quadraticForm (G : SimpleGraph V) [DecidableRel G.Adj] (v : V → ℝ) : ℝ :=
+  ∑ u : V, ∑ w : V, v u * adjacencyMatrix G u w * v w
+
+/-- Rayleigh quotient of the adjacency matrix: $R_A(v) = \frac{\langle v, A v \rangle}{\|v\|^2}$. -/
+noncomputable def rayleighQuotient (G : SimpleGraph V) [DecidableRel G.Adj] (v : V → ℝ) : ℝ :=
+  quadraticForm G v / normSq v
+
+/-- The second largest eigenvalue $\lambda_2(G)$ defined variationally on $\mathbf{1}^\perp$. -/
+noncomputable def secondEigenvalue (G : SimpleGraph V) [DecidableRel G.Adj] : ℝ :=
+  sSup { rayleighQuotient G v | (v : V → ℝ) (_ : v ≠ 0) (_ : isOrthogonalToOnes v) }
+
+/-- The algebraic spectral gap $\Delta = d - \lambda_2(G)$. -/
+noncomputable def spectralGap (G : SimpleGraph V) [DecidableRel G.Adj] (d : ℕ) : ℝ :=
+  (d : ℝ) - secondEigenvalue G
+
+/-- The normalized spectral gap $\gamma = 1 - \frac{\lambda_2(G)}{d}$. -/
+noncomputable def normalizedSpectralGap (G : SimpleGraph V) [DecidableRel G.Adj] (d : ℕ) : ℝ :=
+  1 - secondEigenvalue G / (d : ℝ)
+
+/-- The number of edges across the cut boundary $e(S, S^c) = \sum_{u \in S, v \in S^c} A_{u, v}$. -/
+def edgeBoundary (G : SimpleGraph V) [DecidableRel G.Adj] (S : Finset V) : ℝ :=
+  ∑ u ∈ S, ∑ v ∈ Sᶜ, adjacencyMatrix G u v
+
+/-- Predicate for a valid Cheeger cut: $0 < |S| \le |V| / 2$. -/
+def isValidCut (V : Type*) [Fintype V] (S : Finset V) : Prop :=
+  0 < S.card ∧ 2 * S.card ≤ Fintype.card V
+
+/-- The cut ratio (edge expansion ratio) $\phi(S) = \frac{e(S, S^c)}{|S|}$. -/
+noncomputable def cutRatio (G : SimpleGraph V) [DecidableRel G.Adj] (S : Finset V) : ℝ :=
+  edgeBoundary G S / (S.card : ℝ)
+
+/-- The Cheeger isoperimetric constant $h(G) = \min_{0 < |S| \le n/2} \phi(S)$. -/
+noncomputable def cheegerConstant (G : SimpleGraph V) [DecidableRel G.Adj] : ℝ :=
+  sInf { cutRatio G S | (S : Finset V) (_ : isValidCut V S) }
+
+/-- Definition of a Ramanujan graph: A $d$-regular graph satisfying $\lambda_2(G) \le 2\sqrt{d-1}$. -/
+def IsRamanujan (G : SimpleGraph V) [DecidableRel G.Adj] (d : ℕ) : Prop :=
+  isRegularOfDegree G d ∧ secondEigenvalue G ≤ 2 * Real.sqrt (d - 1 : ℝ)
+
+/-- The vertex boundary $\partial_V S = (\bigcup_{u \in S} N(u)) \setminus S$. -/
+def vertexBoundary (G : SimpleGraph V) [DecidableRel G.Adj] (S : Finset V) : Finset V :=
+  (Finset.biUnion S (fun u => G.neighborFinset u)) \ S
 
 /--
-**The Cauchy–Davenport Theorem (Single Sumset over $\mathbb{Z}/p\mathbb{Z}$)**:
-For any prime $p$ and non-empty subsets $A, B \subseteq \mathbb{Z}/p\mathbb{Z}$:
-$$|A + B| \ge \min(p, |A| + |B| - 1)$$
+**Discrete Cheeger Lower Bound**:
+For any $d$-regular graph $G$ on $n \ge 2$ vertices:
+$$\frac{d - \lambda_2(G)}{2} \le h(G)$$
 -/
-theorem cauchy_davenport {p : ℕ} (hp : Nat.Prime p)
-    (A B : Finset (ZMod p)) (hA : A.Nonempty) (hB : B.Nonempty) :
-    min p (A.card + B.card - 1) ≤ (A + B).card := by
+theorem cheeger_lower_bound (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (hn : 2 ≤ Fintype.card V) :
+    ((d : ℝ) - secondEigenvalue G) / 2 ≤ cheegerConstant G := by
   sorry
 
 /--
-**Cauchy–Davenport on Integers**:
-For non-empty finite subsets $A, B \subseteq \mathbb{Z}$, $|A + B| \ge |A| + |B| - 1$.
+**Discrete Cheeger Lower Bound (Normalized Form)**:
+$$\frac{\gamma}{2} \le \frac{h(G)}{d}$$
 -/
-theorem cauchy_davenport_integers (A B : Finset ℤ) (hA : A.Nonempty) (hB : B.Nonempty) :
-    A.card + B.card - 1 ≤ (A + B).card := by
+theorem cheeger_lower_bound_normalized (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (hd : 0 < d) (hn : 2 ≤ Fintype.card V) :
+    normalizedSpectralGap G d / 2 ≤ cheegerConstant G / (d : ℝ) := by
   sorry
 
 /--
-**Cardinality Conservation of the Dyson $e$-Transform**:
-$$|A'| + |B'| = |A| + |B|$$
+**The Discrete Cheeger Inequality (Alon–Milman 1985 / Dodziuk 1984 / Sinclair–Jerrum 1989)**:
+$$\frac{d - \lambda_2(G)}{2} \le h(G) \le \sqrt{2d(d - \lambda_2(G))}$$
 -/
-theorem dysonTransform_card [AddCommGroup G] (e : G) (A B : Finset G) :
-    (dysonTransformFst e A B).card + (dysonTransformSnd e A B).card = A.card + B.card := by
+theorem discrete_cheeger_inequality_of_cut (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (hn : 2 ≤ Fintype.card V)
+    (S : Finset V) (hvalid : isValidCut V S)
+    (h_sweep : cutRatio G S ≤ Real.sqrt (2 * (d : ℝ) * ((d : ℝ) - secondEigenvalue G))) :
+    ((d : ℝ) - secondEigenvalue G) / 2 ≤ cheegerConstant G ∧
+    cheegerConstant G ≤ Real.sqrt (2 * (d : ℝ) * ((d : ℝ) - secondEigenvalue G)) := by
   sorry
 
 /--
-**Sumset Size Contraction under the Dyson $e$-Transform**:
-$$|A' + B'| \le |A + B|$$
+**Ramanujan Expansion Lower Bound**:
+Any Ramanujan graph satisfies the optimal isoperimetric lower bound:
+$$h(G) \ge \frac{d - 2\sqrt{d-1}}{2}$$
 -/
-theorem dysonTransform_sumset_card_le [AddCommGroup G] (e : G) (A B : Finset G) :
-    (dysonTransformFst e A B + dysonTransformSnd e A B).card ≤ (A + B).card := by
+theorem ramanujan_cheeger_lower_bound (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hR : IsRamanujan G d) (hn : 2 ≤ Fintype.card V) :
+    ((d : ℝ) - 2 * Real.sqrt (d - 1 : ℝ)) / 2 ≤ cheegerConstant G := by
   sorry
 
 /--
-**The Iterated Cauchy–Davenport Theorem**:
-For any prime $p$, integer $k \ge 1$, and non-empty subsets $A_1, \dots, A_k \subseteq \mathbb{Z}/p\mathbb{Z}$:
-$$\left| \sum_{i=1}^k A_i \right| \ge \min\left(p, \sum_{i=1}^k |A_i| - k + 1\right)$$
+**Edge-to-Vertex Boundary Relation**:
+In a $d$-regular graph, $e(S, S^c) \le d |\partial_V S|$.
 -/
-theorem cauchy_davenport_iterated {p : ℕ} (hp : Nat.Prime p) {k : ℕ} (hk : 1 ≤ k)
-    (As : Fin k → Finset (ZMod p)) (h_nonempty : ∀ i, (As i).Nonempty) :
-    min p ((∑ i : Fin k, (As i).card) - k + 1) ≤
-      (∑ i : Fin k, As i).card := by
+theorem edgeBoundary_le_degree_mul_vertexBoundary (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (S : Finset V) :
+    edgeBoundary G S ≤ (d : ℝ) * ((vertexBoundary G S).card : ℝ) := by
   sorry
 
 /--
-**Full Group Surjectivity**:
-If the sum of cardinalities satisfies $\sum_{i=1}^k |A_i| \ge p + k - 1$,
-then the iterated sumset $\sum_{i=1}^k A_i$ equals the entire group $\mathbb{Z}/p\mathbb{Z}$.
+**Spectral Bound on Vertex Expansion**:
+$$\frac{|\partial_V S|}{|S|} \ge \frac{\gamma}{2} = \frac{d - \lambda_2}{2d}$$
 -/
-theorem iterated_sumset_eq_univ_of_card_ge {p : ℕ} (hp : Nat.Prime p) {k : ℕ} (hk : 1 ≤ k)
-    (As : Fin k → Finset (ZMod p)) (h_nonempty : ∀ i, (As i).Nonempty)
-    (h_sum : p + k - 1 ≤ ∑ i : Fin k, (As i).card) :
-    (∑ i : Fin k, As i).card = p := by
+theorem vertex_expansion_spectral_bound (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (hd : 0 < d) (hn : 2 ≤ Fintype.card V)
+    (S : Finset V) (hvalid : isValidCut V S) :
+    normalizedSpectralGap G d / 2 ≤ ((vertexBoundary G S).card : ℝ) / (S.card : ℝ) := by
   sorry
 
-/--
-**Multiple Self-Sumset Bound ($k A$)**:
-For any $k \ge 1$ and non-empty subset $A \subseteq \mathbb{Z}/p\mathbb{Z}$:
-$$|k A| \ge \min(p, k |A| - k + 1)$$
--/
-theorem cauchy_davenport_self_iterated {p : ℕ} (hp : Nat.Prime p) {k : ℕ} (hk : 1 ≤ k)
-    (A : Finset (ZMod p)) (hA : A.Nonempty) :
-    min p (k * A.card - k + 1) ≤ (∑ i : Fin k, A).card := by
-  sorry
-
-/--
-**Iterated Cauchy–Davenport Full Span for EGZ**:
-Given $p - 1$ non-zero differences $d_0, \dots, d_{p-2} \in \mathbb{Z}/p\mathbb{Z}$,
-the sum of the 2-element sets $A_i = \{0, d_i\}$ spans the whole of $\mathbb{Z}/p\mathbb{Z}$.
--/
-theorem egz_cauchy_davenport_span {p : ℕ} (hp : Nat.Prime p)
-    (d : Fin (p - 1) → ZMod p) (hd : ∀ i, d i ≠ 0) :
-    (∑ i : Fin (p - 1), ({0, d i} : Finset (ZMod p))).card = p := by
-  sorry
-
-/--
-**Identical Elements Case**:
-$p$ copies of any element $x \in \mathbb{Z}/p\mathbb{Z}$ sum to $0$.
--/
-theorem egz_identical_sum_zero {p : ℕ} (hp : Nat.Prime p) (x : ZMod p) :
-    (∑ i : Fin p, x) = 0 := by
-  sorry
-
-end CauchyDavenport
+end DiscreteCheeger
