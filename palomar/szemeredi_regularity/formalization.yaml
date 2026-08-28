@@ -1,0 +1,62 @@
+version: "v0.4"
+
+project:
+  name: "Szemerédi's Regularity Lemma and Partition Energy Dynamics"
+  authors:
+    - "Sneed & Feed Formalization Team"
+  responsible_maintainers:
+    - "sneed-and-feed"
+  license: "CC0-1.0"
+  description: >-
+    A machine-checked Lean 4 formalization of the foundations of Szemerédi's Regularity Lemma
+    (Endre Szemerédi, 1978) and the Triangle Removal Lemma (Ruzsa–Szemerédi, 1978). Formalizes pair edge density,
+    \varepsilon-regular pairs, the normalized partition energy E(\mathcal{P}) \in [0, 1], the discrete energy
+    increment exhaustion bound k <= 2/\varepsilon^5, and complete mathematical bridges to Mathlib's verified
+    `szemeredi_regularity` and `triangle_removal` theorems. To the maintainers' knowledge, the theorem
+    was not found in an exact declaration name, docstring, and type signature search of the pinned Mathlib
+    revision (Mathlib v4.34.0-rc1).
+
+classification:
+  arxiv: [math.CO]
+  msc2020: ["05C75", "05C80", "05D10"]
+
+sources:
+  - title: "Regular partitions of graphs"
+    type: paper
+    authors:
+      - "Endre Szemerédi"
+    venue: "Problèmes Combinatoires et Théorie des Graphes, Colloq. Internat. CNRS"
+    year: 1978
+    relationship: formalizes
+  - title: "Triple systems with no six points carrying three triangles"
+    type: paper
+    authors:
+      - "Imre Z. Ruzsa"
+      - "Endre Szemerédi"
+    venue: "Combinatorics (Keszthely), Colloq. Math. Soc. J. Bolyai"
+    year: 1978
+    relationship: adapts
+
+related_formalizations:
+  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Combinatorics/SimpleGraph/Regularity/Lemma.lean"
+    relationship: builds-on
+    note: >-
+      Formalization builds on Mathlib's regularity and uniform partition library, providing
+      first-principles definitions of pair density, partition energy, and iteration exhaustion bounds.
+
+automation:
+  methods:
+    - method: agent
+      tool_setup: >-
+        Formalized using an agentic Lean 4 workflow with automated proof golfing and interactive
+        Lean LSP checking under maintainer direction and human verification.
+        All declarations rely strictly on standard Lean 4 kernel axioms (propext, Quot.sound, Classical.choice).
+
+review:
+  status: self-assessed
+  reviewers:
+    - "sneed-and-feed maintainers"
+  notes: >-
+    Challenge contains deliberate proof holes (`:= sorry` for automated benchmark evaluation),
+    while all definitions and theorem statements are completely specified. Solution verified through
+    human audit by the maintainers with 0 errors, 0 sorries, and strictly standard kernel axioms.

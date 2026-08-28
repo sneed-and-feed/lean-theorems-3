@@ -1,0 +1,16 @@
+{
+  "challenge_module": "Challenge",
+  "solution_module": "Solution",
+  "theorem_names": [
+    "ExpanderMixing.expander_mixing_lemma",
+    "ExpanderMixing.expander_mixing_lemma_simplified",
+    "ExpanderMixing.hoffman_independence_bound",
+    "ExpanderMixing.chromatic_number_spectral_bound",
+    "ExpanderMixing.positive_edge_density_of_large_sets"
+  ],
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound",
+    "Classical.choice"
+  ]
+}

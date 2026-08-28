@@ -1,0 +1,16 @@
+{
+  "challenge_module": "Challenge",
+  "solution_module": "Solution",
+  "theorem_names": [
+    "AlonBoppana.ramanujan_spectral_gap",
+    "AlonBoppana.forwardNeighbors_card_le_d_sub_one",
+    "AlonBoppana.nilliProfile_mul_succ",
+    "AlonBoppana.orthogonalLinearCombination_orthogonal",
+    "AlonBoppana.nilliSignedTestVector_ne_zero"
+  ],
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound",
+    "Classical.choice"
+  ]
+}

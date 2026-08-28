@@ -1,0 +1,20 @@
+{
+  "challenge_module": "Challenge",
+  "solution_module": "Solution",
+  "theorem_names": [
+    "CauchyDavenport.cauchy_davenport",
+    "CauchyDavenport.cauchy_davenport_integers",
+    "CauchyDavenport.dysonTransform_card",
+    "CauchyDavenport.dysonTransform_sumset_card_le",
+    "CauchyDavenport.cauchy_davenport_iterated",
+    "CauchyDavenport.iterated_sumset_eq_univ_of_card_ge",
+    "CauchyDavenport.cauchy_davenport_self_iterated",
+    "CauchyDavenport.egz_cauchy_davenport_span",
+    "CauchyDavenport.egz_identical_sum_zero"
+  ],
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound",
+    "Classical.choice"
+  ]
+}

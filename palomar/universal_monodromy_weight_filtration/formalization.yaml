@@ -1,0 +1,71 @@
+version: "v0.4"
+
+project:
+  name: "Deligne–Schmid Mixed Hodge Weight Filtration and Symplectic Monodromy"
+  authors:
+    - "Sneed & Feed Formalization Team"
+  responsible_maintainers:
+    - "sneed-and-feed"
+  license: "CC0-1.0"
+  description: >-
+    A complete, machine-checked Lean 4 formalization of Pierre Deligne's canonical weight
+    filtration formula W_l(N, k) = sum_{j=0}^k (ker(N^{j+1}) cap im(N^{j - l + k})) for nilpotent
+    monodromy operators N with N^{k+1} = 0 over general commutative rings R. Proves universal
+    filtration monotonicity, top extremal saturation W_{2k} = V, fundamental shift inclusion
+    N(W_l) subseteq W_{l-2}, explicit 2-step weight filtrations on Z^4 for Type II unipotent
+    abelian surface monodromy (N^2 = 0), explicit 4-step weight filtrations for Type III CY3 MUM
+    nilpotent operators (N^4 = 0), and Hodge–Riemann symplectic polarizations Q_N(v, w) = <v, Nw>_J
+    with strict positivity on primitive subspace generators. To the maintainers' knowledge,
+    the theorem was verified absent from the core Mathlib library (checked against Mathlib v4.34.0-rc1).
+
+classification:
+  arxiv: [math.AG, math.CA, math.RT]
+  msc2020: ["14C30", "32G20", "14D07", "14J32"]
+
+sources:
+  - title: "Théorie de Hodge: II"
+    type: paper
+    authors:
+      - "Pierre Deligne"
+    year: 1971
+    venue: "Publications Mathématiques de l'IHÉS, 40, 5-57"
+    relationship: formalizes
+  - title: "Variation of Hodge structure: the singularities of the period mapping"
+    type: paper
+    authors:
+      - "Wilfried Schmid"
+    year: 1973
+    venue: "Inventiones Mathematicae, 22(3-4), 211-319"
+    relationship: adapts
+  - title: "Periods of integrals on algebraic manifolds, I"
+    type: paper
+    authors:
+      - "Phillip A. Griffiths"
+    year: 1968
+    venue: "American Journal of Mathematics, 90(2), 568-626"
+    relationship: background
+
+related_formalizations:
+  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Data/Matrix/Basic.lean"
+    relationship: builds-on
+    note: >-
+      Formalization builds on Mathlib's matrix and module algebra, formalizing Deligne's universal
+      subspace formula for nilpotent monodromy weight filtrations, shift theorems, and Hodge–Riemann
+      symplectic polarizations.
+
+automation:
+  methods:
+    - method: agent
+      tool_setup: >-
+        Formalized using an agentic Lean 4 workflow with automated proof golfing and interactive
+        Lean LSP checking under maintainer direction and human verification.
+        All declarations rely strictly on standard Lean 4 kernel axioms (propext, Quot.sound, Classical.choice).
+
+review:
+  status: self-assessed
+  reviewers:
+    - "sneed-and-feed maintainers"
+  notes: >-
+    Challenge contains deliberate proof holes (`:= sorry` for automated benchmark evaluation),
+    while all definitions and theorem statements are completely specified. Solution verified through
+    maintainer audit with 0 errors, 0 sorries, and strictly standard kernel axioms.

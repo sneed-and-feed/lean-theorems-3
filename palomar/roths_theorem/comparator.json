@@ -1,0 +1,17 @@
+{
+  "challenge_module": "Challenge",
+  "solution_module": "Solution",
+  "theorem_names": [
+    "RothsTheorem.isThreeAPFree_iff",
+    "RothsTheorem.ap3Count_of_free",
+    "RothsTheorem.progression_is3AP",
+    "RothsTheorem.progression_card",
+    "RothsTheorem.density_boost_bound",
+    "RothsTheorem.iteration_step_bound"
+  ],
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound",
+    "Classical.choice"
+  ]
+}

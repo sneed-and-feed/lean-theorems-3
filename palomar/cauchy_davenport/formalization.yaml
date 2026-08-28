@@ -1,0 +1,71 @@
+version: "v0.4"
+
+project:
+  name: "The Cauchy–Davenport Theorem and Iterated Sumsets"
+  authors:
+    - "Sneed & Feed Formalization Team"
+  responsible_maintainers:
+    - "sneed-and-feed"
+  license: "CC0-1.0"
+  description: >-
+    A machine-checked Lean 4 formalization of the Cauchy–Davenport Theorem (Augustin-Louis Cauchy 1813,
+    Harold Davenport 1935) and its multifold generalizations. Includes single sumset bounds in \mathbb{Z}/p\mathbb{Z}
+    and torsion-free groups \mathbb{Z}, Davenport's Dyson e-transform cardinality conservation |A'| + |B'| = |A| + |B|
+    and sumset contraction |A' + B'| <= |A + B|, the general iterated sumset bound
+    |\sum_{i=1}^k A_i| >= \min(p, \sum |A_i| - k + 1), full group surjectivity criteria, multiple self-sumsets
+    |k A| >= \min(p, k|A| - k + 1), and the inductive Cauchy–Davenport full span theorem underlying the
+    Erdős–Ginzburg–Ziv (EGZ) theorem. To the maintainers' knowledge, the theorem was not found in an exact
+    declaration name, docstring, and type signature search of the pinned Mathlib revision (Mathlib v4.34.0-rc1).
+
+classification:
+  arxiv: [math.NT, math.CO]
+  msc2020: ["11P70", "11B13", "05E16", "20K01"]
+
+sources:
+  - title: "Recherches sur les nombres"
+    type: paper
+    authors:
+      - "Augustin-Louis Cauchy"
+    venue: "Journal de l'École Polytechnique"
+    year: 1813
+    relationship: formalizes
+  - title: "On the addition of residue classes"
+    type: paper
+    authors:
+      - "Harold Davenport"
+    venue: "Journal of the London Mathematical Society"
+    year: 1935
+    relationship: formalizes
+  - title: "A theorem in the additive number theory"
+    type: paper
+    authors:
+      - "Paul Erdős"
+      - "Abraham Ginzburg"
+      - "Abraham Ziv"
+    venue: "Bulletin of the Research Council of Israel"
+    year: 1961
+    relationship: adapts
+
+related_formalizations:
+  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Combinatorics/Additive/CauchyDavenport.lean"
+    relationship: builds-on
+    note: >-
+      Formalization builds on Mathlib's binary Cauchy-Davenport theorem, extending it with
+      Dyson e-transform conservation, arbitrary k-fold sumset induction, and EGZ span theorems.
+
+automation:
+  methods:
+    - method: agent
+      tool_setup: >-
+        Formalized using an agentic Lean 4 workflow with automated proof golfing and interactive
+        Lean LSP checking under maintainer direction and human verification.
+        All declarations rely strictly on standard Lean 4 kernel axioms (propext, Quot.sound, Classical.choice).
+
+review:
+  status: self-assessed
+  reviewers:
+    - "sneed-and-feed maintainers"
+  notes: >-
+    Challenge contains deliberate proof holes (`:= sorry` for automated benchmark evaluation),
+    while all definitions and theorem statements are completely specified. Solution verified through
+    human audit by the maintainers with 0 errors, 0 sorries, and strictly standard kernel axioms.

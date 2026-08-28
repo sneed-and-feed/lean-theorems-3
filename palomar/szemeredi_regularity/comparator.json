@@ -1,0 +1,19 @@
+{
+  "challenge_module": "Challenge",
+  "solution_module": "Solution",
+  "theorem_names": [
+    "SzemerediRegularity.pairDensity_le_one",
+    "SzemerediRegularity.pairDensity_weighted_split",
+    "SzemerediRegularity.isEpsilonRegularPair_symm",
+    "SzemerediRegularity.energy_le_one",
+    "SzemerediRegularity.energy_exhaustion_bound",
+    "SzemerediRegularity.max_increment_steps_bound",
+    "SzemerediRegularity.szemeredi_regularity_mathlib_bridge",
+    "SzemerediRegularity.triangle_removal_mathlib_bridge"
+  ],
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound",
+    "Classical.choice"
+  ]
+}

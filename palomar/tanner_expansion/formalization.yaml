@@ -1,0 +1,72 @@
+version: "v0.4"
+
+project:
+  name: "Tanner's Vertex Expansion Bound for Regular Graphs"
+  authors:
+    - "Sneed & Feed Formalization Team"
+  responsible_maintainers:
+    - "sneed-and-feed"
+  license: "CC0-1.0"
+  description: >-
+    A complete machine-checked Lean 4 formalization of Tanner's Vertex Expansion Bound (R. Michael Tanner, 1984),
+    a fundamental theorem in spectral graph theory and coding theory establishing a quantitative lower bound
+    on the open neighborhood size |N(S)| of subsets in a d-regular graph in terms of the second eigenvalue
+    \lambda(G). Includes Cauchy–Schwarz neighborhood estimation, orthogonal spectral decomposition of the
+    indicator vector, the small-set expansion asymptotic bound, optimal expansion in Ramanujan graphs,
+    and the vertex expansion margin bound |N(S)| - |S| >= (d^2 - \lambda^2)/(d^2 + \lambda^2) |S| for sets
+    of relative size at most 1/2. To the maintainers' knowledge, the theorem was not found in an exact declaration
+    name, docstring, and type signature search of the pinned Mathlib revision (Mathlib v4.34.0-rc1).
+
+classification:
+  arxiv: [math.CO]
+  msc2020: ["05C50", "94B65", "05C75", "15A18"]
+
+sources:
+  - title: "Explicit construction of concentrators from generalized N-gons"
+    type: paper
+    authors:
+      - "R. Michael Tanner"
+    venue: "SIAM Journal on Algebraic and Discrete Methods"
+    year: 1984
+    relationship: formalizes
+  - title: "The Probabilistic Method"
+    type: book
+    authors:
+      - "Noga Alon"
+      - "Joel H. Spencer"
+    publisher: "John Wiley & Sons"
+    year: 2016
+    relationship: background
+  - title: "Expander graphs and their applications"
+    type: paper
+    authors:
+      - "Shlomo Hoory"
+      - "Nathan Linial"
+      - "Avi Wigderson"
+    venue: "Bulletin of the American Mathematical Society"
+    year: 2006
+    relationship: background
+
+related_formalizations:
+  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Combinatorics/SimpleGraph/Basic.lean"
+    relationship: builds-on
+    note: >-
+      Formalization builds on Mathlib's simple graph theory representation and adjacency definitions,
+      extending them with neighborhood operator norms and vertex expansion inequalities.
+
+automation:
+  methods:
+    - method: agent
+      tool_setup: >-
+        Formalized using an agentic Lean 4 workflow with automated proof golfing and interactive
+        Lean LSP checking under maintainer direction and human verification.
+        All declarations rely strictly on standard Lean 4 kernel axioms (propext, Quot.sound, Classical.choice).
+
+review:
+  status: self-assessed
+  reviewers:
+    - "sneed-and-feed maintainers"
+  notes: >-
+    Challenge contains deliberate proof holes (`:= sorry` for automated benchmark evaluation),
+    while all definitions and theorem statements are completely specified. Solution verified through
+    human audit by the maintainers with 0 errors, 0 sorries, and strictly standard kernel axioms.

@@ -1,20 +1,138 @@
+import Mathlib.Data.Matrix.Basic
+import Mathlib.Data.Rat.Defs
+import Mathlib.Data.Finset.Basic
+import Mathlib.Algebra.BigOperators.Intervals
+import Mathlib.Algebra.BigOperators.Fin
+import Mathlib.Tactic.Ring
+import Mathlib.Tactic.Linarith
+import Mathlib.Tactic.NormNum
+import Mathlib.Tactic.FinCases
+import Mathlib.Tactic.FieldSimp
+
+open scoped Matrix BigOperators
+open Matrix
+
+set_option linter.unusedSectionVars false
+set_option linter.unusedVariables false
+
+namespace PicardFuchsMirrorMonodromy
+
+def J : Matrix (Fin 4) (Fin 4) ℤ :=
+  ![![ 0,  0,  1,  0],
+    ![ 0,  0,  0,  1],
+    ![-1,  0,  0,  0],
+    ![ 0, -1,  0,  0]]
+
+def Omega6 : Matrix (Fin 4) (Fin 4) ℤ :=
+  ![![ 0,  0,  0,  1],
+    ![ 0,  0,  6,  0],
+    ![ 0, -6,  0,  0],
+    ![-1,  0,  0,  0]]
+
+def T0 : Matrix (Fin 4) (Fin 4) ℤ :=
+  ![![ 1, -1,  0,  0],
+    ![ 0,  1,  0,  0],
+    ![ 0,  0,  1,  0],
+    ![ 0,  0,  1,  1]]
+
+def N : Matrix (Fin 4) (Fin 4) ℤ :=
+  ![![ 0, -1,  0,  0],
+    ![ 0,  0,  0,  0],
+    ![ 0,  0,  0,  0],
+    ![ 0,  0,  1,  0]]
+
+theorem N_unipotent_index_2 : N * N = 0 := by
+  ext i j; fin_cases i <;> fin_cases j <;> rfl
+
+namespace ModularFamilyS6
+
+def T0 : Matrix (Fin 4) (Fin 4) ℤ :=
+  ![![ 1,  0,  0,  1],
+    ![ 0,  1, -1,  0],
+    ![ 0,  0,  1,  0],
+    ![ 0,  0,  0,  1]]
+
+def N : Matrix (Fin 4) (Fin 4) ℤ :=
+  ![![ 0,  0,  0,  1],
+    ![ 0,  0, -1,  0],
+    ![ 0,  0,  0,  0],
+    ![ 0,  0,  0,  0]]
+
+def gamma : Fin 4 → ℤ := ![1, 0, 0, 0]
+def u : Fin 4 → ℤ := ![0, 1, 0, 0]
+def w : Fin 4 → ℤ := ![0, 0, 1, 0]
+def delta : Fin 4 → ℤ := ![0, 0, 0, 1]
+
+theorem N_act_gamma : N *ᵥ gamma = 0 := by ext i; fin_cases i <;> rfl
+theorem N_act_u : N *ᵥ u = 0 := by ext i; fin_cases i <;> rfl
+theorem N_act_w : N *ᵥ w = -u := by ext i; fin_cases i <;> rfl
+theorem N_act_delta : N *ᵥ delta = gamma := by ext i; fin_cases i <;> rfl
+
+end ModularFamilyS6
+
+def gamma : Fin 4 → ℤ := ModularFamilyS6.gamma
+def u : Fin 4 → ℤ := ModularFamilyS6.u
+def w : Fin 4 → ℤ := ModularFamilyS6.w
+def delta : Fin 4 → ℤ := ModularFamilyS6.delta
+
+theorem S6_N_act_gamma : ModularFamilyS6.N *ᵥ ModularFamilyS6.gamma = 0 :=
+  ModularFamilyS6.N_act_gamma
+
+theorem S6_N_act_u : ModularFamilyS6.N *ᵥ ModularFamilyS6.u = 0 :=
+  ModularFamilyS6.N_act_u
+
+theorem S6_N_act_w : ModularFamilyS6.N *ᵥ ModularFamilyS6.w = -ModularFamilyS6.u :=
+  ModularFamilyS6.N_act_w
+
+theorem S6_N_act_delta : ModularFamilyS6.N *ᵥ ModularFamilyS6.delta = ModularFamilyS6.gamma :=
+  ModularFamilyS6.N_act_delta
+
+def N_MUM : Matrix (Fin 4) (Fin 4) ℤ :=
+  ![![ 0, 1, 0, 0 ],
+    ![ 0, 0, 1, 0 ],
+    ![ 0, 0, 0, 1 ],
+    ![ 0, 0, 0, 0 ]]
+
+def symplecticPairing (v w : Fin 4 → ℤ) : ℤ :=
+  v 0 * w 2 + v 1 * w 3 - v 2 * w 0 - v 3 * w 1
+
+theorem symplecticPairing_skew (v w : Fin 4 → ℤ) :
+    symplecticPairing v w = -symplecticPairing w v := by
+  dsimp [symplecticPairing]; ring
+
+theorem mulVec_N (v : Fin 4 → ℤ) :
+    N *ᵥ v = ![-v 1, 0, 0, v 2] := by
+  ext i
+  fin_cases i <;> simp [N, mulVec, dotProduct, Fin.sum_univ_four]
+
+theorem symplecticPairing_N_invariant (v w : Fin 4 → ℤ) :
+    symplecticPairing (N *ᵥ v) w + symplecticPairing v (N *ᵥ w) = 0 := by
+  rw [mulVec_N, mulVec_N]; dsimp [symplecticPairing]; ring
+
+def symplecticPairingOmega6 (v w : Fin 4 → ℤ) : ℤ :=
+  v 0 * w 3 + 6 * v 1 * w 2 - 6 * v 2 * w 1 - v 3 * w 0
+
+theorem symplecticPairingOmega6_skew (v w : Fin 4 → ℤ) :
+    symplecticPairingOmega6 v w = -symplecticPairingOmega6 w v := by
+  dsimp [symplecticPairingOmega6]; ring
+
+theorem mulVec_S6_N (v : Fin 4 → ℤ) :
+    ModularFamilyS6.N *ᵥ v = ![v 3, -v 2, 0, 0] := by
+  ext i
+  fin_cases i <;> simp [ModularFamilyS6.N, mulVec, dotProduct, Fin.sum_univ_four]
+
+theorem symplecticPairingOmega6_N_invariant (v w : Fin 4 → ℤ) :
+    symplecticPairingOmega6 (ModularFamilyS6.N *ᵥ v) w +
+    symplecticPairingOmega6 v (ModularFamilyS6.N *ᵥ w) = 0 := by
+  rw [mulVec_S6_N, mulVec_S6_N]; dsimp [symplecticPairingOmega6]; ring
+
+end PicardFuchsMirrorMonodromy
+
 /-
 Copyright (c) 2026. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Antigravity
 -/
-import Formalization.PicardFuchsMirrorMonodromy
-import Mathlib.Data.Matrix.Basic
-import Mathlib.Data.Finset.Basic
-import Mathlib.Tactic.Ring
-import Mathlib.Tactic.Linarith
-import Mathlib.Tactic.NormNum
-import Mathlib.Tactic.FinCases
-
-open scoped Matrix
-
-set_option linter.unusedSectionVars false
-set_option linter.unusedVariables false
 
 
 /-!
@@ -431,4 +549,3 @@ theorem Q_N_S6_delta_nondegenerate :
   rw [Q_N_S6_delta_eval]; decide
 
 end UniversalMonodromyWeightFiltration
-

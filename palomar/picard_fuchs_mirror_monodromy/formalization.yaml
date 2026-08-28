@@ -1,0 +1,74 @@
+version: "v0.4"
+
+project:
+  name: "Order-4 Picard–Fuchs Differential Equations, Monodromy, and Mirror Yukawa Couplings"
+  authors:
+    - "Sneed & Feed Formalization Team"
+  responsible_maintainers:
+    - "sneed-and-feed"
+  license: "CC0-1.0"
+  description: >-
+    A complete, machine-checked Lean 4 formalization of the order-4 Picard–Fuchs differential
+    operator L_4 for the modular families Delta(3,4,infty) and Delta(2,3,infty). Formalizes
+    the Calabi–Yau self-duality sum condition sum alpha_i = 2, indicial polynomial I_0(theta) = theta^4,
+    Frobenius cusp monodromy T_0 in Sp_4(Z), nilpotence of index 2 (Type II degeneration N^2 = 0),
+    CY3 Maximally Unipotent Monodromy (Type III, N^4 = 0), infinitesimal and finite symplectic Lie algebra
+    invariance (Griffiths transversality), and classical/multi-instanton BPS Yukawa expansions.
+    To the maintainers' knowledge, the theorem was verified absent from the core Mathlib library
+    (checked against Mathlib v4.34.0-rc1).
+
+classification:
+  arxiv: [math.AG, hep-th, math.CA]
+  msc2020: ["14J32", "34M35", "32G20", "14J33"]
+
+sources:
+  - title: "A pair of Calabi-Yau manifolds as an exactly soluble superconformal theory"
+    type: paper
+    authors:
+      - "Philip Candelas"
+      - "Xenia C. de la Ossa"
+      - "Paul S. Green"
+      - "Linda Parkes"
+    year: 1991
+    venue: "Nuclear Physics B, 359(1), 21-74"
+    relationship: formalizes
+  - title: "Mirror symmetry and algebraic geometry"
+    type: book
+    authors:
+      - "David A. Cox"
+      - "Sheldon Katz"
+    year: 1999
+    venue: "Mathematical Surveys and Monographs, Vol. 68, American Mathematical Society"
+    relationship: adapts
+  - title: "Periods of integrals on algebraic manifolds, III: Abelian integrals and the Abel-Jacobi mapping"
+    type: paper
+    authors:
+      - "Phillip A. Griffiths"
+    year: 1968
+    venue: "Publications Mathématiques de l'IHÉS, 38, 125-180"
+    relationship: background
+
+related_formalizations:
+  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Data/Matrix/Basic.lean"
+    relationship: builds-on
+    note: >-
+      Formalization builds on Mathlib's matrix algebra and rational polynomial infrastructure,
+      formalizing hypergeometric differential equations, symplectic Lie algebra actions,
+      Frobenius local monodromy, and multi-instanton BPS Yukawa expansions.
+
+automation:
+  methods:
+    - method: agent
+      tool_setup: >-
+        Formalized using an agentic Lean 4 workflow with automated proof golfing and interactive
+        Lean LSP checking under maintainer direction and human verification.
+        All declarations rely strictly on standard Lean 4 kernel axioms (propext, Quot.sound, Classical.choice).
+
+review:
+  status: self-assessed
+  reviewers:
+    - "sneed-and-feed maintainers"
+  notes: >-
+    Challenge contains deliberate proof holes (`:= sorry` for automated benchmark evaluation),
+    while all definitions and theorem statements are completely specified. Solution verified through
+    maintainer audit with 0 errors, 0 sorries, and strictly standard kernel axioms.

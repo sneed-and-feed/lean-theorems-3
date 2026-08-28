@@ -1,0 +1,72 @@
+version: "v0.4"
+
+project:
+  name: "The Discrete Cheeger Inequality for Regular Graphs"
+  authors:
+    - "Sneed & Feed Formalization Team"
+  responsible_maintainers:
+    - "sneed-and-feed"
+  license: "CC0-1.0"
+  description: >-
+    A complete machine-checked Lean 4 formalization of the Discrete Cheeger Inequality (Alon–Milman 1985,
+    Dodziuk 1984, Sinclair–Jerrum 1989) relating the combinatorial edge expansion (Cheeger isoperimetric
+    constant h(G)) of a d-regular graph to its algebraic spectral gap \Delta = d - \lambda_2(G).
+    Includes the fundamental Dirichlet energy identity, the variational Rayleigh quotient analysis
+    on the orthogonal complement of the all-ones vector, the sharp Cheeger lower bound (d - \lambda_2)/2 <= h(G),
+    the normalized Cheeger bound \gamma / 2 <= h(G)/d, optimal isoperimetry for Ramanujan graphs,
+    and the vertex boundary expansion bounds. To the maintainers' knowledge, the theorem was not found
+    in an exact declaration name, docstring, and type signature search of the pinned Mathlib revision
+    (Mathlib v4.34.0-rc1).
+
+classification:
+  arxiv: [math.CO]
+  msc2020: ["05C50", "05C75", "15A18", "60J10"]
+
+sources:
+  - title: "\lambda_1, isoperimetric inequalities for graphs, and superconcentrators"
+    type: paper
+    authors:
+      - "Noga Alon"
+      - "Vitali D. Milman"
+    venue: "Journal of Combinatorial Theory, Series B"
+    year: 1985
+    relationship: formalizes
+  - title: "Difference equations, isoperimetric inequality and transience of certain random walks"
+    type: paper
+    authors:
+      - "Jozef Dodziuk"
+    venue: "Transactions of the American Mathematical Society"
+    year: 1984
+    relationship: adapts
+  - title: "Approximate counting, uniform generation and rapidly mixing Markov chains"
+    type: paper
+    authors:
+      - "Alistair Sinclair"
+      - "Mark Jerrum"
+    venue: "Information and Computation"
+    year: 1989
+    relationship: background
+
+related_formalizations:
+  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Combinatorics/SimpleGraph/Basic.lean"
+    relationship: builds-on
+    note: >-
+      Formalization builds on Mathlib's simple graph theory representation and adjacency definitions,
+      extending them with graph Laplacian quadratic forms, Dirichlet energy, and Cheeger cuts.
+
+automation:
+  methods:
+    - method: agent
+      tool_setup: >-
+        Formalized using an agentic Lean 4 workflow with automated proof golfing and interactive
+        Lean LSP checking under maintainer direction and human verification.
+        All declarations rely strictly on standard Lean 4 kernel axioms (propext, Quot.sound, Classical.choice).
+
+review:
+  status: self-assessed
+  reviewers:
+    - "sneed-and-feed maintainers"
+  notes: >-
+    Challenge contains deliberate proof holes (`:= sorry` for automated benchmark evaluation),
+    while all definitions and theorem statements are completely specified. Solution verified through
+    human audit by the maintainers with 0 errors, 0 sorries, and strictly standard kernel axioms.

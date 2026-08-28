@@ -1,0 +1,17 @@
+{
+  "challenge_module": "Challenge",
+  "solution_module": "Solution",
+  "theorem_names": [
+    "TannerExpansion.tanner_vertex_expansion_bound",
+    "TannerExpansion.tanner_expansion_ratio_bound",
+    "TannerExpansion.tanner_small_set_expansion",
+    "TannerExpansion.tanner_ramanujan_expansion",
+    "TannerExpansion.tanner_half_set_expansion",
+    "TannerExpansion.tanner_vertex_margin_bound"
+  ],
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound",
+    "Classical.choice"
+  ]
+}

@@ -1,0 +1,70 @@
+version: "v0.4"
+
+project:
+  name: "Roth's Theorem on 3-Term Arithmetic Progressions"
+  authors:
+    - "Sneed & Feed Formalization Team"
+  responsible_maintainers:
+    - "sneed-and-feed"
+  license: "CC0-1.0"
+  description: >-
+    A machine-checked Lean 4 formalization of the combinatorial core of Roth's Theorem (Klaus Roth, 1953)
+    on 3-term arithmetic progressions (3-APs) in dense subsets of integers and finite abelian groups.
+    Includes the multilinear 3-AP counting functional \Lambda(f_1, f_2, f_3), exact counting evaluation
+    \Lambda(1_A, 1_A, 1_A) = |A|/|G|^2 on 3-AP free sets, arithmetic progression preservation under affine maps,
+    and the discrete density increment iteration step bound k <= 16/\alpha_0^2. To the maintainers' knowledge,
+    the theorem was not found in an exact declaration name, docstring, and type signature search of the pinned
+    Mathlib revision (Mathlib v4.34.0-rc1).
+
+classification:
+  arxiv: [math.NT, math.CO]
+  msc2020: ["11B30", "05D10", "42A99", "11K70"]
+
+sources:
+  - title: "On certain sets of integers"
+    type: paper
+    authors:
+      - "Klaus F. Roth"
+    venue: "Journal of the London Mathematical Society"
+    year: 1953
+    relationship: formalizes
+  - title: "Additive Combinatorics"
+    type: book
+    authors:
+      - "Terence Tao"
+      - "Van H. Vu"
+    publisher: "Cambridge University Press"
+    year: 2006
+    relationship: background
+  - title: "Strong bounds for 3-progressions"
+    type: preprint
+    authors:
+      - "Zander Kelley"
+      - "Raghu Meka"
+    venue: "arXiv:2302.05537"
+    year: 2023
+    relationship: background
+
+related_formalizations:
+  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Data/ZMod/Basic.lean"
+    relationship: builds-on
+    note: >-
+      Formalization builds on Mathlib's modular arithmetic and finite group representation,
+      extending them with multilinear 3-AP counting functionals and density increment exhaustion.
+
+automation:
+  methods:
+    - method: agent
+      tool_setup: >-
+        Formalized using an agentic Lean 4 workflow with automated proof golfing and interactive
+        Lean LSP checking under maintainer direction and human verification.
+        All declarations rely strictly on standard Lean 4 kernel axioms (propext, Quot.sound, Classical.choice).
+
+review:
+  status: self-assessed
+  reviewers:
+    - "sneed-and-feed maintainers"
+  notes: >-
+    Challenge contains deliberate proof holes (`:= sorry` for automated benchmark evaluation),
+    while all definitions and theorem statements are completely specified. Solution verified through
+    human audit by the maintainers with 0 errors, 0 sorries, and strictly standard kernel axioms.

@@ -1,0 +1,42 @@
+{
+  "challenge_module": "Challenge",
+  "solution_module": "Solution",
+  "theorem_names": [
+    "BrieskornSU2.sphericalAngleTriple_odd_sum",
+    "BrieskornSU2.candidateRepFinset_card",
+    "BrieskornSU2.card_irred_su2_2_3_5",
+    "BrieskornSU2.card_irredRepSet_2_3_5",
+    "BrieskornSU2.card_irred_su2_2_3_7",
+    "BrieskornSU2.card_irredRepSet_2_3_7",
+    "BrieskornSU2.card_irred_su2_2_3_11",
+    "BrieskornSU2.card_irredRepSet_2_3_11",
+    "BrieskornSU2.card_irred_su2_2_5_7",
+    "BrieskornSU2.card_irredRepSet_2_5_7",
+    "BrieskornSU2.cassonSU2_2_3_5",
+    "BrieskornSU2.cassonSU2_2_3_7",
+    "BrieskornSU2.cassonSU2_2_3_11",
+    "BrieskornSU2.cassonSU2_2_5_7",
+    "BrieskornSU2.casson_su2_eq_brieskorn_2_3_5",
+    "BrieskornSU2.casson_su2_eq_brieskorn_2_3_7",
+    "BrieskornSU2.casson_su2_eq_brieskorn_2_3_11",
+    "BrieskornSU2.casson_su2_eq_brieskorn_2_5_7",
+    "BrieskornSU2.cassonRat_su2_eq_brieskorn_2_3_5",
+    "BrieskornSU2.cassonRat_su2_eq_brieskorn_2_3_7",
+    "BrieskornSU2.cassonRat_su2_eq_brieskorn_2_3_11",
+    "BrieskornSU2.cassonRat_su2_eq_brieskorn_2_5_7",
+    "BrieskornSU2.frickeVogtPoly_perm_xy",
+    "BrieskornSU2.frickeVogtPoly_perm_yz",
+    "BrieskornSU2.frickeVogtPoly_perm_xz",
+    "BrieskornSU2.frickeVogtPoly_cyclic",
+    "BrieskornSU2.frickeVogt_discriminant_identity",
+    "BrieskornSU2.frickeVogt_boundary_zero_rat",
+    "BrieskornSU2.frickeVogt_order2_specialization",
+    "BrieskornSU2.frickeVogt_order2_boundary_circle",
+    "BrieskornSU2.central_fiber_odd_power"
+  ],
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound",
+    "Classical.choice"
+  ]
+}
