@@ -1,66 +1,56 @@
 version: "v0.4"
 
 project:
-  name: "The Kelley–Meka Theorem: Strong Bounds for 3-Progressions"
+  name: "Hyperbolic Orbifold Spectral Zeta, Gauss–Bonnet Area, and the Selberg Trace Formula"
   authors:
     - "Sneed & Feed Formalization Team"
   responsible_maintainers:
     - "sneed-and-feed"
   license: "CC0-1.0"
   description: >-
-    A complete, machine-checked Lean 4 formalization of the breakthrough theorem of
-    Zander Kelley and Raghu Meka (2023) establishing quasi-polynomial upper bounds
-    r_3(N) <= C N exp(-c (log N)^(1/12)) on 3-term arithmetic progression free sets.
-    Formalizes Bohr set geometry, relative density bounds, spectral concentration,
-    additive and multiplicative density boost accumulation, dimension/rank growth bounds,
-    and asymptotic comparison against Roth's (1953) and Bourgain's (1999) rates, with
-    certified concrete numerical bounds for N = 10^6, 2^64, and 10^100.
-    To the maintainers' knowledge, the theorem and spectral Bohr increment bounds
-    were verified absent from the core Mathlib library (checked against Mathlib v4.34.0-rc1).
+    A complete, machine-checked Lean 4 formalization of the spectral geometry of 1-cusped hyperbolic
+    2-orbifolds O(p, q, infty) = Delta(p, q, infty) \ H. Proves Gauss–Bonnet area formulas
+    Area(O) = 2 pi (1 - 1/p - 1/q), certified exact areas for canonical triangle signatures
+    ((3,4,infty), (2,3,infty), (2,5,infty), (3,5,infty)), Eisenstein series scattering determinant
+    properties (functional equation, unitarity on critical line Re(s)=1/2, residue product formula),
+    the Orbifold Selberg Trace Formula decomposing discrete cusp forms, Eisenstein integrals, and geometric
+    conjugacy classes, and the Selberg zeta function. To the maintainers' knowledge, the theorem
+    was verified absent from the core Mathlib library (checked against Mathlib v4.34.0-rc1).
 
 classification:
-  arxiv: [math.CO, math.NT, cs.CC]
-  msc2020: ["11B30", "05D10", "42A99", "68Q87"]
+  arxiv: [math.SP, math.NT, math.DG]
+  msc2020: ["11F72", "58J50", "30F35", "11M36"]
 
 sources:
-  - title: "Strong bounds for 3-progressions"
-    type: preprint
+  - title: "Harmonic analysis on hyperbolic spaces and Selberg's trace formula"
+    type: book
     authors:
-      - "Zander Kelley"
-      - "Raghu Meka"
-    year: 2023
-    venue: "arXiv:2302.05537 / FOCS 2023"
+      - "Dennis A. Hejhal"
+    year: 1983
+    venue: "Lecture Notes in Mathematics, Vol. 1001, Springer-Verlag"
     relationship: formalizes
-  - title: "On certain sets of integers"
+  - title: "Harmonic analysis and discontinuous groups in weakly symmetric Riemannian spaces with applications to Dirichlet series"
     type: paper
     authors:
-      - "K. F. Roth"
-    year: 1953
-    venue: "Journal of the London Mathematical Society, 28(1), 104-109"
-    relationship: background
-  - title: "On triples in arithmetic progression"
-    type: paper
+      - "Atle Selberg"
+    year: 1956
+    venue: "Journal of the Indian Mathematical Society, 20, 47-87"
+    relationship: adapts
+  - title: "Spectral theory of the Riemann zeta-function"
+    type: book
     authors:
-      - "J. Bourgain"
-    year: 1999
-    venue: "Geometric and Functional Analysis, 9(5), 968-984"
-    relationship: background
-  - title: "Breaking the logarithmic barrier in Roth's theorem on arithmetic progressions"
-    type: preprint
-    authors:
-      - "Thomas Bloom"
-      - "Olof Sisask"
-    year: 2020
-    venue: "arXiv:2007.03528"
+      - "Yoichi Motohashi"
+    year: 1997
+    venue: "Cambridge Tracts in Mathematics, Vol. 127, Cambridge University Press"
     relationship: background
 
 related_formalizations:
-  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Combinatorics/Additive/Energy.lean"
+  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Analysis/SpecialFunctions/Trigonometric/Basic.lean"
     relationship: builds-on
     note: >-
-      Formalization builds on Mathlib's additive combinatorics structures and extends them with
-      Bohr set structures, Kelley–Meka density increment iteration bounds, and quantitative
-      asymptotic decay proofs.
+      Formalization builds on Mathlib's real and complex analysis libraries and extends them with
+      hyperbolic orbifold spectral geometry, Gauss–Bonnet area formulas, Eisenstein scattering
+      determinants, and Selberg trace formulas.
 
 automation:
   methods:
