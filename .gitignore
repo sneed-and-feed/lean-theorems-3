@@ -10,4 +10,7 @@
 *.so
 .lake.old
 /.agents
-PALOMAR_CHECKLIST.md
+*.bak
+*.tmp
+.DS_Store
+Thumbs.db
