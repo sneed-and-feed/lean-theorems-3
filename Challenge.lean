@@ -1,10 +1,11 @@
 import Mathlib.Data.Real.Basic
 import Mathlib.Data.Matrix.Basic
 import Mathlib.Data.Fintype.Card
-import Mathlib.Data.Finset.Basic
 import Mathlib.Data.Finset.Card
+import Mathlib.Data.Finset.Basic
 import Mathlib.Combinatorics.SimpleGraph.Basic
 import Mathlib.Combinatorics.SimpleGraph.DegreeSum
+import Mathlib.Combinatorics.SimpleGraph.Coloring.Vertex
 import Mathlib.Analysis.SpecialFunctions.Pow.Real
 import Mathlib.Analysis.SpecialFunctions.Sqrt
 import Mathlib.Tactic.Linarith
@@ -16,33 +17,43 @@ open Classical
 
 set_option linter.unusedSectionVars false
 
-variable {V : Type*} [Fintype V] [DecidableEq V]
-
-namespace DiscreteCheeger
-
 /-!
-# The Discrete Cheeger Inequality for Regular Graphs
+# The Expander Mixing Lemma
 
-This module formalizes the **Discrete Cheeger Inequality** (Noga Alon and Vitali Milman 1985;
-Jozef Dodziuk 1984; Alistair Sinclair and Mark Jerrum 1989) relating the combinatorial edge
-expansion (Cheeger isoperimetric constant $h(G)$) of a $d$-regular graph to its algebraic
-spectral gap $\Delta = d - \lambda_2(G)$.
+This module formalizes the **Expander Mixing Lemma** (Noga Alon and Fan Chung, 1988),
+a fundamental bridge in spectral graph theory connecting the second eigenvalue $\lambda(G)$
+of a regular graph to the pseudo-random distribution of its edges.
 
 ## Mathematical Overview
 
-Let $G = (V, E)$ be a finite, connected, $d$-regular simple graph on $n = |V|$ vertices.
-The Cheeger isoperimetric constant $h(G)$ is the minimum cut ratio:
-$$h(G) = \min_{\substack{S \subset V \\ 0 < |S| \le n/2}} \frac{e(S, S^c)}{|S|}$$
+Let $G = (V, E)$ be a $d$-regular graph on $n = |V|$ vertices.
+Let $A \in M_{n \times n}(\mathbb{R})$ be its adjacency matrix.
+The spectral expansion parameter $\lambda = \lambda(G) = \max_{i \ge 2} |\lambda_i|$ controls the
+discrepancy of edges between any subsets $S, T \subseteq V$:
+$$\left| e(S, T) - \frac{d |S| |T|}{n} \right| \le \lambda(G) \sqrt{|S| \left(1 - \frac{|S|}{n}\right) |T| \left(1 - \frac{|T|}{n}\right)} \le \lambda(G) \sqrt{|S| |T|}$$
 
-### The Discrete Cheeger Inequality
-$$\frac{d - \lambda_2(G)}{2} \le h(G) \le \sqrt{2d(d - \lambda_2(G))}$$
+### Key Applications & Consequences
+
+1. **Independent Sets**: If $S$ is an independent set ($e(S, S) = 0$), then
+   $$|S| \le \frac{\lambda}{d + \lambda} n$$
+   (The Hoffman–Alon bound on the independence number $\alpha(G)$).
+
+2. **Chromatic Number**: Since $\chi(G) \ge n / \alpha(G)$,
+   $$\chi(G) \ge 1 + \frac{d}{\lambda}$$
+
+3. **Discrepancy and Pseudo-randomness**: When $\lambda \ll d$, edges between large subsets $S, T$
+   are distributed almost exactly as in a random graph $G(n, d/n)$.
 
 ## References
 
-- Alon, N., & Milman, V. D. (1985). *$\lambda_1$, isoperimetric inequalities for graphs, and superconcentrators*. J. Comb. Theory Ser. B, 38(1), 73–88.
-- Dodziuk, J. (1984). *Difference equations, isoperimetric inequality and transience of certain random walks*. Trans. Amer. Math. Soc., 284(2), 787–794.
-- Sinclair, A., & Jerrum, M. (1989). *Approximate counting, uniform generation and rapidly mixing Markov chains*. Information and Computation, 82(1), 93–133.
+- Alon, N., & Chung, F. R. K. (1988). *Explicit construction of linear sized tolerant networks*. Discrete Mathematics, 72(1-3), 15–19.
+- Alon, N. (1986). *Eigenvalues and expanders*. Theory of Computing Systems, 19(1), 283–296.
+- Hoory, S., Linial, N., & Wigderson, A. (2006). *Expander graphs and their applications*. Bulletin of the AMS, 43(4), 439–561.
 -/
+
+variable {V : Type*} [Fintype V] [DecidableEq V]
+
+namespace ExpanderMixing
 
 /-- The $0$-$1$ adjacency matrix of a simple graph $G$ over $\mathbb{R}$. -/
 def adjacencyMatrix (G : SimpleGraph V) [DecidableRel G.Adj] : Matrix V V ℝ :=
@@ -52,11 +63,19 @@ def adjacencyMatrix (G : SimpleGraph V) [DecidableRel G.Adj] : Matrix V V ℝ :=
 def isRegularOfDegree (G : SimpleGraph V) (d : ℕ) [DecidableRel G.Adj] : Prop :=
   ∀ v : V, G.degree v = d
 
+/-- The number of ordered directed edges from vertex set $S$ to $T$. -/
+def edgeCountBetween (G : SimpleGraph V) [DecidableRel G.Adj] (S T : Finset V) : ℝ :=
+  ∑ u ∈ S, ∑ v ∈ T, adjacencyMatrix G u v
+
+/-- The indicator function $\mathbf{1}_S : V \to \mathbb{R}$ of a subset $S \subseteq V$. -/
+def indicator (S : Finset V) : V → ℝ :=
+  fun v => if v ∈ S then 1 else 0
+
 /-- Standard Euclidean inner product on $\mathbb{R}^V$. -/
 def innerProduct (u v : V → ℝ) : ℝ :=
   ∑ x : V, u x * v x
 
-/-- The squared Euclidean $\ell^2$-norm $\|v\|^2 = \langle v, v \rangle$. -/
+/-- The squared Euclidean norm $\|v\|^2 = \langle v, v \rangle$. -/
 def normSq (v : V → ℝ) : ℝ :=
   innerProduct v v
 
@@ -64,108 +83,76 @@ def normSq (v : V → ℝ) : ℝ :=
 def isOrthogonalToOnes (v : V → ℝ) : Prop :=
   ∑ x : V, v x = 0
 
-/-- Adjacency quadratic form: $\langle v, A v \rangle = \sum_{u, w} v(u) A_{u, w} v(w)$. -/
-def quadraticForm (G : SimpleGraph V) [DecidableRel G.Adj] (v : V → ℝ) : ℝ :=
-  ∑ u : V, ∑ w : V, v u * adjacencyMatrix G u w * v w
+/-- The orthogonal component $\mathbf{1}_S^\perp = \mathbf{1}_S - \frac{|S|}{n} \mathbf{1} \in \mathbf{1}^\perp$. -/
+noncomputable def decompPerp (S : Finset V) : V → ℝ :=
+  fun v => indicator S v - (S.card : ℝ) / (Fintype.card V : ℝ)
 
-/-- Rayleigh quotient of the adjacency matrix: $R_A(v) = \frac{\langle v, A v \rangle}{\|v\|^2}$. -/
-noncomputable def rayleighQuotient (G : SimpleGraph V) [DecidableRel G.Adj] (v : V → ℝ) : ℝ :=
-  quadraticForm G v / normSq v
-
-/-- The second largest eigenvalue $\lambda_2(G)$ defined variationally on $\mathbf{1}^\perp$. -/
-noncomputable def secondEigenvalue (G : SimpleGraph V) [DecidableRel G.Adj] : ℝ :=
-  sSup { rayleighQuotient G v | (v : V → ℝ) (_ : v ≠ 0) (_ : isOrthogonalToOnes v) }
-
-/-- The algebraic spectral gap $\Delta = d - \lambda_2(G)$. -/
-noncomputable def spectralGap (G : SimpleGraph V) [DecidableRel G.Adj] (d : ℕ) : ℝ :=
-  (d : ℝ) - secondEigenvalue G
-
-/-- The normalized spectral gap $\gamma = 1 - \frac{\lambda_2(G)}{d}$. -/
-noncomputable def normalizedSpectralGap (G : SimpleGraph V) [DecidableRel G.Adj] (d : ℕ) : ℝ :=
-  1 - secondEigenvalue G / (d : ℝ)
-
-/-- The number of edges across the cut boundary $e(S, S^c) = \sum_{u \in S, v \in S^c} A_{u, v}$. -/
-def edgeBoundary (G : SimpleGraph V) [DecidableRel G.Adj] (S : Finset V) : ℝ :=
-  ∑ u ∈ S, ∑ v ∈ Sᶜ, adjacencyMatrix G u v
-
-/-- Predicate for a valid Cheeger cut: $0 < |S| \le |V| / 2$. -/
-def isValidCut (V : Type*) [Fintype V] (S : Finset V) : Prop :=
-  0 < S.card ∧ 2 * S.card ≤ Fintype.card V
-
-/-- The cut ratio (edge expansion ratio) $\phi(S) = \frac{e(S, S^c)}{|S|}$. -/
-noncomputable def cutRatio (G : SimpleGraph V) [DecidableRel G.Adj] (S : Finset V) : ℝ :=
-  edgeBoundary G S / (S.card : ℝ)
-
-/-- The Cheeger isoperimetric constant $h(G) = \min_{0 < |S| \le n/2} \phi(S)$. -/
-noncomputable def cheegerConstant (G : SimpleGraph V) [DecidableRel G.Adj] : ℝ :=
-  sInf { cutRatio G S | (S : Finset V) (_ : isValidCut V S) }
-
-/-- Definition of a Ramanujan graph: A $d$-regular graph satisfying $\lambda_2(G) \le 2\sqrt{d-1}$. -/
-def IsRamanujan (G : SimpleGraph V) [DecidableRel G.Adj] (d : ℕ) : Prop :=
-  isRegularOfDegree G d ∧ secondEigenvalue G ≤ 2 * Real.sqrt (d - 1 : ℝ)
-
-/-- The vertex boundary $\partial_V S = (\bigcup_{u \in S} N(u)) \setminus S$. -/
-def vertexBoundary (G : SimpleGraph V) [DecidableRel G.Adj] (S : Finset V) : Finset V :=
-  (Finset.biUnion S (fun u => G.neighborFinset u)) \ S
+/-- The spectral expansion parameter $\lambda(G) = \max_{i \ge 2} |\lambda_i|$ of a regular graph $G$,
+defined variationally as the operator norm of $A$ restricted to $\mathbf{1}^\perp$. -/
+noncomputable def spectralExpansionParameter (G : SimpleGraph V) [DecidableRel G.Adj] : ℝ :=
+  sSup { |innerProduct u (fun x => ∑ y : V, adjacencyMatrix G x y * v y)| /
+         (Real.sqrt (normSq u) * Real.sqrt (normSq v)) |
+         (u : V → ℝ) (v : V → ℝ) (_ : u ≠ 0) (_ : v ≠ 0)
+         (_ : isOrthogonalToOnes u) (_ : isOrthogonalToOnes v) }
 
 /--
-**Discrete Cheeger Lower Bound**:
-For any $d$-regular graph $G$ on $n \ge 2$ vertices:
-$$\frac{d - \lambda_2(G)}{2} \le h(G)$$
+**The Expander Mixing Lemma (Alon–Chung Bound)**:
+For any $d$-regular graph $G = (V, E)$ on $n$ vertices and any subsets $S, T \subseteq V$,
+the number of edges $e(S, T)$ between $S$ and $T$ satisfies:
+$$\left| e(S, T) - \frac{d |S| |T|}{n} \right| \le \lambda(G) \sqrt{|S| \left(1 - \frac{|S|}{n}\right) |T| \left(1 - \frac{|T|}{n}\right)}$$
 -/
-theorem cheeger_lower_bound (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
-    (hreg : isRegularOfDegree G d) (hn : 2 ≤ Fintype.card V) :
-    ((d : ℝ) - secondEigenvalue G) / 2 ≤ cheegerConstant G := by
+theorem expander_mixing_lemma (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (S T : Finset V) :
+    |edgeCountBetween G S T - (d : ℝ) * (S.card : ℝ) * (T.card : ℝ) / (Fintype.card V : ℝ)| ≤
+      spectralExpansionParameter G *
+        Real.sqrt ((S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) *
+                   (T.card : ℝ) * (1 - (T.card : ℝ) / (Fintype.card V : ℝ))) := by
   sorry
 
 /--
-**Discrete Cheeger Lower Bound (Normalized Form)**:
-$$\frac{\gamma}{2} \le \frac{h(G)}{d}$$
+**Expander Mixing Lemma (Simplified Form)**:
+For any subsets $S, T \subseteq V$ in a $d$-regular graph:
+$$\left| e(S, T) - \frac{d |S| |T|}{n} \right| \le \lambda(G) \sqrt{|S| |T|}$$
 -/
-theorem cheeger_lower_bound_normalized (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
-    (hreg : isRegularOfDegree G d) (hd : 0 < d) (hn : 2 ≤ Fintype.card V) :
-    normalizedSpectralGap G d / 2 ≤ cheegerConstant G / (d : ℝ) := by
+theorem expander_mixing_lemma_simplified (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (S T : Finset V) :
+    |edgeCountBetween G S T - (d : ℝ) * (S.card : ℝ) * (T.card : ℝ) / (Fintype.card V : ℝ)| ≤
+      spectralExpansionParameter G * Real.sqrt ((S.card : ℝ) * (T.card : ℝ)) := by
   sorry
 
 /--
-**The Discrete Cheeger Inequality (Alon–Milman 1985 / Dodziuk 1984 / Sinclair–Jerrum 1989)**:
-$$\frac{d - \lambda_2(G)}{2} \le h(G) \le \sqrt{2d(d - \lambda_2(G))}$$
+**Hoffman–Alon Bound on the Independence Number**:
+If $S \subseteq V$ is an independent set in a $d$-regular graph $G$ (i.e. $e(S, S) = 0$), then
+$$|S| \le \frac{\lambda(G)}{d + \lambda(G)} |V|$$
+assuming $\lambda(G) > 0$.
 -/
-theorem discrete_cheeger_inequality_of_cut (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
-    (hreg : isRegularOfDegree G d) (hn : 2 ≤ Fintype.card V)
-    (S : Finset V) (hvalid : isValidCut V S)
-    (h_sweep : cutRatio G S ≤ Real.sqrt (2 * (d : ℝ) * ((d : ℝ) - secondEigenvalue G))) :
-    ((d : ℝ) - secondEigenvalue G) / 2 ≤ cheegerConstant G ∧
-    cheegerConstant G ≤ Real.sqrt (2 * (d : ℝ) * ((d : ℝ) - secondEigenvalue G)) := by
+theorem hoffman_independence_bound (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (S : Finset V)
+    (hindep : edgeCountBetween G S S = 0)
+    (hpos : 0 < spectralExpansionParameter G) :
+    (S.card : ℝ) ≤ (spectralExpansionParameter G / (d + spectralExpansionParameter G)) * (Fintype.card V : ℝ) := by
   sorry
 
 /--
-**Ramanujan Expansion Lower Bound**:
-Any Ramanujan graph satisfies the optimal isoperimetric lower bound:
-$$h(G) \ge \frac{d - 2\sqrt{d-1}}{2}$$
+**Lower Bound on Chromatic Number via Spectral Expansion**:
+For any $d$-regular graph $G$, $\chi(G) \ge 1 + \frac{d}{\lambda(G)}$.
 -/
-theorem ramanujan_cheeger_lower_bound (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
-    (hR : IsRamanujan G d) (hn : 2 ≤ Fintype.card V) :
-    ((d : ℝ) - 2 * Real.sqrt (d - 1 : ℝ)) / 2 ≤ cheegerConstant G := by
+theorem chromatic_number_spectral_bound (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (χ : ℕ)
+    (hcol : G.Colorable χ) (hpos : 0 < spectralExpansionParameter G) :
+    1 + (d : ℝ) / spectralExpansionParameter G ≤ (χ : ℝ) := by
   sorry
 
 /--
-**Edge-to-Vertex Boundary Relation**:
-In a $d$-regular graph, $e(S, S^c) \le d |\partial_V S|$.
+**Connectivity and Positive Edge Density**:
+If two sets $S, T \subseteq V$ satisfy $|S| |T| > \frac{\lambda(G) n^2}{d}$,
+then there is at least one edge between $S$ and $T$ ($e(S, T) > 0$).
 -/
-theorem edgeBoundary_le_degree_mul_vertexBoundary (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
-    (hreg : isRegularOfDegree G d) (S : Finset V) :
-    edgeBoundary G S ≤ (d : ℝ) * ((vertexBoundary G S).card : ℝ) := by
+theorem positive_edge_density_of_large_sets (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (hd : 0 < d)
+    (S T : Finset V)
+    (h_size : spectralExpansionParameter G * (Fintype.card V : ℝ) ^ 2 / (d : ℝ) < (S.card : ℝ) * (T.card : ℝ)) :
+    0 < edgeCountBetween G S T := by
   sorry
 
-/--
-**Spectral Bound on Vertex Expansion**:
-$$\frac{|\partial_V S|}{|S|} \ge \frac{\gamma}{2} = \frac{d - \lambda_2}{2d}$$
--/
-theorem vertex_expansion_spectral_bound (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
-    (hreg : isRegularOfDegree G d) (hd : 0 < d) (hn : 2 ≤ Fintype.card V)
-    (S : Finset V) (hvalid : isValidCut V S) :
-    normalizedSpectralGap G d / 2 ≤ ((vertexBoundary G S).card : ℝ) / (S.card : ℝ) := by
-  sorry
-
-end DiscreteCheeger
+end ExpanderMixing

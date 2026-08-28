@@ -1,50 +1,50 @@
 version: "v0.4"
 
 project:
-  name: "The Discrete Cheeger Inequality for Regular Graphs"
+  name: "The Expander Mixing Lemma and Spectral Discrepancy"
   authors:
     - "Sneed & Feed Formalization Team"
   responsible_maintainers:
     - "sneed-and-feed"
   license: "CC0-1.0"
   description: >-
-    A complete machine-checked Lean 4 formalization of the Discrete Cheeger Inequality (Alon–Milman 1985,
-    Dodziuk 1984, Sinclair–Jerrum 1989) relating the combinatorial edge expansion (Cheeger isoperimetric
-    constant h(G)) of a d-regular graph to its algebraic spectral gap \Delta = d - \lambda_2(G).
-    Includes the fundamental Dirichlet energy identity, the variational Rayleigh quotient analysis
-    on the orthogonal complement of the all-ones vector, the sharp Cheeger lower bound (d - \lambda_2)/2 <= h(G),
-    the normalized Cheeger bound \gamma / 2 <= h(G)/d, optimal isoperimetry for Ramanujan graphs,
-    and the vertex boundary expansion bounds. To the maintainers' knowledge, the theorem was not found
-    in an exact declaration name, docstring, and type signature search of the pinned Mathlib revision
-    (Mathlib v4.34.0-rc1).
+    A complete, machine-checked Lean 4 formalization of the Expander Mixing Lemma (Alon–Chung 1988)
+    and its spectral combinatorial consequences for regular graphs. Proves the sharp eigenvalue
+    bound on edge discrepancy |e(S, T) - d|S||T|/n| <= \lambda \sqrt{|S|(1-|S|/n)|T|(1-|T|/n)},
+    the simplified \lambda \sqrt{|S||T|} bound, the Hoffman–Alon independence number bound
+    \alpha(G) <= \lambda n / (d + \lambda), the chromatic number lower bound \chi(G) >= 1 + d/\lambda,
+    and the positive edge density threshold for large vertex subsets. To the maintainers' knowledge,
+    the theorem was not found in an exact declaration name, docstring, and type signature search of
+    the pinned Mathlib revision (Mathlib v4.34.0-rc1).
 
 classification:
   arxiv: [math.CO]
-  msc2020: ["05C50", "05C75", "15A18", "60J10"]
+  msc2020: ["05C50", "05C80", "15A18"]
 
 sources:
-  - title: "\lambda_1, isoperimetric inequalities for graphs, and superconcentrators"
+  - title: "Explicit construction of linear sized tolerant networks"
     type: paper
     authors:
       - "Noga Alon"
-      - "Vitali D. Milman"
-    venue: "Journal of Combinatorial Theory, Series B"
-    year: 1985
+      - "Fan R. K. Chung"
+    venue: "Discrete Mathematics"
+    year: 1988
     relationship: formalizes
-  - title: "Difference equations, isoperimetric inequality and transience of certain random walks"
+  - title: "Eigenvalues and expanders"
     type: paper
     authors:
-      - "Jozef Dodziuk"
-    venue: "Transactions of the American Mathematical Society"
-    year: 1984
+      - "Noga Alon"
+    venue: "Theory of Computing Systems"
+    year: 1986
     relationship: adapts
-  - title: "Approximate counting, uniform generation and rapidly mixing Markov chains"
+  - title: "Expander graphs and their applications"
     type: paper
     authors:
-      - "Alistair Sinclair"
-      - "Mark Jerrum"
-    venue: "Information and Computation"
-    year: 1989
+      - "Shlomo Hoory"
+      - "Nathan Linial"
+      - "Avi Wigderson"
+    venue: "Bulletin of the American Mathematical Society"
+    year: 2006
     relationship: background
 
 related_formalizations:
@@ -52,7 +52,7 @@ related_formalizations:
     relationship: builds-on
     note: >-
       Formalization builds on Mathlib's simple graph theory representation and adjacency definitions,
-      extending them with graph Laplacian quadratic forms, Dirichlet energy, and Cheeger cuts.
+      extending them with variational operator norms and spectral discrepancy inequalities.
 
 automation:
   methods:
