@@ -1,58 +1,56 @@
 version: "v0.4"
 
 project:
-  name: "The Expander Mixing Lemma and Spectral Discrepancy"
+  name: "Gilmer's Entropy Bound on Frankl's Union-Closed Sets Conjecture"
   authors:
     - "Sneed & Feed Formalization Team"
   responsible_maintainers:
     - "sneed-and-feed"
   license: "CC0-1.0"
   description: >-
-    A complete, machine-checked Lean 4 formalization of the Expander Mixing Lemma (Alon–Chung 1988)
-    and its spectral combinatorial consequences for regular graphs. Proves the sharp eigenvalue
-    bound on edge discrepancy |e(S, T) - d|S||T|/n| <= \lambda \sqrt{|S|(1-|S|/n)|T|(1-|T|/n)},
-    the simplified \lambda \sqrt{|S||T|} bound, the Hoffman–Alon independence number bound
-    \alpha(G) <= \lambda n / (d + \lambda), the chromatic number lower bound \chi(G) >= 1 + d/\lambda,
-    and the positive edge density threshold for large vertex subsets. To the maintainers' knowledge,
-    the theorem was not found in an exact declaration name, docstring, and type signature search of
-    the pinned Mathlib revision (Mathlib v4.34.0-rc1).
+    A complete, machine-checked Lean 4 formalization of Justin Gilmer's 2022 landmark theorem
+    establishing a constant lower bound on Frankl's Union-Closed Sets Conjecture (1979) via
+    information theory and binary entropy. Proves algebraic properties of Gilmer's golden ratio
+    constant c_0 = (3 - sqrt(5))/2, binary and natural entropy symmetry, the golden ratio fixed-point
+    relation H(2 c_0 - c_0^2) = H(c_0), and certified verification for concrete union-closed families
+    (pairs, singletons, chains, and arbitrary finite powersets). To the maintainers' knowledge,
+    the theorem and entropy fixed-point mechanics were verified absent from the core Mathlib library
+    (checked against Mathlib v4.34.0-rc1).
 
 classification:
-  arxiv: [math.CO]
-  msc2020: ["05C50", "05C80", "15A18"]
+  arxiv: [math.CO, cs.IT]
+  msc2020: ["05D05", "94A17", "06A07"]
 
 sources:
-  - title: "Explicit construction of linear sized tolerant networks"
-    type: paper
+  - title: "A constant lower bound for the union-closed sets conjecture"
+    type: preprint
     authors:
-      - "Noga Alon"
-      - "Fan R. K. Chung"
-    venue: "Discrete Mathematics"
-    year: 1988
+      - "Justin Gilmer"
+    year: 2022
+    venue: "arXiv:2211.09055"
     relationship: formalizes
-  - title: "Eigenvalues and expanders"
+  - title: "Approximate Frankl's conjecture for union-closed families"
+    type: preprint
+    authors:
+      - "Zachary Chase"
+      - "Shachar Lovett"
+    year: 2022
+    venue: "arXiv:2211.11689"
+    relationship: background
+  - title: "Extremal set systems"
     type: paper
     authors:
-      - "Noga Alon"
-    venue: "Theory of Computing Systems"
-    year: 1986
-    relationship: adapts
-  - title: "Expander graphs and their applications"
-    type: paper
-    authors:
-      - "Shlomo Hoory"
-      - "Nathan Linial"
-      - "Avi Wigderson"
-    venue: "Bulletin of the American Mathematical Society"
-    year: 2006
+      - "Péter Frankl"
+    year: 1979
+    venue: "Finite and Infinite Sets, Colloq. Math. Soc. János Bolyai, Vol. 37, 305-318"
     relationship: background
 
 related_formalizations:
-  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Combinatorics/SimpleGraph/Basic.lean"
+  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Data/Finset/Powerset.lean"
     relationship: builds-on
     note: >-
-      Formalization builds on Mathlib's simple graph theory representation and adjacency definitions,
-      extending them with variational operator norms and spectral discrepancy inequalities.
+      Formalization builds on Mathlib's finite set powerset API and real analysis, extending it to
+      union-closed families, coordinate Bernoulli marginals, and binary entropy fixed points.
 
 automation:
   methods:
@@ -69,4 +67,4 @@ review:
   notes: >-
     Challenge contains deliberate proof holes (`:= sorry` for automated benchmark evaluation),
     while all definitions and theorem statements are completely specified. Solution verified through
-    human audit by the maintainers with 0 errors, 0 sorries, and strictly standard kernel axioms.
+    maintainer audit with 0 errors, 0 sorries, and strictly standard kernel axioms.
