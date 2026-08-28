@@ -2,12 +2,16 @@
   "challenge_module": "Challenge",
   "solution_module": "Solution",
   "theorem_names": [
-    "RothsTheorem.isThreeAPFree_iff",
-    "RothsTheorem.ap3Count_of_free",
-    "RothsTheorem.progression_is3AP",
-    "RothsTheorem.progression_card",
-    "RothsTheorem.density_boost_bound",
-    "RothsTheorem.iteration_step_bound"
+    "RuzsaFreiman.doublingConstant_ge_one",
+    "RuzsaFreiman.ruzsa_triangle_cardinality",
+    "RuzsaFreiman.ruzsa_triangle_inequality",
+    "RuzsaFreiman.diffset_bound_of_doubling",
+    "RuzsaFreiman.plunnecke_petridis_lemma",
+    "RuzsaFreiman.plunnecke_ruzsa_inequality",
+    "RuzsaFreiman.plunnecke_tripling",
+    "RuzsaFreiman.plunnecke_two_sub_two",
+    "RuzsaFreiman.gapElements_card_le",
+    "RuzsaFreiman.freimanHomomorphism_id"
   ],
   "permitted_axioms": [
     "propext",

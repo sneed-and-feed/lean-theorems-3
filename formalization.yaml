@@ -1,33 +1,41 @@
 version: "v0.4"
 
 project:
-  name: "Roth's Theorem on 3-Term Arithmetic Progressions"
+  name: "Ruzsa Distance, Plünnecke–Ruzsa Inequalities, and Freiman Homomorphisms"
   authors:
     - "Sneed & Feed Formalization Team"
   responsible_maintainers:
     - "sneed-and-feed"
   license: "CC0-1.0"
   description: >-
-    A machine-checked Lean 4 formalization of the combinatorial core of Roth's Theorem (Klaus Roth, 1953)
-    on 3-term arithmetic progressions (3-APs) in dense subsets of integers and finite abelian groups.
-    Includes the multilinear 3-AP counting functional \Lambda(f_1, f_2, f_3), exact counting evaluation
-    \Lambda(1_A, 1_A, 1_A) = |A|/|G|^2 on 3-AP free sets, arithmetic progression preservation under affine maps,
-    and the discrete density increment iteration step bound k <= 16/\alpha_0^2. To the maintainers' knowledge,
-    the theorem was not found in an exact declaration name, docstring, and type signature search of the pinned
-    Mathlib revision (Mathlib v4.34.0-rc1).
+    A complete machine-checked Lean 4 formalization of Ruzsa distance, sumset difference inequalities,
+    Plünnecke–Ruzsa bounds, Petridis' minimizer lemma, and Generalized Arithmetic Progressions (GAP).
+    Includes the fundamental Ruzsa triangle inequality in both cardinality and log-metric forms,
+    the Plünnecke–Ruzsa iterated sumset bounds |k B - \ell B| <= K^{k+\ell} |A|, cubic tripling
+    |A + A + A| <= K^3 |A|, four-fold difference set bounds |2A - 2A| <= K^4 |A|, and Freiman
+    homomorphism composition properties. To the maintainers' knowledge, the theorem was not found
+    in an exact declaration name, docstring, and type signature search of the pinned Mathlib revision
+    (Mathlib v4.34.0-rc1).
 
 classification:
-  arxiv: [math.NT, math.CO]
-  msc2020: ["11B30", "05D10", "42A99", "11K70"]
+  arxiv: [math.CO, math.NT]
+  msc2020: ["11B30", "11P70", "05B10", "20K99"]
 
 sources:
-  - title: "On certain sets of integers"
+  - title: "Sums of finite sets"
     type: paper
     authors:
-      - "Klaus F. Roth"
-    venue: "Journal of the London Mathematical Society"
-    year: 1953
+      - "Imre Z. Ruzsa"
+    venue: "Number Theory: New York Seminar, Springer"
+    year: 1996
     relationship: formalizes
+  - title: "New proofs of Plünnecke-type estimates for sumsets"
+    type: paper
+    authors:
+      - "Giorgis Petridis"
+    venue: "Combinatorics, Probability and Computing"
+    year: 2012
+    relationship: adapts
   - title: "Additive Combinatorics"
     type: book
     authors:
@@ -36,21 +44,13 @@ sources:
     publisher: "Cambridge University Press"
     year: 2006
     relationship: background
-  - title: "Strong bounds for 3-progressions"
-    type: preprint
-    authors:
-      - "Zander Kelley"
-      - "Raghu Meka"
-    venue: "arXiv:2302.05537"
-    year: 2023
-    relationship: background
 
 related_formalizations:
-  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Data/ZMod/Basic.lean"
+  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Combinatorics/Additive/PluenneckeRuzsa.lean"
     relationship: builds-on
     note: >-
-      Formalization builds on Mathlib's modular arithmetic and finite group representation,
-      extending them with multilinear 3-AP counting functionals and density increment exhaustion.
+      Formalization builds on Mathlib's Plünnecke-Ruzsa sumset primitives, extending them with
+      the Ruzsa log-metric distance, Petridis minimizer analysis, and GAP volume bounds.
 
 automation:
   methods:

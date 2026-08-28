@@ -1,143 +1,267 @@
-import Mathlib.Data.Real.Basic
-import Mathlib.Data.Finset.Basic
+import Mathlib.Algebra.Group.Pointwise.Finset.Basic
 import Mathlib.Data.Finset.Card
-import Mathlib.Data.Fintype.Card
-import Mathlib.Data.ZMod.Basic
-import Mathlib.Algebra.BigOperators.Group.Finset.Basic
+import Mathlib.Data.Finset.Basic
+import Mathlib.Data.Fintype.BigOperators
+import Mathlib.Combinatorics.Additive.PluenneckeRuzsa
+import Mathlib.Data.Real.Basic
+import Mathlib.Analysis.SpecialFunctions.Log.Basic
+import Mathlib.Analysis.SpecialFunctions.Sqrt
+import Mathlib.Analysis.SpecialFunctions.Pow.Real
 import Mathlib.Tactic.Positivity
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Linarith
 
+open scoped Pointwise
 open scoped BigOperators Finset
-open Classical
 
 set_option linter.unusedSectionVars false
 
-namespace RothsTheorem
+namespace RuzsaFreiman
 
 variable {G : Type*} [DecidableEq G] [AddCommGroup G]
 
-/-- A triple $(x, y, z)$ forms a 3-term arithmetic progression if $x + z = 2 \cdot y$. -/
-def Is3AP (x y z : G) : Prop :=
-  x + z = (2 : ℕ) • y
+/-- The sumset $A + B = \{a + b : a \in A, b \in B\}$. -/
+def sumset (A B : Finset G) : Finset G := A + B
 
-/-- A 3-AP is non-trivial if the common difference is non-zero ($x \ne y$). -/
-def IsNonTrivial3AP (x y z : G) : Prop :=
-  Is3AP x y z ∧ x ≠ y
+/-- The difference set $A - B = \{a - b : a \in A, b \in B\}$. -/
+def diffset (A B : Finset G) : Finset G := A - B
 
-/-- A subset $A \subseteq G$ is 3-AP free if it contains no non-trivial 3-APs. -/
-def IsThreeAPFree (A : Finset G) : Prop :=
-  ∀ x ∈ A, ∀ y ∈ A, ∀ z ∈ A, Is3AP x y z → x = y
+/-- The doubling constant $\sigma(A) = \frac{|A + A|}{|A|}$. -/
+def doublingConstant (A : Finset G) : ℚ :=
+  (A + A).card / (A.card : ℚ)
 
-/-- Trivial 3-APs: $(x, x, x)$ is always a 3-AP. -/
-theorem is3AP_refl (x : G) : Is3AP x x x := (two_nsmul x).symm
+/-- The difference constant $\delta(A) = \frac{|A - A|}{|A|}$. -/
+def differenceConstant (A : Finset G) : ℚ :=
+  (A - A).card / (A.card : ℚ)
 
-/-- Reflection symmetry: $(x, y, z)$ is a 3-AP iff $(z, y, x)$ is a 3-AP. -/
-theorem is3AP_symm (x y z : G) : Is3AP x y z ↔ Is3AP z y x := by
-  simp [Is3AP, add_comm]
+/-- Doubling constant is at least 1 for non-empty sets. -/
+theorem doublingConstant_ge_one {A : Finset G} (hA : A.Nonempty) :
+    1 ≤ doublingConstant A := by
+  dsimp [doublingConstant]
+  rw [one_le_div₀ (by positivity)]
+  exact_mod_cast Finset.card_le_card_add_right hA
 
-/-- Standard 3-AP parameterization: $(x, x+d, x+2d)$ is always a 3-AP. -/
-theorem is3AP_def_add (x d : G) : Is3AP x (x + d) (x + (2 : ℕ) • d) := by
-  simp [Is3AP, two_nsmul, add_assoc, add_left_comm]
+/-- Iterated sumset $k A = A + \dots + A$ ($k$ terms). -/
+def iteratedSumset (k : ℕ) (A : Finset G) : Finset G :=
+  match k with
+  | 0 => {0}
+  | k + 1 => iteratedSumset k A + A
 
-/-- Characterization of 3-AP freeness via non-existence of non-trivial 3-APs. -/
-theorem isThreeAPFree_iff (A : Finset G) :
-    IsThreeAPFree A ↔ ∀ x ∈ A, ∀ y ∈ A, ∀ z ∈ A, ¬ IsNonTrivial3AP x y z := by
-  simp [IsThreeAPFree, IsNonTrivial3AP, not_and]
-
-/-- Indicator function $\mathbf{1}_A : G \to \mathbb{R}$. -/
-def indicator (A : Finset G) : G → ℝ :=
-  fun x => if x ∈ A then 1 else 0
-
-variable [Fintype G]
-
-/-- Sum of indicator equals cardinality of the finset. -/
-theorem sum_indicator (A : Finset G) : ∑ x : G, indicator A x = (A.card : ℝ) := by
-  simp [indicator]
-
-/-- For 3-AP free set $A$, off-diagonal 3-AP product terms vanish. -/
-theorem ap3_term_of_free (A : Finset G) (hfree : IsThreeAPFree A) (x d : G) :
-    indicator A x * indicator A (x + d) * indicator A (x + (2 : ℕ) • d) =
-      if d = 0 then indicator A x else 0 := by
-  by_cases hd : d = 0
-  · subst hd; simp only [add_zero, nsmul_zero]; dsimp [indicator]; split_ifs <;> ring
-  · dsimp [indicator]
-    split_ifs with hx hxd hx2d
-    · exact (hd (add_left_cancel (a := x) (by simpa using (hfree x hx (x + d) hxd (x + (2 : ℕ) • d) hx2d (is3AP_def_add x d)).symm))).elim
-    all_goals ring
-
-/-- The multilinear 3-AP counting functional $\Lambda(f_1, f_2, f_3) = \frac{1}{|G|^2} \sum_{x, d} f_1(x) f_2(x+d) f_3(x+2d)$. -/
-noncomputable def ap3Count (f1 f2 f3 : G → ℝ) : ℝ :=
-  (1 / ((Fintype.card G : ℝ) ^ 2)) *
-    ∑ x : G, ∑ d : G, f1 x * f2 (x + d) * f3 (x + (2 : ℕ) • d)
-
-/-- For a 3-AP free set $A$, the only contributions to $\Lambda(1_A, 1_A, 1_A)$ come from $d = 0$. -/
-theorem ap3Count_of_free (A : Finset G) (hfree : IsThreeAPFree A) :
-    ap3Count (indicator A) (indicator A) (indicator A) =
-      (A.card : ℝ) / ((Fintype.card G : ℝ) ^ 2) := by
-  dsimp [ap3Count]
-  have h_inner x : (∑ d : G, indicator A x * indicator A (x + d) * indicator A (x + (2 : ℕ) • d)) = indicator A x := by
-    simp [ap3_term_of_free A hfree x, Finset.sum_ite_eq']
-  simp_rw [h_inner, sum_indicator]
-  ring
-
-/-- An arithmetic progression $P(a, d, L) = \{a + k d : 0 \le k < L\}$ in $\mathbb{Z}$. -/
-structure Progression where
-  start : ℤ
-  step : ℤ
-  length : ℕ
-  step_pos : 0 < step
-
-/-- The elements of a progression as a finset in $\mathbb{Z}$. -/
-def Progression.elements (P : Progression) : Finset ℤ :=
-  (Finset.range P.length).image (fun (k : ℕ) => P.start + (k : ℤ) * P.step)
-
-/-- The length of a progression is its cardinality. -/
-theorem progression_card (P : Progression) :
-    P.elements.card = P.length := by
-  dsimp [Progression.elements]
-  rw [Finset.card_image_of_injective _ (fun x y h => Nat.cast_inj.mp (mul_right_cancel₀ (ne_of_gt P.step_pos) (add_left_cancel h)))]
-  exact Finset.card_range P.length
-
-/-- Preservation of 3-APs under affine progression map $k \mapsto a + k d$. -/
-theorem progression_is3AP (P : Progression) (k1 k2 k3 : ℤ) :
-    (P.start + k1 * P.step) + (P.start + k3 * P.step) = 2 * (P.start + k2 * P.step) ↔
-      k1 + k3 = 2 * k2 := by
-  have h_step : P.step ≠ 0 := ne_of_gt P.step_pos
-  constructor
-  · intro h
-    have h1 : (k1 + k3) * P.step = (2 * k2) * P.step := by linear_combination h
-    exact mul_right_cancel₀ h_step h1
-  · intro h
-    linear_combination h * P.step
-
-/--
-**Density Boost Accumulation**:
-If density increases by at least $\alpha_0^2 / 16$ at each step, after $k$ steps
-the density has grown by at least $k \alpha_0^2 / 16$.
--/
-theorem density_boost_bound (α₀ : ℝ) (hα₀ : 0 < α₀) (α : ℕ → ℝ) (h0 : α 0 = α₀)
-    (h_step : ∀ k, α (k + 1) ≥ α k + (α₀ ^ 2) / 16) :
-    ∀ k : ℕ, α k ≥ α₀ + (k : ℝ) * ((α₀ ^ 2) / 16) := by
-  intro k
+/-- Equivalence between `iteratedSumset` and pointwise `nsmul`. -/
+theorem iteratedSumset_eq_nsmul (k : ℕ) (A : Finset G) :
+    iteratedSumset k A = k • A := by
   induction k with
-  | zero => simp [h0]
-  | succ n ih =>
-    have := h_step n
-    push_cast at *
-    linarith
+  | zero => rfl
+  | succ k ih => simp only [iteratedSumset, ih, succ_nsmul]
+
+/-- The Ruzsa multiplicative ratio $\rho_R(A, B) = \frac{|A - B|}{\sqrt{|A| |B|}}$. -/
+noncomputable def ruzsaRatio (A B : Finset G) : ℝ :=
+  (A - B).card / Real.sqrt ((A.card : ℝ) * (B.card : ℝ))
+
+/-- The Ruzsa distance $d_R(A, B) = \log \frac{|A - B|}{\sqrt{|A| |B|}}$. -/
+noncomputable def ruzsaDistance (A B : Finset G) : ℝ :=
+  Real.log (ruzsaRatio A B)
+
+/-- Difference set has same size under reflection: $|A - B| = |B - A|$. -/
+theorem card_diffset_symm (A B : Finset G) :
+    (A - B).card = (B - A).card := by
+  rw [← Finset.card_neg, neg_sub]
+
+/-- Symmetry of the Ruzsa distance: $d_R(A, B) = d_R(B, A)$. -/
+theorem ruzsaDistance_symm (A B : Finset G) :
+    ruzsaDistance A B = ruzsaDistance B A := by
+  dsimp [ruzsaDistance, ruzsaRatio]
+  rw [card_diffset_symm A B, mul_comm (A.card : ℝ)]
 
 /--
-**Iteration Step Upper Bound**:
-Since density cannot exceed 1, the number of density increments $k$ satisfies
-$k \cdot (\alpha_0^2 / 16) \le 1$, meaning $k \le 16 / \alpha_0^2$.
+**Ruzsa Triangle Inequality (Cardinality Form)**:
+For any finite subsets $A, B, C$ in an additive group $G$:
+$$|B| \cdot |A - C| \le |A - B| \cdot |B - C|$$
 -/
-theorem iteration_step_bound (α₀ : ℝ) (hα₀ : 0 < α₀) (α : ℕ → ℝ) (h0 : α 0 = α₀)
-    (h_step : ∀ k, α (k + 1) ≥ α k + (α₀ ^ 2) / 16)
-    (h_le_one : ∀ k, α k ≤ 1) (k : ℕ) :
-    (k : ℝ) * ((α₀ ^ 2) / 16) ≤ 1 := by
-  have := density_boost_bound α₀ hα₀ α h0 h_step k
-  have := h_le_one k
-  linarith
+theorem ruzsa_triangle_cardinality (A B C : Finset G) :
+    B.card * (A - C).card ≤ (A - B).card * (B - C).card := by
+  have h := Finset.ruzsa_triangle_inequality_sub_sub_sub A B C
+  rw [mul_comm B.card, card_diffset_symm B C]
+  exact h
 
-end RothsTheorem
+/-- Strict positivity of the Ruzsa multiplicative ratio for non-empty sets. -/
+theorem ruzsaRatio_pos {A B : Finset G} (hA : A.Nonempty) (hB : B.Nonempty) :
+    0 < ruzsaRatio A B := by
+  have : (A - B).Nonempty := hA.sub hB
+  dsimp [ruzsaRatio]
+  positivity
+
+/-- Multiplicative triangle inequality for the Ruzsa ratio. -/
+theorem ruzsaRatio_mul_le {A B C : Finset G}
+    (hA : A.Nonempty) (hB : B.Nonempty) (hC : C.Nonempty) :
+    ruzsaRatio A C ≤ ruzsaRatio A B * ruzsaRatio B C := by
+  dsimp [ruzsaRatio]
+  have h_card : (B.card : ℝ) * (A - C).card ≤ (A - B).card * (B - C).card := by
+    exact_mod_cast ruzsa_triangle_cardinality A B C
+  have h_sqrt (X Y : Finset G) : Real.sqrt ((X.card : ℝ) * (Y.card : ℝ)) = Real.sqrt X.card * Real.sqrt Y.card :=
+    Real.sqrt_mul (Nat.cast_nonneg _) _
+  have hB_self : Real.sqrt B.card * Real.sqrt B.card = B.card := Real.mul_self_sqrt (Nat.cast_nonneg _)
+  have h_denom : Real.sqrt A.card * Real.sqrt B.card * (Real.sqrt B.card * Real.sqrt C.card) =
+      (B.card : ℝ) * (Real.sqrt A.card * Real.sqrt C.card) := by
+    linear_combination Real.sqrt A.card * Real.sqrt C.card * hB_self
+  rw [div_mul_div_comm, h_sqrt A B, h_sqrt B C, h_sqrt A C, h_denom,
+    ← mul_div_mul_left _ _ (ne_of_gt (by positivity : (0 : ℝ) < B.card))]
+  exact div_le_div_of_nonneg_right h_card (by positivity)
+
+/--
+**Ruzsa Triangle Inequality (Metric Form)**:
+For any non-empty finite subsets $A, B, C \subseteq G$:
+$$d_R(A, C) \le d_R(A, B) + d_R(B, C)$$
+-/
+theorem ruzsa_triangle_inequality {A B C : Finset G}
+    (hA : A.Nonempty) (hB : B.Nonempty) (hC : C.Nonempty) :
+    ruzsaDistance A C ≤ ruzsaDistance A B + ruzsaDistance B C := by
+  dsimp [ruzsaDistance]
+  rw [← Real.log_mul (ne_of_gt (ruzsaRatio_pos hA hB)) (ne_of_gt (ruzsaRatio_pos hB hC))]
+  exact Real.log_le_log (ruzsaRatio_pos hA hC) (ruzsaRatio_mul_le hA hB hC)
+
+/--
+**Iterated Difference Bound**:
+For any non-empty finite set $A \subseteq G$ with $|A + A| \le K |A|$,
+$|A - A| \le K^2 |A|$.
+-/
+theorem diffset_bound_of_doubling {A : Finset G} (hA : A.Nonempty) {K : ℝ}
+    (hK : ((A + A).card : ℝ) ≤ K * (A.card : ℝ)) :
+    ((A - A).card : ℝ) ≤ K ^ 2 * (A.card : ℝ) := by
+  have h_pos : (0 : ℝ) < A.card := by positivity
+  have h_ineq : ((A - A).card : ℝ) * A.card ≤ ((A + A).card : ℝ) * (A + A).card := by
+    exact_mod_cast Finset.ruzsa_triangle_inequality_sub_add_add A A A
+  exact (mul_le_mul_iff_of_pos_right h_pos).mp (by nlinarith)
+
+/--
+**Petridis' Minimizer Lemma**:
+For any non-empty finite subsets $A, B \subseteq G$, there exists a non-empty subset $A' \subseteq A$ such that
+for all finite sets $X \subseteq G$:
+$$|A' + B + X| \le \frac{|A' + B|}{|A'|} |A' + X|$$
+-/
+theorem plunnecke_petridis_lemma (A B : Finset G) (hA : A.Nonempty) (_hB : B.Nonempty) :
+    ∃ A' : Finset G, A'.Nonempty ∧ A' ⊆ A ∧
+      ∀ X : Finset G, (A' + B + X).card * A'.card ≤ (A' + B).card * (A' + X).card := by
+  have hA' : A ∈ A.powerset.erase ∅ := Finset.mem_erase_of_ne_of_mem hA.ne_empty (Finset.mem_powerset_self _)
+  obtain ⟨A', hA'mem, hAmin⟩ :=
+    Finset.exists_min_image (A.powerset.erase ∅) (fun C ↦ ((C + B).card : ℚ≥0) / (C.card : ℚ≥0)) ⟨A, hA'⟩
+  rw [Finset.mem_erase, Finset.mem_powerset, ← Finset.nonempty_iff_ne_empty] at hA'mem
+  obtain ⟨hA'nonempty, hA'sub⟩ := hA'mem
+  refine ⟨A', hA'nonempty, hA'sub, fun X ↦ ?_⟩
+  have h_hyp : ∀ A'' ⊆ A', (A' + B).card * A''.card ≤ (A'' + B).card * A'.card := by
+    intro A'' hA''sub
+    obtain rfl | hA''_nonempty := A''.eq_empty_or_nonempty
+    · simp
+    have hA''mem : A'' ∈ A.powerset.erase ∅ :=
+      Finset.mem_erase_of_ne_of_mem hA''_nonempty.ne_empty (Finset.mem_powerset.2 (hA''sub.trans hA'sub))
+    exact_mod_cast (div_le_div_iff₀ (by positivity) (by positivity)).1 (hAmin A'' hA''mem)
+  have h_petridis := Finset.pluennecke_petridis_inequality_add X h_hyp
+  rwa [add_comm X A', add_assoc, add_comm X B, ← add_assoc] at h_petridis
+
+/--
+**The Plünnecke–Ruzsa Inequality (General Two-Set Form)**:
+If $A, B \subseteq G$ are finite sets with $|A + B| \le K |A|$, then for any $k, \ell \ge 0$:
+$$|k B - \ell B| \le K^{k + \ell} |A|$$
+-/
+theorem plunnecke_ruzsa_inequality {A B : Finset G} (hA : A.Nonempty) {K : ℝ}
+    (hK : ((A + B).card : ℝ) ≤ K * (A.card : ℝ)) (k l : ℕ) :
+    ((iteratedSumset k B - iteratedSumset l B).card : ℝ) ≤ K ^ (k + l) * (A.card : ℝ) := by
+  simp only [iteratedSumset_eq_nsmul]
+  have h_pr := Finset.pluennecke_ruzsa_inequality_nsmul_sub_nsmul_add hA B k l
+  have h_cast : (((k • B - l • B).card : ℚ≥0) : ℝ) ≤
+      (((((A + B).card : ℚ≥0) / (A.card : ℚ≥0)) ^ (k + l) * (A.card : ℚ≥0) : ℚ≥0) : ℝ) :=
+    NNRat.cast_le.mpr h_pr
+  push_cast at h_cast
+  have h_div_le : ((A + B).card : ℝ) / A.card ≤ K := (div_le_iff₀ (by positivity : (0 : ℝ) < A.card)).mpr hK
+  have h_pow_le : (((A + B).card : ℝ) / A.card) ^ (k + l) ≤ K ^ (k + l) :=
+    pow_le_pow_left₀ (by positivity) h_div_le (k + l)
+  have h_final : (((A + B).card : ℝ) / A.card) ^ (k + l) * A.card ≤ K ^ (k + l) * A.card :=
+    mul_le_mul_of_nonneg_right h_pow_le (by positivity)
+  exact le_trans h_cast h_final
+
+/-- Translation of a finset by the zero singleton is the finset itself. -/
+theorem singleton_zero_add (A : Finset G) : {0} + A = A := by
+  rw [Finset.singleton_zero, zero_add]
+
+/-- Difference of a finset with the zero singleton is the finset itself. -/
+theorem sub_singleton_zero (A : Finset G) : A - {0} = A := by
+  rw [Finset.singleton_zero, sub_zero]
+
+/-- 0-th iterated sumset is `{0}`. -/
+theorem iteratedSumset_zero (A : Finset G) : iteratedSumset 0 A = {0} := rfl
+
+/-- 1-st iterated sumset is $A$. -/
+theorem iteratedSumset_one (A : Finset G) : iteratedSumset 1 A = A := by
+  change {0} + A = A
+  exact singleton_zero_add A
+
+/-- 2-nd iterated sumset is $A + A$. -/
+theorem iteratedSumset_two (A : Finset G) : iteratedSumset 2 A = A + A := by
+  change iteratedSumset 1 A + A = A + A
+  rw [iteratedSumset_one]
+
+/-- 3-rd iterated sumset is $A + A + A$. -/
+theorem iteratedSumset_three (A : Finset G) : iteratedSumset 3 A = A + A + A := by
+  change iteratedSumset 2 A + A = A + A + A
+  rw [iteratedSumset_two]
+
+/--
+**The Plünnecke–Ruzsa Inequality (Automorphic / Single-Set Form)**:
+If $A \subseteq G$ is a finite set with $|A + A| \le K |A|$, then for any $k, \ell \ge 0$:
+$$|k A - \ell A| \le K^{k + \ell} |A|$$
+-/
+theorem plunnecke_ruzsa_self {A : Finset G} (hA : A.Nonempty) {K : ℝ}
+    (hK : ((A + A).card : ℝ) ≤ K * (A.card : ℝ)) (k l : ℕ) :
+    ((iteratedSumset k A - iteratedSumset l A).card : ℝ) ≤ K ^ (k + l) * (A.card : ℝ) :=
+  plunnecke_ruzsa_inequality hA hK k l
+
+/--
+**Tripling Bound from Doubling**:
+If $|A + A| \le K |A|$, then $|A + A + A| \le K^3 |A|$.
+-/
+theorem plunnecke_tripling {A : Finset G} (hA : A.Nonempty) {K : ℝ}
+    (hK : ((A + A).card : ℝ) ≤ K * (A.card : ℝ)) :
+    ((A + A + A).card : ℝ) ≤ K ^ 3 * (A.card : ℝ) := by
+  have h := plunnecke_ruzsa_self hA hK 3 0
+  rwa [iteratedSumset_three, iteratedSumset_zero, sub_singleton_zero] at h
+
+/--
+**Four-fold Difference Bound**:
+If $|A + A| \le K |A|$, then $|2A - 2A| \le K^4 |A|$.
+-/
+theorem plunnecke_two_sub_two {A : Finset G} (hA : A.Nonempty) {K : ℝ}
+    (hK : ((A + A).card : ℝ) ≤ K * (A.card : ℝ)) :
+    (((A + A) - (A + A)).card : ℝ) ≤ K ^ 4 * (A.card : ℝ) := by
+  have h := plunnecke_ruzsa_self hA hK 2 2
+  rwa [iteratedSumset_two, show 2 + 2 = 4 from rfl] at h
+
+/-- A Generalized Arithmetic Progression (GAP) of dimension `dim` in an additive group $G$. -/
+structure GAP (G : Type*) [AddCommGroup G] where
+  dim : ℕ
+  base : G
+  steps : Fin dim → G
+  lengths : Fin dim → ℕ
+
+/-- The Finset of elements represented by a GAP $P$. -/
+def gapElements (P : GAP G) : Finset G :=
+  (Fintype.piFinset (fun i : Fin P.dim => Finset.range (P.lengths i))).image
+    (fun (k : Fin P.dim → ℕ) => P.base + ∑ i : Fin P.dim, (k i) • (P.steps i))
+
+/-- The cardinality of a GAP is bounded by the volume (product of side lengths). -/
+theorem gapElements_card_le (P : GAP G) :
+    (gapElements P).card ≤ ∏ i : Fin P.dim, P.lengths i := by
+  dsimp [gapElements]
+  exact Finset.card_image_le.trans (by simp)
+
+/-- A map $\phi : A \to B$ is a Freiman homomorphism of order $k$ if it preserves $k$-term equality of sums. -/
+def IsFreimanHomomorphism {H : Type*} [AddCommGroup H]
+    (A : Finset G) (f : G → H) (k : ℕ) : Prop :=
+  ∀ (xs ys : Fin k → G), (∀ i, xs i ∈ A) → (∀ i, ys i ∈ A) →
+    (∑ i, xs i = ∑ i, ys i) → (∑ i, f (xs i) = ∑ i, f (ys i))
+
+/-- Identity map is always a Freiman homomorphism of any order $k$. -/
+theorem freimanHomomorphism_id (A : Finset G) (k : ℕ) :
+    IsFreimanHomomorphism A id k :=
+  fun _ _ _ _ => id
+
+end RuzsaFreiman

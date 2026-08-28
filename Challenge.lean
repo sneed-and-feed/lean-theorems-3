@@ -1,124 +1,170 @@
-import Mathlib.Data.Real.Basic
-import Mathlib.Data.Finset.Basic
+import Mathlib.Algebra.Group.Pointwise.Finset.Basic
 import Mathlib.Data.Finset.Card
-import Mathlib.Data.Fintype.Card
-import Mathlib.Data.ZMod.Basic
-import Mathlib.Algebra.BigOperators.Group.Finset.Basic
+import Mathlib.Data.Finset.Basic
+import Mathlib.Data.Fintype.BigOperators
+import Mathlib.Combinatorics.Additive.PluenneckeRuzsa
+import Mathlib.Data.Real.Basic
+import Mathlib.Analysis.SpecialFunctions.Log.Basic
+import Mathlib.Analysis.SpecialFunctions.Sqrt
+import Mathlib.Analysis.SpecialFunctions.Pow.Real
 import Mathlib.Tactic.Positivity
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Linarith
 
+open scoped Pointwise
 open scoped BigOperators Finset
-open Classical
 
 set_option linter.unusedSectionVars false
 
 /-!
-# Roth's Theorem: 3-AP Counting, Progressions, and Density Increment Bounds
+# Ruzsa–Freiman Sumset Calculus and Plünnecke–Ruzsa Bounds
 
-This module formalizes the foundations of **Roth's Theorem on 3-Term Arithmetic Progressions** (Klaus Roth, 1953),
-including the multilinear 3-AP counting functional $\Lambda(f_1, f_2, f_3)$, the structure of arithmetic
-progressions in $\mathbb{Z}$, affine 3-AP conservation, and the quantitative iteration bounds of the density boost process.
+This module formalizes the core algebraic machinery of **Ruzsa Distance, Plünnecke–Ruzsa Bounds,
+and Freiman Homomorphisms** (Imre Z. Ruzsa 1989/1996, Helmut Plünnecke 1970, Giorgis Petridis 2012).
 
 ## Mathematical Overview
 
-1. A triple $(x, y, z)$ in an additive group $G$ forms a **3-term arithmetic progression (3-AP)** if $x + z = 2y$.
-2. A subset $A \subseteq G$ is **3-AP free** if it contains no non-trivial 3-APs ($x + z = 2y \implies x = y = z$).
-3. The normalized 3-AP counting operator $\Lambda(f_1, f_2, f_3) = \frac{1}{|G|^2} \sum_{x, d} f_1(x) f_2(x+d) f_3(x+2d)$
-   satisfies $\Lambda(\mathbf{1}_A, \mathbf{1}_A, \mathbf{1}_A) = \frac{|A|}{|G|^2}$ on any 3-AP free set $A$.
-4. **Affine Progressions**: Any 1D progression $P(a, d, L) = \{a + k d : 0 \le k < L\}$ preserves 3-APs under scaling.
-5. **Density Accumulation**: If $\alpha_{k+1} \ge \alpha_k + \alpha_0^2 / 16$, then $\alpha_k \ge \alpha_0 + k \alpha_0^2 / 16$,
-   forcing the iteration to terminate in at most $16 / \alpha_0^2$ steps since density $\le 1$.
+For finite subsets $A, B, C$ of an additive abelian group $G$:
+1. **Ruzsa Cardinality Inequality**: $|B| \cdot |A - C| \le |A - B| \cdot |B - C|$.
+2. **Ruzsa Metric Triangle Inequality**: $d_R(A, C) \le d_R(A, B) + d_R(B, C)$ where $d_R(A, B) = \log \frac{|A - B|}{\sqrt{|A||B|}}$.
+3. **Plünnecke–Petridis Lemma**: Existence of a minimal magnification subset $A' \subseteq A$.
+4. **Plünnecke–Ruzsa Inequality**: $|k B - \ell B| \le K^{k+\ell} |A|$ whenever $|A + B| \le K |A|$.
+5. **Sumset Tripling and Difference Bounds**: $|A + A + A| \le K^3 |A|$ and $|2A - 2A| \le K^4 |A|$.
 
 ## References
 
-- Roth, K. F. (1953). *On certain sets of integers*. Journal of the London Mathematical Society, 28(1), 104–109.
+- Ruzsa, I. Z. (1996). *Sums of finite sets*. Number Theory: New York Seminar, Springer, 281–293.
+- Petridis, G. (2012). *New proofs of Plünnecke-type estimates for sumsets*. Combinatorics, Probability and Computing, 21(6), 821–828.
 - Tao, T., & Vu, V. (2006). *Additive Combinatorics*. Cambridge University Press.
 -/
 
-namespace RothsTheorem
+namespace RuzsaFreiman
 
 variable {G : Type*} [DecidableEq G] [AddCommGroup G]
 
-/-- A triple $(x, y, z)$ forms a 3-term arithmetic progression if $x + z = 2 \cdot y$. -/
-def Is3AP (x y z : G) : Prop :=
-  x + z = (2 : ℕ) • y
+/-- The sumset $A + B = \{a + b : a \in A, b \in B\}$. -/
+def sumset (A B : Finset G) : Finset G := A + B
 
-/-- A 3-AP is non-trivial if the common difference is non-zero ($x \ne y$). -/
-def IsNonTrivial3AP (x y z : G) : Prop :=
-  Is3AP x y z ∧ x ≠ y
+/-- The difference set $A - B = \{a - b : a \in A, b \in B\}$. -/
+def diffset (A B : Finset G) : Finset G := A - B
 
-/-- A subset $A \subseteq G$ is 3-AP free if it contains no non-trivial 3-APs. -/
-def IsThreeAPFree (A : Finset G) : Prop :=
-  ∀ x ∈ A, ∀ y ∈ A, ∀ z ∈ A, Is3AP x y z → x = y
+/-- The doubling constant $\sigma(A) = \frac{|A + A|}{|A|}$. -/
+def doublingConstant (A : Finset G) : ℚ :=
+  (A + A).card / (A.card : ℚ)
 
-/-- Indicator function $\mathbf{1}_A : G \to \mathbb{R}$. -/
-def indicator (A : Finset G) : G → ℝ :=
-  fun x => if x ∈ A then 1 else 0
+/-- The Ruzsa multiplicative ratio $\rho_R(A, B) = \frac{|A - B|}{\sqrt{|A| |B|}}$. -/
+noncomputable def ruzsaRatio (A B : Finset G) : ℝ :=
+  (A - B).card / Real.sqrt ((A.card : ℝ) * (B.card : ℝ))
 
-variable [Fintype G]
+/-- The Ruzsa distance $d_R(A, B) = \log \frac{|A - B|}{\sqrt{|A| |B|}}$. -/
+noncomputable def ruzsaDistance (A B : Finset G) : ℝ :=
+  Real.log (ruzsaRatio A B)
 
-/-- The multilinear 3-AP counting functional $\Lambda(f_1, f_2, f_3) = \frac{1}{|G|^2} \sum_{x, d} f_1(x) f_2(x+d) f_3(x+2d)$. -/
-noncomputable def ap3Count (f1 f2 f3 : G → ℝ) : ℝ :=
-  (1 / ((Fintype.card G : ℝ) ^ 2)) *
-    ∑ x : G, ∑ d : G, f1 x * f2 (x + d) * f3 (x + (2 : ℕ) • d)
+/-- Iterated sumset $k A = A + \dots + A$ ($k$ terms). -/
+def iteratedSumset (k : ℕ) (A : Finset G) : Finset G :=
+  match k with
+  | 0 => {0}
+  | k + 1 => iteratedSumset k A + A
 
-/-- An arithmetic progression $P(a, d, L) = \{a + k d : 0 \le k < L\}$ in $\mathbb{Z}$. -/
-structure Progression where
-  start : ℤ
-  step : ℤ
-  length : ℕ
-  step_pos : 0 < step
+/-- A Generalized Arithmetic Progression (GAP) of dimension `dim` in an additive group $G$. -/
+structure GAP (G : Type*) [AddCommGroup G] where
+  dim : ℕ
+  base : G
+  steps : Fin dim → G
+  lengths : Fin dim → ℕ
 
-/-- The elements of a progression as a finset in $\mathbb{Z}$. -/
-def Progression.elements (P : Progression) : Finset ℤ :=
-  (Finset.range P.length).image (fun (k : ℕ) => P.start + (k : ℤ) * P.step)
+/-- The Finset of elements represented by a GAP $P$. -/
+def gapElements (P : GAP G) : Finset G :=
+  (Fintype.piFinset (fun i : Fin P.dim => Finset.range (P.lengths i))).image
+    (fun (k : Fin P.dim → ℕ) => P.base + ∑ i : Fin P.dim, (k i) • (P.steps i))
 
-/-- The integer interval $[0, N-1]$ as a Finset of $\mathbb{Z}$. -/
-def intRange (N : ℕ) : Finset ℤ :=
-  (Finset.range N).image (fun (k : ℕ) => (k : ℤ))
+/-- A map $\phi : A \to B$ is a Freiman homomorphism of order $k$ if it preserves $k$-term equality of sums. -/
+def IsFreimanHomomorphism {H : Type*} [AddCommGroup H]
+    (A : Finset G) (f : G → H) (k : ℕ) : Prop :=
+  ∀ (xs ys : Fin k → G), (∀ i, xs i ∈ A) → (∀ i, ys i ∈ A) →
+    (∑ i, xs i = ∑ i, ys i) → (∑ i, f (xs i) = ∑ i, f (ys i))
 
-/-- Characterization of 3-AP freeness via non-existence of non-trivial 3-APs. -/
-theorem isThreeAPFree_iff (A : Finset G) :
-    IsThreeAPFree A ↔ ∀ x ∈ A, ∀ y ∈ A, ∀ z ∈ A, ¬ IsNonTrivial3AP x y z := by
-  sorry
-
-/-- For a 3-AP free set $A$, the only contributions to $\Lambda(1_A, 1_A, 1_A)$ come from $d = 0$. -/
-theorem ap3Count_of_free (A : Finset G) (hfree : IsThreeAPFree A) :
-    ap3Count (indicator A) (indicator A) (indicator A) =
-      (A.card : ℝ) / ((Fintype.card G : ℝ) ^ 2) := by
-  sorry
-
-/-- Preservation of 3-APs under affine progression map $k \mapsto a + k d$. -/
-theorem progression_is3AP (P : Progression) (k1 k2 k3 : ℤ) :
-    (P.start + k1 * P.step) + (P.start + k3 * P.step) = 2 * (P.start + k2 * P.step) ↔
-      k1 + k3 = 2 * k2 := by
-  sorry
-
-/-- The length of a progression is its cardinality. -/
-theorem progression_card (P : Progression) :
-    P.elements.card = P.length := by
+/-- Doubling constant is at least 1 for non-empty sets. -/
+theorem doublingConstant_ge_one {A : Finset G} (hA : A.Nonempty) :
+    1 ≤ doublingConstant A := by
   sorry
 
 /--
-**Density Boost Accumulation**:
-If density increases by at least $\alpha_0^2 / 16$ at each step, after $k$ steps
-the density has grown by at least $k \alpha_0^2 / 16$.
+**Ruzsa Triangle Inequality (Cardinality Form)**:
+For any finite subsets $A, B, C$ in an additive group $G$:
+$$|B| \cdot |A - C| \le |A - B| \cdot |B - C|$$
 -/
-theorem density_boost_bound (α₀ : ℝ) (hα₀ : 0 < α₀) (α : ℕ → ℝ) (h0 : α 0 = α₀)
-    (h_step : ∀ k, α (k + 1) ≥ α k + (α₀ ^ 2) / 16) :
-    ∀ k : ℕ, α k ≥ α₀ + (k : ℝ) * ((α₀ ^ 2) / 16) := by
+theorem ruzsa_triangle_cardinality (A B C : Finset G) :
+    B.card * (A - C).card ≤ (A - B).card * (B - C).card := by
   sorry
 
 /--
-**Iteration Step Upper Bound**:
-Since density cannot exceed 1, the number of density increments $k$ satisfies
-$k \cdot (\alpha_0^2 / 16) \le 1$, meaning $k \le 16 / \alpha_0^2$.
+**Ruzsa Triangle Inequality (Metric Form)**:
+For any non-empty finite subsets $A, B, C \subseteq G$:
+$$d_R(A, C) \le d_R(A, B) + d_R(B, C)$$
 -/
-theorem iteration_step_bound (α₀ : ℝ) (hα₀ : 0 < α₀) (α : ℕ → ℝ) (h0 : α 0 = α₀)
-    (h_step : ∀ k, α (k + 1) ≥ α k + (α₀ ^ 2) / 16)
-    (h_le_one : ∀ k, α k ≤ 1) (k : ℕ) :
-    (k : ℝ) * ((α₀ ^ 2) / 16) ≤ 1 := by
+theorem ruzsa_triangle_inequality {A B C : Finset G}
+    (hA : A.Nonempty) (hB : B.Nonempty) (hC : C.Nonempty) :
+    ruzsaDistance A C ≤ ruzsaDistance A B + ruzsaDistance B C := by
   sorry
 
-end RothsTheorem
+/--
+**Iterated Difference Bound**:
+For any non-empty finite set $A \subseteq G$ with $|A + A| \le K |A|$,
+$|A - A| \le K^2 |A|$.
+-/
+theorem diffset_bound_of_doubling {A : Finset G} (hA : A.Nonempty) {K : ℝ}
+    (hK : ((A + A).card : ℝ) ≤ K * (A.card : ℝ)) :
+    ((A - A).card : ℝ) ≤ K ^ 2 * (A.card : ℝ) := by
+  sorry
+
+/--
+**Petridis' Minimizer Lemma**:
+For any non-empty finite subsets $A, B \subseteq G$, there exists a non-empty subset $A' \subseteq A$ such that
+for all finite sets $X \subseteq G$:
+$$|A' + B + X| \le \frac{|A' + B|}{|A'|} |A' + X|$$
+-/
+theorem plunnecke_petridis_lemma (A B : Finset G) (hA : A.Nonempty) (hB : B.Nonempty) :
+    ∃ A' : Finset G, A'.Nonempty ∧ A' ⊆ A ∧
+      ∀ X : Finset G, (A' + B + X).card * A'.card ≤ (A' + B).card * (A' + X).card := by
+  sorry
+
+/--
+**The Plünnecke–Ruzsa Inequality (General Two-Set Form)**:
+If $A, B \subseteq G$ are finite sets with $|A + B| \le K |A|$, then for any $k, \ell \ge 0$:
+$$|k B - \ell B| \le K^{k + \ell} |A|$$
+-/
+theorem plunnecke_ruzsa_inequality {A B : Finset G} (hA : A.Nonempty) {K : ℝ}
+    (hK : ((A + B).card : ℝ) ≤ K * (A.card : ℝ)) (k l : ℕ) :
+    ((iteratedSumset k B - iteratedSumset l B).card : ℝ) ≤ K ^ (k + l) * (A.card : ℝ) := by
+  sorry
+
+/--
+**Tripling Bound from Doubling**:
+If $|A + A| \le K |A|$, then $|A + A + A| \le K^3 |A|$.
+-/
+theorem plunnecke_tripling {A : Finset G} (hA : A.Nonempty) {K : ℝ}
+    (hK : ((A + A).card : ℝ) ≤ K * (A.card : ℝ)) :
+    ((A + A + A).card : ℝ) ≤ K ^ 3 * (A.card : ℝ) := by
+  sorry
+
+/--
+**Four-fold Difference Bound**:
+If $|A + A| \le K |A|$, then $|2A - 2A| \le K^4 |A|$.
+-/
+theorem plunnecke_two_sub_two {A : Finset G} (hA : A.Nonempty) {K : ℝ}
+    (hK : ((A + A).card : ℝ) ≤ K * (A.card : ℝ)) :
+    (((A + A) - (A + A)).card : ℝ) ≤ K ^ 4 * (A.card : ℝ) := by
+  sorry
+
+/-- The cardinality of a GAP is bounded by the product of side lengths. -/
+theorem gapElements_card_le (P : GAP G) :
+    (gapElements P).card ≤ ∏ i : Fin P.dim, P.lengths i := by
+  sorry
+
+/-- Identity map is always a Freiman homomorphism of any order $k$. -/
+theorem freimanHomomorphism_id (A : Finset G) (k : ℕ) :
+    IsFreimanHomomorphism A id k := by
+  sorry
+
+end RuzsaFreiman
