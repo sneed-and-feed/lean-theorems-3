@@ -1,57 +1,58 @@
 version: "v0.4"
 
 project:
-  name: "Deligne–Schmid Mixed Hodge Weight Filtration and Symplectic Monodromy"
+  name: "The Expander Mixing Lemma and Spectral Discrepancy"
   authors:
     - "Sneed & Feed Formalization Team"
   responsible_maintainers:
     - "sneed-and-feed"
   license: "CC0-1.0"
   description: >-
-    A complete, machine-checked Lean 4 formalization of Pierre Deligne's canonical weight
-    filtration formula W_l(N, k) = sum_{j=0}^k (ker(N^{j+1}) cap im(N^{j - l + k})) for nilpotent
-    monodromy operators N with N^{k+1} = 0 over general commutative rings R. Proves universal
-    filtration monotonicity, top extremal saturation W_{2k} = V, fundamental shift inclusion
-    N(W_l) subseteq W_{l-2}, explicit 2-step weight filtrations on Z^4 for Type II unipotent
-    abelian surface monodromy (N^2 = 0), explicit 4-step weight filtrations for Type III CY3 MUM
-    nilpotent operators (N^4 = 0), and Hodge–Riemann symplectic polarizations Q_N(v, w) = <v, Nw>_J
-    with strict positivity on primitive subspace generators. To the maintainers' knowledge,
-    the theorem was verified absent from the core Mathlib library (checked against Mathlib v4.34.0-rc1).
+    A complete, machine-checked Lean 4 formalization of the Expander Mixing Lemma (Alon–Chung 1988)
+    and its spectral combinatorial consequences for regular graphs. Proves the sharp eigenvalue
+    bound on edge discrepancy |e(S, T) - d|S||T|/n| <= \lambda \sqrt{|S|(1-|S|/n)|T|(1-|T|/n)},
+    the simplified \lambda \sqrt{|S||T|} bound, the Hoffman–Alon independence number bound
+    \alpha(G) <= \lambda n / (d + \lambda), the chromatic number lower bound \chi(G) >= 1 + d/\lambda,
+    and the positive edge density threshold for large vertex subsets. To the maintainers' knowledge,
+    the theorem was not found in an exact declaration name, docstring, and type signature search of
+    the pinned Mathlib revision (Mathlib v4.34.0-rc1).
 
 classification:
-  arxiv: [math.AG, math.CA, math.RT]
-  msc2020: ["14C30", "32G20", "14D07", "14J32"]
+  arxiv: [math.CO]
+  msc2020: ["05C50", "05C80", "15A18"]
 
 sources:
-  - title: "Théorie de Hodge: II"
+  - title: "Explicit construction of linear sized tolerant networks"
     type: paper
     authors:
-      - "Pierre Deligne"
-    year: 1971
-    venue: "Publications Mathématiques de l'IHÉS, 40, 5-57"
+      - "Noga Alon"
+      - "Fan R. K. Chung"
+    venue: "Discrete Mathematics"
+    year: 1988
     relationship: formalizes
-  - title: "Variation of Hodge structure: the singularities of the period mapping"
+  - title: "Eigenvalues and expanders"
     type: paper
     authors:
-      - "Wilfried Schmid"
-    year: 1973
-    venue: "Inventiones Mathematicae, 22(3-4), 211-319"
+      - "Noga Alon"
+    venue: "Theory of Computing Systems"
+    year: 1986
     relationship: adapts
-  - title: "Periods of integrals on algebraic manifolds, I"
+  - title: "Expander graphs and their applications"
     type: paper
     authors:
-      - "Phillip A. Griffiths"
-    year: 1968
-    venue: "American Journal of Mathematics, 90(2), 568-626"
+      - "Shlomo Hoory"
+      - "Nathan Linial"
+      - "Avi Wigderson"
+    venue: "Bulletin of the American Mathematical Society"
+    year: 2006
     relationship: background
 
 related_formalizations:
-  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Data/Matrix/Basic.lean"
+  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Combinatorics/SimpleGraph/Basic.lean"
     relationship: builds-on
     note: >-
-      Formalization builds on Mathlib's matrix and module algebra, formalizing Deligne's universal
-      subspace formula for nilpotent monodromy weight filtrations, shift theorems, and Hodge–Riemann
-      symplectic polarizations.
+      Formalization builds on Mathlib's simple graph theory representation and adjacency definitions,
+      extending them with variational operator norms and spectral discrepancy inequalities.
 
 automation:
   methods:
@@ -68,4 +69,4 @@ review:
   notes: >-
     Challenge contains deliberate proof holes (`:= sorry` for automated benchmark evaluation),
     while all definitions and theorem statements are completely specified. Solution verified through
-    maintainer audit with 0 errors, 0 sorries, and strictly standard kernel axioms.
+    human audit by the maintainers with 0 errors, 0 sorries, and strictly standard kernel axioms.

@@ -1,551 +1,540 @@
+import Mathlib.Data.Real.Basic
 import Mathlib.Data.Matrix.Basic
-import Mathlib.Data.Rat.Defs
+import Mathlib.Data.Fintype.Card
+import Mathlib.Data.Finset.Card
 import Mathlib.Data.Finset.Basic
-import Mathlib.Algebra.BigOperators.Intervals
-import Mathlib.Algebra.BigOperators.Fin
-import Mathlib.Tactic.Ring
+import Mathlib.Combinatorics.SimpleGraph.Basic
+import Mathlib.Combinatorics.SimpleGraph.DegreeSum
+import Mathlib.Combinatorics.SimpleGraph.Coloring.Vertex
+import Mathlib.Analysis.SpecialFunctions.Pow.Real
+import Mathlib.Analysis.SpecialFunctions.Sqrt
 import Mathlib.Tactic.Linarith
-import Mathlib.Tactic.NormNum
-import Mathlib.Tactic.FinCases
-import Mathlib.Tactic.FieldSimp
+import Mathlib.Tactic.Ring
+import Mathlib.Tactic.Positivity
 
-open scoped Matrix BigOperators
-open Matrix
+open scoped BigOperators Matrix Finset
+open Classical
 
 set_option linter.unusedSectionVars false
-set_option linter.unusedVariables false
 
-namespace PicardFuchsMirrorMonodromy
+variable {V : Type*} [Fintype V] [DecidableEq V]
 
-def J : Matrix (Fin 4) (Fin 4) ℤ :=
-  ![![ 0,  0,  1,  0],
-    ![ 0,  0,  0,  1],
-    ![-1,  0,  0,  0],
-    ![ 0, -1,  0,  0]]
+namespace ExpanderMixing
 
-def Omega6 : Matrix (Fin 4) (Fin 4) ℤ :=
-  ![![ 0,  0,  0,  1],
-    ![ 0,  0,  6,  0],
-    ![ 0, -6,  0,  0],
-    ![-1,  0,  0,  0]]
+/-- The $0$-$1$ adjacency matrix of a simple graph $G$ over $\mathbb{R}$. -/
+def adjacencyMatrix (G : SimpleGraph V) [DecidableRel G.Adj] : Matrix V V ℝ :=
+  fun u v => if G.Adj u v then 1 else 0
 
-def T0 : Matrix (Fin 4) (Fin 4) ℤ :=
-  ![![ 1, -1,  0,  0],
-    ![ 0,  1,  0,  0],
-    ![ 0,  0,  1,  0],
-    ![ 0,  0,  1,  1]]
+/-- Predicate stating that a simple graph is $d$-regular. -/
+def isRegularOfDegree (G : SimpleGraph V) (d : ℕ) [DecidableRel G.Adj] : Prop :=
+  ∀ v : V, G.degree v = d
 
-def N : Matrix (Fin 4) (Fin 4) ℤ :=
-  ![![ 0, -1,  0,  0],
-    ![ 0,  0,  0,  0],
-    ![ 0,  0,  0,  0],
-    ![ 0,  0,  1,  0]]
+/-- In a $d$-regular graph, the sum of any row of the adjacency matrix is $d$. -/
+theorem sum_adj_row_eq_degree (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (u : V) :
+    (∑ v : V, adjacencyMatrix G u v) = (d : ℝ) := by
+  have : (Finset.filter (G.Adj u) Finset.univ) = G.neighborFinset u := by
+    ext; simp [SimpleGraph.mem_neighborFinset]
+  simp [adjacencyMatrix, Finset.sum_boole, this, SimpleGraph.card_neighborFinset_eq_degree, hreg u]
 
-theorem N_unipotent_index_2 : N * N = 0 := by
-  ext i j; fin_cases i <;> fin_cases j <;> rfl
+/-- In a $d$-regular graph, the sum of any column of the adjacency matrix is $d$. -/
+theorem sum_adj_col_eq_degree (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (v : V) :
+    (∑ u : V, adjacencyMatrix G u v) = (d : ℝ) := by
+  simp_rw [adjacencyMatrix, G.adj_comm]
+  exact sum_adj_row_eq_degree G hreg v
 
-namespace ModularFamilyS6
+/-- In a $d$-regular graph on $n$ vertices, the total sum of all adjacency matrix entries is $d \cdot n$. -/
+theorem sum_adj_all_eq (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) :
+    (∑ u : V, ∑ v : V, adjacencyMatrix G u v) = (d : ℝ) * (Fintype.card V : ℝ) := by
+  simp [sum_adj_row_eq_degree G hreg, mul_comm]
 
-def T0 : Matrix (Fin 4) (Fin 4) ℤ :=
-  ![![ 1,  0,  0,  1],
-    ![ 0,  1, -1,  0],
-    ![ 0,  0,  1,  0],
-    ![ 0,  0,  0,  1]]
+/-- The number of ordered directed edges from vertex set $S$ to $T$. -/
+def edgeCountBetween (G : SimpleGraph V) [DecidableRel G.Adj] (S T : Finset V) : ℝ :=
+  ∑ u ∈ S, ∑ v ∈ T, adjacencyMatrix G u v
 
-def N : Matrix (Fin 4) (Fin 4) ℤ :=
-  ![![ 0,  0,  0,  1],
-    ![ 0,  0, -1,  0],
-    ![ 0,  0,  0,  0],
-    ![ 0,  0,  0,  0]]
+/-- The indicator function $\mathbf{1}_S : V \to \mathbb{R}$ of a subset $S \subseteq V$. -/
+def indicator (S : Finset V) : V → ℝ :=
+  fun v => if v ∈ S then 1 else 0
 
-def gamma : Fin 4 → ℤ := ![1, 0, 0, 0]
-def u : Fin 4 → ℤ := ![0, 1, 0, 0]
-def w : Fin 4 → ℤ := ![0, 0, 1, 0]
-def delta : Fin 4 → ℤ := ![0, 0, 0, 1]
+/-- Standard Euclidean inner product on $\mathbb{R}^V$. -/
+def innerProduct (u v : V → ℝ) : ℝ :=
+  ∑ x : V, u x * v x
 
-theorem N_act_gamma : N *ᵥ gamma = 0 := by ext i; fin_cases i <;> rfl
-theorem N_act_u : N *ᵥ u = 0 := by ext i; fin_cases i <;> rfl
-theorem N_act_w : N *ᵥ w = -u := by ext i; fin_cases i <;> rfl
-theorem N_act_delta : N *ᵥ delta = gamma := by ext i; fin_cases i <;> rfl
+/-- The squared Euclidean norm $\|v\|^2 = \langle v, v \rangle$. -/
+def normSq (v : V → ℝ) : ℝ :=
+  innerProduct v v
 
-end ModularFamilyS6
+/-- A vector $v \in \mathbb{R}^V$ is orthogonal to $\mathbf{1}$ if its coordinate sum is zero. -/
+def isOrthogonalToOnes (v : V → ℝ) : Prop :=
+  ∑ x : V, v x = 0
 
-def gamma : Fin 4 → ℤ := ModularFamilyS6.gamma
-def u : Fin 4 → ℤ := ModularFamilyS6.u
-def w : Fin 4 → ℤ := ModularFamilyS6.w
-def delta : Fin 4 → ℤ := ModularFamilyS6.delta
+/-- The parallel projection of the indicator vector $\mathbf{1}_S$ along $\mathbf{1}$:
+    $\mathbf{1}_S^\parallel = \frac{|S|}{n} \mathbf{1}$. -/
+noncomputable def decompParallel (S : Finset V) : V → ℝ :=
+  fun _ => (S.card : ℝ) / (Fintype.card V : ℝ)
 
-theorem S6_N_act_gamma : ModularFamilyS6.N *ᵥ ModularFamilyS6.gamma = 0 :=
-  ModularFamilyS6.N_act_gamma
+/-- The orthogonal component $\mathbf{1}_S^\perp = \mathbf{1}_S - \frac{|S|}{n} \mathbf{1} \in \mathbf{1}^\perp$. -/
+noncomputable def decompPerp (S : Finset V) : V → ℝ :=
+  fun v => indicator S v - (S.card : ℝ) / (Fintype.card V : ℝ)
 
-theorem S6_N_act_u : ModularFamilyS6.N *ᵥ ModularFamilyS6.u = 0 :=
-  ModularFamilyS6.N_act_u
+/-- Auxiliary: sum of indicator over universe is cardinality. -/
+theorem sum_indicator_univ (S : Finset V) : (∑ x : V, indicator S x) = (S.card : ℝ) := by
+  simp [indicator]
 
-theorem S6_N_act_w : ModularFamilyS6.N *ᵥ ModularFamilyS6.w = -ModularFamilyS6.u :=
-  ModularFamilyS6.N_act_w
+/-- Sum of indicator times a function over universe is sum over the set. -/
+theorem sum_indicator_mul (S : Finset V) (f : V → ℝ) :
+    (∑ x : V, indicator S x * f x) = ∑ x ∈ S, f x := by
+  simp [indicator, ite_mul]
 
-theorem S6_N_act_delta : ModularFamilyS6.N *ᵥ ModularFamilyS6.delta = ModularFamilyS6.gamma :=
-  ModularFamilyS6.N_act_delta
+/-- Sum of a function times indicator over universe is sum over the set. -/
+theorem sum_mul_indicator (S : Finset V) (f : V → ℝ) :
+    (∑ x : V, f x * indicator S x) = ∑ x ∈ S, f x := by
+  simp [indicator, mul_ite]
 
-def N_MUM : Matrix (Fin 4) (Fin 4) ℤ :=
-  ![![ 0, 1, 0, 0 ],
-    ![ 0, 0, 1, 0 ],
-    ![ 0, 0, 0, 1 ],
-    ![ 0, 0, 0, 0 ]]
+/-- Orthogonality of the perpendicular component: $\sum_{v \in V} \mathbf{1}_S^\perp(v) = 0$. -/
+theorem decompPerp_orthogonal (S : Finset V) (hn : Fintype.card V ≠ 0) :
+    isOrthogonalToOnes (decompPerp S) := by
+  dsimp [isOrthogonalToOnes, decompPerp]
+  have : (Fintype.card V : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr hn
+  simp [Finset.sum_sub_distrib, sum_indicator_univ, mul_div_cancel₀ _ this]
 
-def symplecticPairing (v w : Fin 4 → ℤ) : ℤ :=
-  v 0 * w 2 + v 1 * w 3 - v 2 * w 0 - v 3 * w 1
+/-- The squared $\ell^2$-norm of $\mathbf{1}_S^\perp$ is $|S|(1 - |S|/n)$. -/
+theorem decompPerp_normSq (S : Finset V) (hn : Fintype.card V ≠ 0) :
+    normSq (decompPerp S) = (S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) := by
+  dsimp [normSq, innerProduct, decompPerp]
+  have hnc : (Fintype.card V : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr hn
+  have h_alg : ∀ x : V, (indicator S x - (S.card : ℝ) / (Fintype.card V : ℝ)) *
+      (indicator S x - (S.card : ℝ) / (Fintype.card V : ℝ)) =
+      indicator S x - 2 * ((S.card : ℝ) / (Fintype.card V : ℝ)) * indicator S x +
+      ((S.card : ℝ) / (Fintype.card V : ℝ)) ^ 2 := by
+    intro x; simp [indicator]; split_ifs <;> ring
+  simp_rw [h_alg, Finset.sum_add_distrib, Finset.sum_sub_distrib,
+           ← Finset.mul_sum, sum_indicator_univ, Finset.sum_const, Finset.card_univ, nsmul_eq_mul]
+  have : (Fintype.card V : ℝ) * ((S.card : ℝ) / (Fintype.card V : ℝ)) ^ 2 =
+      (S.card : ℝ) * ((S.card : ℝ) / (Fintype.card V : ℝ)) := by
+    rw [sq, ← mul_assoc, mul_div_cancel₀ _ hnc]
+  rw [this]
+  ring
 
-theorem symplecticPairing_skew (v w : Fin 4 → ℤ) :
-    symplecticPairing v w = -symplecticPairing w v := by
-  dsimp [symplecticPairing]; ring
+/-- The bilinear expansion of $\langle \mathbf{1}_S^\perp, A \mathbf{1}_T^\perp \rangle$
+equals $e(S, T) - \frac{d |S| |T|}{n}$. -/
+theorem innerProduct_decompPerp_eq_edgeCountBetween_sub
+    (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (S T : Finset V) :
+    innerProduct (decompPerp S) (fun x => ∑ y : V, adjacencyMatrix G x y * decompPerp T y) =
+      edgeCountBetween G S T - (d : ℝ) * (S.card : ℝ) * (T.card : ℝ) / (Fintype.card V : ℝ) := by
+  dsimp [innerProduct, decompPerp]
+  have hnc : (Fintype.card V : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr hn
+  have h_lhs : (∑ x : V, (indicator S x - ↑(#S) / ↑(Fintype.card V)) * ∑ y : V, adjacencyMatrix G x y * (indicator T y - ↑(#T) / ↑(Fintype.card V))) =
+      ∑ x : V, ∑ y : V, (indicator S x - ↑(#S) / ↑(Fintype.card V)) * (adjacencyMatrix G x y * (indicator T y - ↑(#T) / ↑(Fintype.card V))) := by
+    simp_rw [Finset.mul_sum]
+  rw [h_lhs]
+  have h_alg : ∀ x y : V,
+      (indicator S x - (S.card : ℝ) / (Fintype.card V : ℝ)) *
+        (adjacencyMatrix G x y * (indicator T y - (T.card : ℝ) / (Fintype.card V : ℝ))) =
+      indicator S x * adjacencyMatrix G x y * indicator T y -
+      ((T.card : ℝ) / (Fintype.card V : ℝ)) * (indicator S x * adjacencyMatrix G x y) -
+      ((S.card : ℝ) / (Fintype.card V : ℝ)) * (adjacencyMatrix G x y * indicator T y) +
+      ((S.card : ℝ) / (Fintype.card V : ℝ)) * ((T.card : ℝ) / (Fintype.card V : ℝ)) * adjacencyMatrix G x y := by
+    intro x y; ring
+  simp_rw [h_alg, Finset.sum_add_distrib, Finset.sum_sub_distrib]
+  have h_T1 : (∑ x : V, ∑ y : V, indicator S x * adjacencyMatrix G x y * indicator T y) = edgeCountBetween G S T := by
+    dsimp [edgeCountBetween]
+    have h1 : ∀ x : V, (∑ y : V, indicator S x * adjacencyMatrix G x y * indicator T y) =
+        indicator S x * (∑ y : V, adjacencyMatrix G x y * indicator T y) := by
+      intro x; rw [Finset.mul_sum]; apply Finset.sum_congr rfl; intro y _; ring
+    simp_rw [h1, sum_mul_indicator, sum_indicator_mul]
+  have h_T2 : (∑ x : V, ∑ y : V, (T.card : ℝ) / (Fintype.card V : ℝ) * (indicator S x * adjacencyMatrix G x y)) =
+      (d : ℝ) * (S.card : ℝ) * (T.card : ℝ) / (Fintype.card V : ℝ) := by
+    have h1 : ∀ x : V, (∑ y : V, (T.card : ℝ) / (Fintype.card V : ℝ) * (indicator S x * adjacencyMatrix G x y)) =
+        ((T.card : ℝ) / (Fintype.card V : ℝ) * indicator S x) * (∑ y : V, adjacencyMatrix G x y) := by
+      intro x; rw [Finset.mul_sum]; apply Finset.sum_congr rfl; intro y _; ring
+    simp_rw [h1, sum_adj_row_eq_degree G hreg]
+    have h2 : (∑ x : V, (T.card : ℝ) / (Fintype.card V : ℝ) * indicator S x * (d : ℝ)) =
+        ((T.card : ℝ) / (Fintype.card V : ℝ) * (d : ℝ)) * (∑ x : V, indicator S x) := by
+      rw [Finset.mul_sum]; apply Finset.sum_congr rfl; intro x _; ring
+    rw [h2, sum_indicator_univ S]; ring
+  have h_T3 : (∑ x : V, ∑ y : V, (S.card : ℝ) / (Fintype.card V : ℝ) * (adjacencyMatrix G x y * indicator T y)) =
+      (d : ℝ) * (S.card : ℝ) * (T.card : ℝ) / (Fintype.card V : ℝ) := by
+    rw [Finset.sum_comm]
+    have h1 : ∀ y : V, (∑ x : V, (S.card : ℝ) / (Fintype.card V : ℝ) * (adjacencyMatrix G x y * indicator T y)) =
+        ((S.card : ℝ) / (Fintype.card V : ℝ) * indicator T y) * (∑ x : V, adjacencyMatrix G x y) := by
+      intro y; rw [Finset.mul_sum]; apply Finset.sum_congr rfl; intro y _; ring
+    simp_rw [h1, sum_adj_col_eq_degree G hreg]
+    have h2 : (∑ y : V, (S.card : ℝ) / (Fintype.card V : ℝ) * indicator T y * (d : ℝ)) =
+        ((S.card : ℝ) / (Fintype.card V : ℝ) * (d : ℝ)) * (∑ y : V, indicator T y) := by
+      rw [Finset.mul_sum]; apply Finset.sum_congr rfl; intro y _; ring
+    rw [h2, sum_indicator_univ T]; ring
+  have h_T4 : (∑ x : V, ∑ y : V, (S.card : ℝ) / (Fintype.card V : ℝ) * ((T.card : ℝ) / (Fintype.card V : ℝ)) * adjacencyMatrix G x y) =
+      (d : ℝ) * (S.card : ℝ) * (T.card : ℝ) / (Fintype.card V : ℝ) := by
+    have h1 : (∑ x : V, ∑ y : V, (S.card : ℝ) / (Fintype.card V : ℝ) * ((T.card : ℝ) / (Fintype.card V : ℝ)) * adjacencyMatrix G x y) =
+        ((S.card : ℝ) / (Fintype.card V : ℝ) * ((T.card : ℝ) / (Fintype.card V : ℝ))) * (∑ x : V, ∑ y : V, adjacencyMatrix G x y) := by
+      rw [Finset.mul_sum]; apply Finset.sum_congr rfl; intro x _; rw [Finset.mul_sum]
+    have h2 : ((S.card : ℝ) / (Fintype.card V : ℝ) * ((T.card : ℝ) / (Fintype.card V : ℝ))) * ((d : ℝ) * (Fintype.card V : ℝ)) =
+        ((d : ℝ) * (S.card : ℝ) * (T.card : ℝ) / (Fintype.card V : ℝ)) * ((Fintype.card V : ℝ) / (Fintype.card V : ℝ)) := by ring
+    rw [h1, sum_adj_all_eq G hreg, h2, div_self hnc, mul_one]
+  rw [h_T1, h_T2, h_T3, h_T4]
+  ring
 
-theorem mulVec_N (v : Fin 4 → ℤ) :
-    N *ᵥ v = ![-v 1, 0, 0, v 2] := by
-  ext i
-  fin_cases i <;> simp [N, mulVec, dotProduct, Fin.sum_univ_four]
+/-- Squared norm is the sum of component squares. -/
+theorem normSq_eq_sum_sq (v : V → ℝ) : normSq v = ∑ u : V, (v u) ^ 2 := by
+  simp only [normSq, innerProduct, sq]
 
-theorem symplecticPairing_N_invariant (v w : Fin 4 → ℤ) :
-    symplecticPairing (N *ᵥ v) w + symplecticPairing v (N *ᵥ w) = 0 := by
-  rw [mulVec_N, mulVec_N]; dsimp [symplecticPairing]; ring
+/-- Squared norm is non-negative. -/
+theorem normSq_nonneg (v : V → ℝ) : 0 ≤ normSq v := by
+  rw [normSq_eq_sum_sq]
+  exact Finset.sum_nonneg fun _ _ => sq_nonneg _
 
-def symplecticPairingOmega6 (v w : Fin 4 → ℤ) : ℤ :=
-  v 0 * w 3 + 6 * v 1 * w 2 - 6 * v 2 * w 1 - v 3 * w 0
+/-- Squared norm is zero if and only if the vector is zero. -/
+theorem normSq_eq_zero_iff (v : V → ℝ) : normSq v = 0 ↔ v = 0 := by
+  simp [normSq_eq_sum_sq, Finset.sum_eq_zero_iff_of_nonneg (fun _ _ => sq_nonneg _), funext_iff]
 
-theorem symplecticPairingOmega6_skew (v w : Fin 4 → ℤ) :
-    symplecticPairingOmega6 v w = -symplecticPairingOmega6 w v := by
-  dsimp [symplecticPairingOmega6]; ring
+/-- Squared norm is strictly positive for any non-zero vector. -/
+theorem normSq_pos_of_ne_zero {v : V → ℝ} (hne : v ≠ 0) : 0 < normSq v :=
+  lt_of_le_of_ne (normSq_nonneg v) (Ne.symm (mt (normSq_eq_zero_iff v).mp hne))
 
-theorem mulVec_S6_N (v : Fin 4 → ℤ) :
-    ModularFamilyS6.N *ᵥ v = ![v 3, -v 2, 0, 0] := by
-  ext i
-  fin_cases i <;> simp [ModularFamilyS6.N, mulVec, dotProduct, Fin.sum_univ_four]
+/-- Bilinear Cauchy-Schwarz bound for the adjacency operator:
+$\langle u, A v \rangle^2 \le d^2 \|u\|^2 \|v\|^2$. -/
+theorem innerProduct_adjOp_sq_le (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (u v : V → ℝ) :
+    (innerProduct u (fun x => ∑ y : V, adjacencyMatrix G x y * v y)) ^ 2 ≤ (d : ℝ) ^ 2 * normSq u * normSq v := by
+  dsimp [innerProduct]
+  have h_inner_sq : ∀ x y : V, (adjacencyMatrix G x y * u x) * (adjacencyMatrix G x y * v y) =
+      u x * (adjacencyMatrix G x y * v y) := fun x y => by
+    dsimp [adjacencyMatrix]; split_ifs <;> ring
+  have h_lhs : (∑ x : V, u x * ∑ y : V, adjacencyMatrix G x y * v y) =
+      ∑ p : V × V, (adjacencyMatrix G p.1 p.2 * u p.1) * (adjacencyMatrix G p.1 p.2 * v p.2) := by
+    rw [Fintype.sum_prod_type]
+    simp_rw [Finset.mul_sum, ← h_inner_sq]
+  rw [h_lhs]
+  have h_cs := Finset.sum_mul_sq_le_sq_mul_sq Finset.univ
+    (fun p : V × V => adjacencyMatrix G p.1 p.2 * u p.1)
+    (fun p : V × V => adjacencyMatrix G p.1 p.2 * v p.2)
+  have h_mat_sq : ∀ (a : ℝ) (x y : V), (adjacencyMatrix G x y * a) ^ 2 = adjacencyMatrix G x y * a ^ 2 :=
+    fun a x y => by dsimp [adjacencyMatrix]; split_ifs <;> ring
+  have h_left : (∑ p : V × V, (adjacencyMatrix G p.1 p.2 * u p.1) ^ 2) = (d : ℝ) * ∑ x : V, (u x) ^ 2 := by
+    rw [Fintype.sum_prod_type]
+    simp_rw [h_mat_sq, ← Finset.sum_mul, sum_adj_row_eq_degree G hreg, ← Finset.mul_sum]
+  have h_right : (∑ p : V × V, (adjacencyMatrix G p.1 p.2 * v p.2) ^ 2) = (d : ℝ) * ∑ y : V, (v y) ^ 2 := by
+    rw [Fintype.sum_prod_type_right]
+    simp_rw [h_mat_sq, ← Finset.sum_mul, sum_adj_col_eq_degree G hreg, ← Finset.mul_sum]
+  rw [h_left, h_right, ← normSq_eq_sum_sq, ← normSq_eq_sum_sq] at h_cs
+  calc (∑ p : V × V, (adjacencyMatrix G p.1 p.2 * u p.1) * (adjacencyMatrix G p.1 p.2 * v p.2)) ^ 2
+    _ ≤ ((d : ℝ) * normSq u) * ((d : ℝ) * normSq v) := h_cs
+    _ = (d : ℝ) ^ 2 * normSq u * normSq v := by ring
 
-theorem symplecticPairingOmega6_N_invariant (v w : Fin 4 → ℤ) :
-    symplecticPairingOmega6 (ModularFamilyS6.N *ᵥ v) w +
-    symplecticPairingOmega6 v (ModularFamilyS6.N *ᵥ w) = 0 := by
-  rw [mulVec_S6_N, mulVec_S6_N]; dsimp [symplecticPairingOmega6]; ring
+/-- The set in the definition of $\lambda(G)$ is bounded above by $d$. -/
+theorem bddAbove_spectralExpansionParameter_set (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) :
+    BddAbove { |innerProduct u (fun x => ∑ y : V, adjacencyMatrix G x y * v y)| /
+         (Real.sqrt (normSq u) * Real.sqrt (normSq v)) |
+         (u : V → ℝ) (v : V → ℝ) (_ : u ≠ 0) (_ : v ≠ 0)
+         (_ : isOrthogonalToOnes u) (_ : isOrthogonalToOnes v) } := by
+  use (d : ℝ)
+  rintro x ⟨u, v, hu, hv, _, _, rfl⟩
+  have hu_pos : 0 < normSq u := normSq_pos_of_ne_zero hu
+  have hv_pos : 0 < normSq v := normSq_pos_of_ne_zero hv
+  have h_denom_pos : 0 < Real.sqrt (normSq u) * Real.sqrt (normSq v) :=
+    mul_pos (Real.sqrt_pos.mpr hu_pos) (Real.sqrt_pos.mpr hv_pos)
+  have h_sq := innerProduct_adjOp_sq_le G hreg u v
+  rw [← sq_abs (innerProduct u (fun x => ∑ y : V, adjacencyMatrix G x y * v y))] at h_sq
+  have h_rhs : (d : ℝ) ^ 2 * normSq u * normSq v = ((d : ℝ) * (Real.sqrt (normSq u) * Real.sqrt (normSq v))) ^ 2 := by
+    rw [mul_pow, mul_pow, Real.sq_sqrt hu_pos.le, Real.sq_sqrt hv_pos.le]; ring
+  rw [h_rhs] at h_sq
+  have h_nonneg : 0 ≤ (d : ℝ) * (Real.sqrt (normSq u) * Real.sqrt (normSq v)) := by positivity
+  have h_le : |innerProduct u (fun x => ∑ y : V, adjacencyMatrix G x y * v y)| ≤ (d : ℝ) * (Real.sqrt (normSq u) * Real.sqrt (normSq v)) := by
+    have := sq_le_sq.mp h_sq
+    rwa [abs_abs, abs_of_nonneg h_nonneg] at this
+  exact (div_le_iff₀ h_denom_pos).mpr h_le
 
-end PicardFuchsMirrorMonodromy
+/-- The spectral expansion parameter $\lambda(G) = \max_{i \ge 2} |\lambda_i|$ of a regular graph $G$,
+defined variationally as the operator norm of $A$ restricted to $\mathbf{1}^\perp$. -/
+noncomputable def spectralExpansionParameter (G : SimpleGraph V) [DecidableRel G.Adj] : ℝ :=
+  sSup { |innerProduct u (fun x => ∑ y : V, adjacencyMatrix G x y * v y)| /
+         (Real.sqrt (normSq u) * Real.sqrt (normSq v)) |
+         (u : V → ℝ) (v : V → ℝ) (_ : u ≠ 0) (_ : v ≠ 0)
+         (_ : isOrthogonalToOnes u) (_ : isOrthogonalToOnes v) }
 
-/-
-Copyright (c) 2026. All rights reserved.
-Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Antigravity
+/-- The spectral expansion parameter is non-negative. -/
+theorem spectralExpansionParameter_nonneg (G : SimpleGraph V) [DecidableRel G.Adj] :
+    0 ≤ spectralExpansionParameter G := by
+  dsimp [spectralExpansionParameter]
+  by_cases h_bdd : BddAbove { |innerProduct u (fun x => ∑ y : V, adjacencyMatrix G x y * v y)| /
+         (Real.sqrt (normSq u) * Real.sqrt (normSq v)) |
+         (u : V → ℝ) (v : V → ℝ) (_ : u ≠ 0) (_ : v ≠ 0)
+         (_ : isOrthogonalToOnes u) (_ : isOrthogonalToOnes v) }
+  · by_cases h_ne : { |innerProduct u (fun x => ∑ y : V, adjacencyMatrix G x y * v y)| /
+         (Real.sqrt (normSq u) * Real.sqrt (normSq v)) |
+         (u : V → ℝ) (v : V → ℝ) (_ : u ≠ 0) (_ : v ≠ 0)
+         (_ : isOrthogonalToOnes u) (_ : isOrthogonalToOnes v) }.Nonempty
+    · obtain ⟨x, u, v, hu, hv, hu_orth, hv_orth, rfl⟩ := h_ne
+      exact le_trans (by positivity) (le_csSup h_bdd ⟨u, v, hu, hv, hu_orth, hv_orth, rfl⟩)
+    · rw [Set.not_nonempty_iff_eq_empty.mp h_ne, Real.sSup_empty]
+  · rw [Real.sSup_of_not_bddAbove h_bdd]
+
+/--
+**The Expander Mixing Lemma (Alon–Chung Bound)**:
+For any $d$-regular graph $G = (V, E)$ on $n$ vertices and any subsets $S, T \subseteq V$,
+the number of edges $e(S, T)$ between $S$ and $T$ satisfies:
+$$\left| e(S, T) - \frac{d |S| |T|}{n} \right| \le \lambda(G) \sqrt{|S| \left(1 - \frac{|S|}{n}\right) |T| \left(1 - \frac{|T|}{n}\right)}$$
 -/
+theorem expander_mixing_lemma (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (S T : Finset V) :
+    |edgeCountBetween G S T - (d : ℝ) * (S.card : ℝ) * (T.card : ℝ) / (Fintype.card V : ℝ)| ≤
+      spectralExpansionParameter G *
+        Real.sqrt ((S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) *
+                   (T.card : ℝ) * (1 - (T.card : ℝ) / (Fintype.card V : ℝ))) := by
+  set u := decompPerp S
+  set v := decompPerp T
+  have hu_norm : normSq u = (S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) := decompPerp_normSq S hn
+  have hv_norm : normSq v = (T.card : ℝ) * (1 - (T.card : ℝ) / (Fintype.card V : ℝ)) := decompPerp_normSq T hn
+  have h_inner : innerProduct u (fun x => ∑ y : V, adjacencyMatrix G x y * v y) =
+      edgeCountBetween G S T - (d : ℝ) * (S.card : ℝ) * (T.card : ℝ) / (Fintype.card V : ℝ) :=
+    innerProduct_decompPerp_eq_edgeCountBetween_sub G hreg hn S T
+  by_cases hu : u = 0
+  · have : normSq u = 0 := by rw [hu]; simp [normSq, innerProduct]
+    have h_prod : (S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) = 0 := by rwa [← hu_norm]
+    have h_lhs : |edgeCountBetween G S T - (d : ℝ) * (S.card : ℝ) * (T.card : ℝ) / (Fintype.card V : ℝ)| = 0 := by
+      rw [← h_inner, hu]; simp [innerProduct]
+    rw [h_lhs, h_prod, zero_mul, zero_mul, Real.sqrt_zero, mul_zero]
+  by_cases hv : v = 0
+  · have : normSq v = 0 := by rw [hv]; simp [normSq, innerProduct]
+    have h_prod : (T.card : ℝ) * (1 - (T.card : ℝ) / (Fintype.card V : ℝ)) = 0 := by rwa [← hv_norm]
+    have h_lhs : |edgeCountBetween G S T - (d : ℝ) * (S.card : ℝ) * (T.card : ℝ) / (Fintype.card V : ℝ)| = 0 := by
+      rw [← h_inner, hv]; simp [innerProduct]
+    have : (S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) * (T.card : ℝ) * (1 - (T.card : ℝ) / (Fintype.card V : ℝ)) =
+           (S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) * ((T.card : ℝ) * (1 - (T.card : ℝ) / (Fintype.card V : ℝ))) := by ring
+    rw [h_lhs, this, h_prod, mul_zero, Real.sqrt_zero, mul_zero]
+  have hu_pos : 0 < normSq u := normSq_pos_of_ne_zero hu
+  have hv_pos : 0 < normSq v := normSq_pos_of_ne_zero hv
+  have h_denom_pos : 0 < Real.sqrt (normSq u) * Real.sqrt (normSq v) :=
+    mul_pos (Real.sqrt_pos.mpr hu_pos) (Real.sqrt_pos.mpr hv_pos)
+  have h_elem : |innerProduct u (fun x => ∑ y : V, adjacencyMatrix G x y * v y)| /
+         (Real.sqrt (normSq u) * Real.sqrt (normSq v)) ∈
+         { |innerProduct u' (fun x => ∑ y : V, adjacencyMatrix G x y * v' y)| /
+           (Real.sqrt (normSq u') * Real.sqrt (normSq v')) |
+           (u' : V → ℝ) (v' : V → ℝ) (_ : u' ≠ 0) (_ : v' ≠ 0)
+           (_ : isOrthogonalToOnes u') (_ : isOrthogonalToOnes v') } :=
+    ⟨u, v, hu, hv, decompPerp_orthogonal S hn, decompPerp_orthogonal T hn, rfl⟩
+  have h_le := le_csSup (bddAbove_spectralExpansionParameter_set G hreg) h_elem
+  have h_mul_le := (div_le_iff₀ h_denom_pos).mp h_le
+  rw [h_inner, hu_norm, hv_norm] at h_mul_le
+  have h_sqrt_mul : Real.sqrt ((S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ))) *
+         Real.sqrt ((T.card : ℝ) * (1 - (T.card : ℝ) / (Fintype.card V : ℝ))) =
+         Real.sqrt ((S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) *
+                    (T.card : ℝ) * (1 - (T.card : ℝ) / (Fintype.card V : ℝ))) := by
+    have h1 : 0 ≤ (S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) := by rw [← hu_norm]; positivity
+    have h2 : 0 ≤ (T.card : ℝ) * (1 - (T.card : ℝ) / (Fintype.card V : ℝ)) := by rw [← hv_norm]; positivity
+    have : (S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) * ((T.card : ℝ) * (1 - (T.card : ℝ) / (Fintype.card V : ℝ))) =
+           (S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) * (T.card : ℝ) * (1 - (T.card : ℝ) / (Fintype.card V : ℝ)) := by ring
+    rw [← Real.sqrt_mul h1, this]
+  rwa [h_sqrt_mul] at h_mul_le
 
+/-- Bounding the normalized product in the Expander Mixing Lemma by $\sqrt{|S| |T|}$. -/
+theorem sqrt_card_sub_le (S T : Finset V) (hn : Fintype.card V ≠ 0) :
+    Real.sqrt ((S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) *
+               (T.card : ℝ) * (1 - (T.card : ℝ) / (Fintype.card V : ℝ))) ≤
+    Real.sqrt ((S.card : ℝ) * (T.card : ℝ)) := by
+  have hn_pos : 0 < (Fintype.card V : ℝ) := Nat.cast_pos.mpr (Nat.pos_of_ne_zero hn)
+  have hs_le : (S.card : ℝ) ≤ (Fintype.card V : ℝ) := Nat.cast_le.mpr (Finset.card_le_univ S)
+  have ht_le : (T.card : ℝ) ≤ (Fintype.card V : ℝ) := Nat.cast_le.mpr (Finset.card_le_univ T)
+  have hs1 : (S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) ≤ (S.card : ℝ) := by
+    nlinarith [div_nonneg (Nat.cast_nonneg S.card) (le_of_lt hn_pos)]
+  have ht1 : (T.card : ℝ) * (1 - (T.card : ℝ) / (Fintype.card V : ℝ)) ≤ (T.card : ℝ) := by
+    nlinarith [div_nonneg (Nat.cast_nonneg T.card) (le_of_lt hn_pos)]
+  have ht1_nonneg : 0 ≤ (T.card : ℝ) * (1 - (T.card : ℝ) / (Fintype.card V : ℝ)) := by
+    have : 0 ≤ 1 - (T.card : ℝ) / (Fintype.card V : ℝ) := by nlinarith [(div_le_one hn_pos).mpr ht_le]
+    positivity
+  have h_prod : (S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) *
+                (T.card : ℝ) * (1 - (T.card : ℝ) / (Fintype.card V : ℝ)) ≤
+                (S.card : ℝ) * (T.card : ℝ) := by
+    have : (S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) * (T.card : ℝ) * (1 - (T.card : ℝ) / (Fintype.card V : ℝ)) =
+           ((S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ))) * ((T.card : ℝ) * (1 - (T.card : ℝ) / (Fintype.card V : ℝ))) := by ring
+    rw [this]
+    exact mul_le_mul hs1 ht1 ht1_nonneg (by positivity)
+  exact Real.sqrt_le_sqrt h_prod
 
-/-!
-# Deligne-Schmid Mixed Hodge Weight Filtration $W_\bullet(N)$ & Symplectic Monodromy
-
-This module formalizes Deligne's canonical weight filtration formula for nilpotent monodromy
-operators $N$ on cohomology and integral lattices, establishing:
-
-1. **Deligne's Canonical Subspace Formula**:
-   For any nilpotent operator $N \in \mathrm{Mat}_n(R)$ with $N^{k+1} = 0$:
-   $$W_l(N, k) = \sum_{j=0}^k \left( \ker(N^{j+1}) \cap \operatorname{im}(N^{j - l + k}) \right)$$
-   Formalized via set union with general commutative ring coefficients $R$.
-
-2. **Universal Filtration Properties**:
-   - Monotonicity: $W_l(N, k) \subseteq W_{l+1}(N, k)$ and $W_{l_1}(N, k) \subseteq W_{l_2}(N, k)$ for $l_1 \le l_2$.
-   - Shift Property: $N(W_l(N, k)) \subseteq W_{l-2}(N, k)$.
-   - Extremal Properties: $0 \in W_l$ for all $l$, and $W_{2k}(N, k) = V$ (the full space).
-
-3. **Explicit Weight 2 Filtration for $(3,4,\infty)$ Modular Monodromy**:
-   For $N = T_0 - I_4 \in \mathrm{Mat}_4(\mathbb{Z})$ (Type II degeneration, $N^2 = 0$):
-   - $W_0 = \{0\}$
-   - $W_1 = \operatorname{im}(N) = \ker(N^2) \cap \operatorname{im}(N) \subseteq \ker(N)$
-   - $W_2 = \mathbb{Z}^4 = \ker(N^2)$
-   - Explicit basis action: $N\gamma = 0$, $Nu = -\gamma$, $Nw = \delta$, $N\delta = 0$.
-   - $S_6$-family action: $N\gamma = 0$, $Nu = 0$, $Nw = -u$, $N\delta = \gamma$.
-
-4. **Explicit Weight 3 Filtration for Type III MUM Monodromy**:
-   For $N_{\mathrm{MUM}}$ with $N_{\mathrm{MUM}}^4 = 0$ (CY3 Maximally Unipotent Monodromy):
-   - $W_0 = \{0\} \subset W_1 \subset W_2 \subset W_3 \subset W_4 = \mathbb{Z}^4$.
-   - Step shift inclusions: $N_{\mathrm{MUM}}(W_j) \subseteq W_{j-1}$ and $N_{\mathrm{MUM}}^2(W_j) \subseteq W_{j-2}$.
-
-5. **Hodge-Riemann Symplectic Polarization & Nondegeneracy**:
-   - Infinitesimal symplectic Lie algebra identity: $J N + N^T J = 0$ and $N^T J + J N = 0$.
-   - Polarized bilinear form $Q_N(v, w) = \langle v, N w \rangle_J$.
-   - Machine-checked symmetry, nondegeneracy, and positivity on primitive subspace generators.
+/--
+**Expander Mixing Lemma (Simplified Form)**:
+For any subsets $S, T \subseteq V$ in a $d$-regular graph:
+$$\left| e(S, T) - \frac{d |S| |T|}{n} \right| \le \lambda(G) \sqrt{|S| |T|}$$
 -/
-
-namespace UniversalMonodromyWeightFiltration
-
-open Matrix PicardFuchsMirrorMonodromy
-
-/-! ### 1. General Matrix Operator Algebra & Deligne-Schmid Weight Filtration -/
-
-/-- Kernel of matrix-vector multiplication as a subset of `Fin n → R`. -/
-def kerMat {n : ℕ} {R : Type*} [CommRing R] (M : Matrix (Fin n) (Fin n) R) : Set (Fin n → R) :=
-  {v | M *ᵥ v = 0}
-
-/-- Image of matrix-vector multiplication as a subset of `Fin n → R`. -/
-def imMat {n : ℕ} {R : Type*} [CommRing R] (M : Matrix (Fin n) (Fin n) R) : Set (Fin n → R) :=
-  {v | ∃ u, M *ᵥ u = v}
-
-/-- Generalized image power: $\operatorname{im}(N^m)$ for $m > 0$ and full space for $m \le 0$. -/
-def imPower {n : ℕ} {R : Type*} [CommRing R] (N : Matrix (Fin n) (Fin n) R) (m : ℤ) : Set (Fin n → R) :=
-  if m ≤ 0 then Set.univ else imMat (N ^ m.toNat)
-
-/-- Generalized kernel power: $\ker(N^m)$. -/
-def kerPower {n : ℕ} {R : Type*} [CommRing R] (N : Matrix (Fin n) (Fin n) R) (m : ℕ) : Set (Fin n → R) :=
-  kerMat (N ^ m)
-
-/-- Deligne's $(j, l, k)$-summand $\ker(N^{j+1}) \cap \operatorname{im}(N^{j - l + k})$. -/
-def DeligneSummand {n : ℕ} {R : Type*} [CommRing R]
-    (N : Matrix (Fin n) (Fin n) R) (k : ℕ) (l : ℕ) (j : ℕ) : Set (Fin n → R) :=
-  kerPower N (j + 1) ∩ imPower N ((j : ℤ) - (l : ℤ) + (k : ℤ))
-
-/-- Deligne weight space $W_l(N, k) = \bigcup_{j=0}^k \left( \ker(N^{j+1}) \cap \operatorname{im}(N^{j - l + k}) \right)$. -/
-def DeligneWeightSpace {n : ℕ} {R : Type*} [CommRing R]
-    (N : Matrix (Fin n) (Fin n) R) (k : ℕ) (l : ℕ) : Set (Fin n → R) :=
-  {v | ∃ j : ℕ, j ≤ k ∧ v ∈ DeligneSummand N k l j}
-
-/-- The zero vector belongs to every kernel power. -/
-theorem zero_mem_kerPower {n : ℕ} {R : Type*} [CommRing R] (N : Matrix (Fin n) (Fin n) R) (m : ℕ) :
-    (0 : Fin n → R) ∈ kerPower N m :=
-  mulVec_zero (N ^ m)
-
-/-- The zero vector belongs to every image power. -/
-theorem zero_mem_imPower {n : ℕ} {R : Type*} [CommRing R] (N : Matrix (Fin n) (Fin n) R) (m : ℤ) :
-    (0 : Fin n → R) ∈ imPower N m := by
-  dsimp [imPower]; split_ifs <;> [trivial; exact ⟨0, mulVec_zero _⟩]
-
-/-- The zero vector belongs to every Deligne summand. -/
-theorem zero_mem_DeligneSummand {n : ℕ} {R : Type*} [CommRing R]
-    (N : Matrix (Fin n) (Fin n) R) (k : ℕ) (l : ℕ) (j : ℕ) :
-    (0 : Fin n → R) ∈ DeligneSummand N k l j :=
-  ⟨zero_mem_kerPower N (j + 1), zero_mem_imPower N (j - l + k)⟩
-
-/-- The zero vector belongs to every Deligne weight space. -/
-theorem zero_mem_DeligneWeightSpace {n : ℕ} {R : Type*} [CommRing R]
-    (N : Matrix (Fin n) (Fin n) R) (k : ℕ) (l : ℕ) :
-    (0 : Fin n → R) ∈ DeligneWeightSpace N k l :=
-  ⟨0, Nat.zero_le k, zero_mem_DeligneSummand N k l 0⟩
-
-/-- Image powers are antitone: if $m_1 \le m_2$, then $\operatorname{im}(N^{m_2}) \subseteq \operatorname{im}(N^{m_1})$. -/
-theorem imPower_anti {n : ℕ} {R : Type*} [CommRing R] (N : Matrix (Fin n) (Fin n) R)
-    (m1 m2 : ℤ) (h : m1 ≤ m2) :
-    imPower N m2 ⊆ imPower N m1 := by
-  dsimp [imPower]; split_ifs with h2 h1 <;> try (first | rfl | exact Set.subset_univ _ | exact (h1 (h.trans h2)).elim)
-  rintro v ⟨u, rfl⟩; obtain ⟨d, hd⟩ := Nat.le.dest (Int.toNat_le_toNat h)
-  exact ⟨(N ^ d) *ᵥ u, by rw [mulVec_mulVec, ← pow_add, hd]⟩
-
-/-- Each Deligne summand is monotonic in the filtration level $l$:
-    $\operatorname{DeligneSummand}(N, k, l, j) \subseteq \operatorname{DeligneSummand}(N, k, l+1, j)$. -/
-theorem DeligneSummand_subset_succ {n : ℕ} {R : Type*} [CommRing R]
-    (N : Matrix (Fin n) (Fin n) R) (k : ℕ) (l : ℕ) (j : ℕ) :
-    DeligneSummand N k l j ⊆ DeligneSummand N k (l + 1) j :=
-  fun _ ⟨hker, him⟩ => ⟨hker, imPower_anti N _ _ (by omega) him⟩
-
-/-- The Deligne weight spaces are increasing: $W_l(N, k) \subseteq W_{l+1}(N, k)$. -/
-theorem DeligneWeightSpace_subset_succ {n : ℕ} {R : Type*} [CommRing R]
-    (N : Matrix (Fin n) (Fin n) R) (k : ℕ) (l : ℕ) :
-    DeligneWeightSpace N k l ⊆ DeligneWeightSpace N k (l + 1) :=
-  fun _ ⟨j, hj, hv⟩ => ⟨j, hj, DeligneSummand_subset_succ N k l j hv⟩
-
-/-- Monotonicity for arbitrary levels: if $l_1 \le l_2$, then $W_{l_1}(N, k) \subseteq W_{l_2}(N, k)$. -/
-theorem DeligneWeightSpace_mono {n : ℕ} {R : Type*} [CommRing R]
-    (N : Matrix (Fin n) (Fin n) R) (k : ℕ) :
-    ∀ {l1 l2 : ℕ}, l1 ≤ l2 → DeligneWeightSpace N k l1 ⊆ DeligneWeightSpace N k l2 := by
-  intro l1 l2 h; obtain ⟨d, rfl⟩ := Nat.le.dest h; clear h
-  induction d with
-  | zero => exact Set.Subset.rfl
-  | succ d ih => exact Set.Subset.trans ih (DeligneWeightSpace_subset_succ N k (l1 + d))
-
-/-- Shift property on Deligne summands for kernels: $N$ maps $\ker(N^{j+1})$ into $\ker(N^j)$. -/
-theorem N_mulVec_mem_kerPower_pred {n : ℕ} {R : Type*} [CommRing R]
-    (N : Matrix (Fin n) (Fin n) R) (j : ℕ) (v : Fin n → R)
-    (hv : v ∈ kerPower N (j + 1)) :
-    N *ᵥ v ∈ kerPower N j := by
-  dsimp [kerPower, kerMat] at hv ⊢
-  rw [mulVec_mulVec, ← pow_succ, hv]
-
-/-- Shift property on image powers: $N$ maps $\operatorname{im}(N^m)$ into $\operatorname{im}(N^{m+1})$. -/
-theorem N_mulVec_mem_imPower_succ {n : ℕ} {R : Type*} [CommRing R]
-    (N : Matrix (Fin n) (Fin n) R) (m : ℤ) (v : Fin n → R)
-    (hv : v ∈ imPower N m) :
-    N *ᵥ v ∈ imPower N (m + 1) := by
-  dsimp [imPower] at hv ⊢
-  split_ifs at hv with h1 <;> split_ifs with h2 <;> try trivial
-  · have : (m + 1).toNat = 1 := by omega
-    exact ⟨v, by rw [this, pow_one]⟩
-  · obtain ⟨u, rfl⟩ := hv
-    have : (m + 1).toNat = m.toNat + 1 := by omega
-    exact ⟨u, by rw [this, pow_succ', mulVec_mulVec]⟩
-
-/-- Extremal property: for nilpotent $N$ with $N^{k+1} = 0$, $W_{2k}(N, k)$ is the full space. -/
-theorem DeligneWeightSpace_top {n : ℕ} {R : Type*} [CommRing R]
-    (N : Matrix (Fin n) (Fin n) R) (k : ℕ) (hk : N ^ (k + 1) = 0) (l : ℕ) (hl : 2 * k ≤ l) :
-    DeligneWeightSpace N k l = Set.univ := by
-  ext v; simp only [Set.mem_univ, iff_true]
-  refine ⟨k, le_rfl, by simp [kerPower, kerMat, hk], ?_⟩
-  dsimp [DeligneSummand, imPower]; split_ifs <;> [trivial; omega]
-
-/-- Fundamental shift property of Deligne weight filtration: $N(W_l) \subseteq W_{l-2}$. -/
-theorem DeligneWeightSpace_shift {n : ℕ} {R : Type*} [CommRing R]
-    (N : Matrix (Fin n) (Fin n) R) (k : ℕ) (l : ℕ) (v : Fin n → R)
-    (hv : v ∈ DeligneWeightSpace N k l) :
-    N *ᵥ v ∈ DeligneWeightSpace N k (l - 2) := by
-  obtain ⟨_|j, hj, hvj⟩ := hv
-  · have h_ker : N *ᵥ v = 0 := by simpa [DeligneSummand, kerPower, kerMat] using hvj.1
-    rw [h_ker]
-    exact zero_mem_DeligneWeightSpace N k (l - 2)
-  · refine ⟨j, by omega, N_mulVec_mem_kerPower_pred N (j + 1) v hvj.1, ?_⟩
-    have him := N_mulVec_mem_imPower_succ N ((j + 1 : ℤ) - (l : ℤ) + (k : ℤ)) v hvj.2
-    exact imPower_anti N _ _ (by omega) him
-
-/-! ### 2. Explicit Computation on $\mathbb{Z}^4$ for $(3,4,\infty)$ Modular Monodromy -/
-
-/-- Weight space $W_0 = \{0\}$ for the $(3,4,\infty)$ modular monodromy. -/
-def W0_34 : Set (Fin 4 → ℤ) := {0}
-
-/-- Weight space $W_1 = \operatorname{im}(N)$ for the $(3,4,\infty)$ modular monodromy. -/
-def W1_34 : Set (Fin 4 → ℤ) := imMat PicardFuchsMirrorMonodromy.N
-
-/-- Weight space $W_2 = \mathbb{Z}^4$ for the $(3,4,\infty)$ modular monodromy. -/
-def W2_34 : Set (Fin 4 → ℤ) := Set.univ
-
-/-- Filtration step $W_0 \subseteq W_1$. -/
-theorem W0_sub_W1 : W0_34 ⊆ W1_34 := by
-  rintro _ rfl; exact ⟨0, mulVec_zero _⟩
-
-/-- Filtration step $W_1 \subseteq W_2$. -/
-theorem W1_sub_W2 : W1_34 ⊆ W2_34 :=
-  Set.subset_univ _
-
-/-- Complete chain $W_0 \subseteq W_1 \subseteq W_2$. -/
-theorem weight_filtration_chain_34 : W0_34 ⊆ W1_34 ∧ W1_34 ⊆ W2_34 :=
-  ⟨W0_sub_W1, W1_sub_W2⟩
-
-/-- The image of $N$ is contained in the kernel of $N$: $N(W_1) \subseteq W_0 = \{0\}$. -/
-theorem N_act_W1_in_W0 (v : Fin 4 → ℤ) (hv : v ∈ W1_34) :
-    PicardFuchsMirrorMonodromy.N *ᵥ v ∈ W0_34 := by
-  obtain ⟨u, rfl⟩ := hv
-  simp [W0_34, mulVec_mulVec, PicardFuchsMirrorMonodromy.N_unipotent_index_2]
-
-/-- $N$ maps $W_2 = \mathbb{Z}^4$ into $W_1 = \operatorname{im}(N)$. -/
-theorem N_act_W2_in_W1 (v : Fin 4 → ℤ) (_hv : v ∈ W2_34) :
-    PicardFuchsMirrorMonodromy.N *ᵥ v ∈ W1_34 :=
-  ⟨v, rfl⟩
-
-/-- Shift verification: $N^2$ annihilates $W_2$, so $N^2(W_2) \subseteq W_0$. -/
-theorem N_act_W2_in_W0 (v : Fin 4 → ℤ) (hv : v ∈ W2_34) :
-    PicardFuchsMirrorMonodromy.N *ᵥ (PicardFuchsMirrorMonodromy.N *ᵥ v) ∈ W0_34 :=
-  N_act_W1_in_W0 _ (N_act_W2_in_W1 v hv)
-
-/-- Explicit action of $N$ on basis vector $\gamma = (1, 0, 0, 0)^T$. -/
-theorem N_act_gamma : PicardFuchsMirrorMonodromy.N *ᵥ PicardFuchsMirrorMonodromy.gamma = 0 := by
-  ext i; fin_cases i <;> rfl
-
-/-- Explicit action of $N$ on basis vector $u = (0, 1, 0, 0)^T$. -/
-theorem N_act_u :
-    PicardFuchsMirrorMonodromy.N *ᵥ PicardFuchsMirrorMonodromy.u =
-    -PicardFuchsMirrorMonodromy.gamma := by
-  ext i; fin_cases i <;> rfl
-
-/-- Explicit action of $N$ on basis vector $w = (0, 0, 1, 0)^T$. -/
-theorem N_act_w :
-    PicardFuchsMirrorMonodromy.N *ᵥ PicardFuchsMirrorMonodromy.w =
-    PicardFuchsMirrorMonodromy.delta := by
-  ext i; fin_cases i <;> rfl
-
-/-- Explicit action of $N$ on basis vector $\delta = (0, 0, 0, 1)^T$. -/
-theorem N_act_delta : PicardFuchsMirrorMonodromy.N *ᵥ PicardFuchsMirrorMonodromy.delta = 0 := by
-  ext i; fin_cases i <;> rfl
-
-/-- Explicit action of $S_6$ monodromy operator $N_{S_6}$ on $\gamma$: $N_{S_6}\gamma = 0$. -/
-theorem S6_N_act_gamma : ModularFamilyS6.N *ᵥ PicardFuchsMirrorMonodromy.gamma = 0 :=
-  ModularFamilyS6.N_act_gamma
-
-/-- Explicit action of $S_6$ monodromy operator $N_{S_6}$ on $u$: $N_{S_6}u = 0$. -/
-theorem S6_N_act_u : ModularFamilyS6.N *ᵥ PicardFuchsMirrorMonodromy.u = 0 :=
-  ModularFamilyS6.N_act_u
-
-/-- Explicit action of $S_6$ monodromy operator $N_{S_6}$ on $w$: $N_{S_6}w = -u$. -/
-theorem S6_N_act_w :
-    ModularFamilyS6.N *ᵥ PicardFuchsMirrorMonodromy.w = -PicardFuchsMirrorMonodromy.u :=
-  ModularFamilyS6.N_act_w
-
-/-- Explicit action of $S_6$ monodromy operator $N_{S_6}$ on $\delta$: $N_{S_6}\delta = \gamma$. -/
-theorem S6_N_act_delta :
-    ModularFamilyS6.N *ᵥ PicardFuchsMirrorMonodromy.delta = PicardFuchsMirrorMonodromy.gamma :=
-  ModularFamilyS6.N_act_delta
-
-/-! ### 3. Explicit Computation for Type III MUM Monodromy -/
-
-/-- Weight space $W_0 = \{0\}$ for the CY3 MUM operator $N_{\mathrm{MUM}}$. -/
-def W_MUM_0 : Set (Fin 4 → ℤ) := {0}
-
-/-- Weight space $W_1 = \operatorname{span}(e_0) = \ker(N_{\mathrm{MUM}})$. -/
-def W_MUM_1 : Set (Fin 4 → ℤ) := {v | v 1 = 0 ∧ v 2 = 0 ∧ v 3 = 0}
-
-/-- Weight space $W_2 = \operatorname{span}(e_0, e_1) = \ker(N_{\mathrm{MUM}}^2)$. -/
-def W_MUM_2 : Set (Fin 4 → ℤ) := {v | v 2 = 0 ∧ v 3 = 0}
-
-/-- Weight space $W_3 = \operatorname{span}(e_0, e_1, e_2) = \ker(N_{\mathrm{MUM}}^3)$. -/
-def W_MUM_3 : Set (Fin 4 → ℤ) := {v | v 3 = 0}
-
-/-- Weight space $W_4 = \mathbb{Z}^4 = \ker(N_{\mathrm{MUM}}^4)$. -/
-def W_MUM_4 : Set (Fin 4 → ℤ) := Set.univ
-
-/-- Filtration inclusion $W_0 \subseteq W_1$ for MUM. -/
-theorem W_MUM_chain_0_1 : W_MUM_0 ⊆ W_MUM_1 := by
-  rintro _ rfl; simp [W_MUM_1]
-
-/-- Filtration inclusion $W_1 \subseteq W_2$ for MUM. -/
-theorem W_MUM_chain_1_2 : W_MUM_1 ⊆ W_MUM_2 :=
-  fun _ ⟨_, h2, h3⟩ => ⟨h2, h3⟩
-
-/-- Filtration inclusion $W_2 \subseteq W_3$ for MUM. -/
-theorem W_MUM_chain_2_3 : W_MUM_2 ⊆ W_MUM_3 :=
-  fun _ ⟨_, h3⟩ => h3
-
-/-- Filtration inclusion $W_3 \subseteq W_4$ for MUM. -/
-theorem W_MUM_chain_3_4 : W_MUM_3 ⊆ W_MUM_4 :=
-  Set.subset_univ _
-
-/-- Complete chain $W_0 \subseteq W_1 \subseteq W_2 \subseteq W_3 \subseteq W_4$ for MUM. -/
-theorem W_MUM_complete_chain :
-    W_MUM_0 ⊆ W_MUM_1 ∧ W_MUM_1 ⊆ W_MUM_2 ∧ W_MUM_2 ⊆ W_MUM_3 ∧ W_MUM_3 ⊆ W_MUM_4 :=
-  ⟨W_MUM_chain_0_1, W_MUM_chain_1_2, W_MUM_chain_2_3, W_MUM_chain_3_4⟩
-
-/-- Matrix-vector multiplication for $N_{\mathrm{MUM}}$. -/
-theorem mulVec_N_MUM (v : Fin 4 → ℤ) :
-    PicardFuchsMirrorMonodromy.N_MUM *ᵥ v = ![v 1, v 2, v 3, 0] := by
-  ext i
-  fin_cases i <;> simp [PicardFuchsMirrorMonodromy.N_MUM, mulVec, dotProduct, Fin.sum_univ_four]
-
-/-- $N_{\mathrm{MUM}}$ maps $W_0$ into $W_0$. -/
-theorem N_MUM_act_W0 (v : Fin 4 → ℤ) (hv : v ∈ W_MUM_0) :
-    PicardFuchsMirrorMonodromy.N_MUM *ᵥ v ∈ W_MUM_0 := by
-  subst hv; simp [W_MUM_0, mulVec_zero]
-
-/-- $N_{\mathrm{MUM}}$ maps $W_1$ into $W_0$. -/
-theorem N_MUM_act_W1 (v : Fin 4 → ℤ) (hv : v ∈ W_MUM_1) :
-    PicardFuchsMirrorMonodromy.N_MUM *ᵥ v ∈ W_MUM_0 := by
-  rw [mulVec_N_MUM]
-  obtain ⟨h1, h2, h3⟩ := hv
-  ext i; fin_cases i <;> simp [h1, h2, h3]
-
-/-- $N_{\mathrm{MUM}}$ maps $W_2$ into $W_1$. -/
-theorem N_MUM_act_W2 (v : Fin 4 → ℤ) (hv : v ∈ W_MUM_2) :
-    PicardFuchsMirrorMonodromy.N_MUM *ᵥ v ∈ W_MUM_1 := by
-  rw [mulVec_N_MUM]; exact ⟨hv.1, hv.2, rfl⟩
-
-/-- $N_{\mathrm{MUM}}$ maps $W_3$ into $W_2$. -/
-theorem N_MUM_act_W3 (v : Fin 4 → ℤ) (hv : v ∈ W_MUM_3) :
-    PicardFuchsMirrorMonodromy.N_MUM *ᵥ v ∈ W_MUM_2 := by
-  rw [mulVec_N_MUM]; exact ⟨hv, rfl⟩
-
-/-- $N_{\mathrm{MUM}}$ maps $W_4$ into $W_3$. -/
-theorem N_MUM_act_W4 (v : Fin 4 → ℤ) (_hv : v ∈ W_MUM_4) :
-    PicardFuchsMirrorMonodromy.N_MUM *ᵥ v ∈ W_MUM_3 := by
-  rw [mulVec_N_MUM]; rfl
-
-/-- Two-step shift: $N_{\mathrm{MUM}}^2$ maps $W_2$ into $W_0$. -/
-theorem N_MUM_shift_2_0 (v : Fin 4 → ℤ) (hv : v ∈ W_MUM_2) :
-    PicardFuchsMirrorMonodromy.N_MUM *ᵥ (PicardFuchsMirrorMonodromy.N_MUM *ᵥ v) ∈ W_MUM_0 :=
-  N_MUM_act_W1 _ (N_MUM_act_W2 v hv)
-
-/-- Two-step shift: $N_{\mathrm{MUM}}^2$ maps $W_3$ into $W_1$. -/
-theorem N_MUM_shift_3_1 (v : Fin 4 → ℤ) (hv : v ∈ W_MUM_3) :
-    PicardFuchsMirrorMonodromy.N_MUM *ᵥ (PicardFuchsMirrorMonodromy.N_MUM *ᵥ v) ∈ W_MUM_1 :=
-  N_MUM_act_W2 _ (N_MUM_act_W3 v hv)
-
-/-- Two-step shift: $N_{\mathrm{MUM}}^2$ maps $W_4$ into $W_2$. -/
-theorem N_MUM_shift_4_2 (v : Fin 4 → ℤ) (hv : v ∈ W_MUM_4) :
-    PicardFuchsMirrorMonodromy.N_MUM *ᵥ (PicardFuchsMirrorMonodromy.N_MUM *ᵥ v) ∈ W_MUM_2 :=
-  N_MUM_act_W3 _ (N_MUM_act_W4 v hv)
-
-/-! ### 4. Hodge-Riemann Symplectic Polarization & Infinitesimal Isometry -/
-
-/-- Infinitesimal symplectic Lie algebra condition: $J N + N^T J = 0$. -/
-theorem J_N_plus_NT_J_zero :
-    PicardFuchsMirrorMonodromy.J * PicardFuchsMirrorMonodromy.N +
-    PicardFuchsMirrorMonodromy.Nᵀ * PicardFuchsMirrorMonodromy.J = 0 := by
-  ext i j; fin_cases i <;> fin_cases j <;> rfl
-
-/-- Infinitesimal symplectic Lie algebra condition: $N^T J + J N = 0$. -/
-theorem NT_J_plus_J_N_zero :
-    PicardFuchsMirrorMonodromy.Nᵀ * PicardFuchsMirrorMonodromy.J +
-    PicardFuchsMirrorMonodromy.J * PicardFuchsMirrorMonodromy.N = 0 := by
-  ext i j; fin_cases i <;> fin_cases j <;> rfl
-
-/-- Hodge-Riemann polarized bilinear form $Q_N(v, w) = \langle v, N w \rangle_J$. -/
-def Q_N (v w : Fin 4 → ℤ) : ℤ :=
-  PicardFuchsMirrorMonodromy.symplecticPairing v (PicardFuchsMirrorMonodromy.N *ᵥ w)
-
-/-- Symmetry of the Hodge-Riemann polarized bilinear form: $Q_N(v, w) = Q_N(w, v)$. -/
-theorem Q_N_symm (v w : Fin 4 → ℤ) : Q_N v w = Q_N w v := by
-  dsimp [Q_N]
-  have h := PicardFuchsMirrorMonodromy.symplecticPairing_N_invariant w v
-  have hskew := PicardFuchsMirrorMonodromy.symplecticPairing_skew
-    (PicardFuchsMirrorMonodromy.N *ᵥ w) v
+theorem expander_mixing_lemma_simplified (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (S T : Finset V) :
+    |edgeCountBetween G S T - (d : ℝ) * (S.card : ℝ) * (T.card : ℝ) / (Fintype.card V : ℝ)| ≤
+      spectralExpansionParameter G * Real.sqrt ((S.card : ℝ) * (T.card : ℝ)) :=
+  (expander_mixing_lemma G hreg hn S T).trans
+    (mul_le_mul_of_nonneg_left (sqrt_card_sub_le S T hn) (spectralExpansionParameter_nonneg G))
+
+/--
+**Hoffman–Alon Bound on the Independence Number**:
+If $S \subseteq V$ is an independent set in a $d$-regular graph $G$ (i.e. $e(S, S) = 0$), then
+$$|S| \le \frac{\lambda(G)}{d + \lambda(G)} |V|$$
+assuming $\lambda(G) > 0$.
+-/
+theorem hoffman_independence_bound (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (S : Finset V)
+    (hindep : edgeCountBetween G S S = 0)
+    (hpos : 0 < spectralExpansionParameter G) :
+    (S.card : ℝ) ≤ (spectralExpansionParameter G / (d + spectralExpansionParameter G)) * (Fintype.card V : ℝ) := by
+  have hn_pos : 0 < (Fintype.card V : ℝ) := Nat.cast_pos.mpr (Nat.pos_of_ne_zero hn)
+  have hs_le : (S.card : ℝ) ≤ (Fintype.card V : ℝ) := Nat.cast_le.mpr (Finset.card_le_univ S)
+  have h_em := expander_mixing_lemma G hreg hn S S
+  rw [hindep] at h_em
+  have h_abs : |0 - (d : ℝ) * (S.card : ℝ) * (S.card : ℝ) / (Fintype.card V : ℝ)| =
+      (d : ℝ) * (S.card : ℝ) * (S.card : ℝ) / (Fintype.card V : ℝ) := by
+    have : 0 ≤ (d : ℝ) * (S.card : ℝ) * (S.card : ℝ) / (Fintype.card V : ℝ) := by positivity
+    rw [show 0 - (d : ℝ) * (S.card : ℝ) * (S.card : ℝ) / (Fintype.card V : ℝ) =
+        - ((d : ℝ) * (S.card : ℝ) * (S.card : ℝ) / (Fintype.card V : ℝ)) by ring, abs_neg, abs_of_nonneg this]
+  have h_sqrt_nonneg : 0 ≤ (S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) := by
+    have : (S.card : ℝ) / (Fintype.card V : ℝ) ≤ 1 := (div_le_one hn_pos).mpr hs_le
+    nlinarith
+  have h_sqrt : Real.sqrt ((S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) *
+                   (S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ))) =
+                 (S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) := by
+    rw [show (S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) *
+             (S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) =
+             ((S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ))) ^ 2 by ring, Real.sqrt_sq h_sqrt_nonneg]
+  rw [h_abs, h_sqrt] at h_em
+  by_cases hs : (S.card : ℝ) = 0
+  · rw [hs]; positivity
+  have hs_pos : 0 < (S.card : ℝ) := lt_of_le_of_ne (Nat.cast_nonneg _) (Ne.symm hs)
+  have h_quad : ((d : ℝ) + spectralExpansionParameter G) * (S.card : ℝ) * (S.card : ℝ) / (Fintype.card V : ℝ) ≤
+      spectralExpansionParameter G * (S.card : ℝ) := by
+    calc ((d : ℝ) + spectralExpansionParameter G) * (S.card : ℝ) * (S.card : ℝ) / (Fintype.card V : ℝ)
+      _ = (d : ℝ) * (S.card : ℝ) * (S.card : ℝ) / (Fintype.card V : ℝ) +
+          spectralExpansionParameter G * (S.card : ℝ) * (S.card : ℝ) / (Fintype.card V : ℝ) := by ring
+      _ ≤ spectralExpansionParameter G * ((S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ))) +
+          spectralExpansionParameter G * (S.card : ℝ) * (S.card : ℝ) / (Fintype.card V : ℝ) := by linarith
+      _ = spectralExpansionParameter G * (S.card : ℝ) := by ring
+  have h_div : ((d : ℝ) + spectralExpansionParameter G) * (S.card : ℝ) ≤ spectralExpansionParameter G * (Fintype.card V : ℝ) := by
+    have : (((d : ℝ) + spectralExpansionParameter G) * (S.card : ℝ) / (Fintype.card V : ℝ)) * (S.card : ℝ) ≤
+        spectralExpansionParameter G * (S.card : ℝ) := by
+      calc (((d : ℝ) + spectralExpansionParameter G) * (S.card : ℝ) / (Fintype.card V : ℝ)) * (S.card : ℝ)
+        _ = ((d : ℝ) + spectralExpansionParameter G) * (S.card : ℝ) * (S.card : ℝ) / (Fintype.card V : ℝ) := by ring
+        _ ≤ spectralExpansionParameter G * (S.card : ℝ) := h_quad
+    have h1 := (mul_le_mul_iff_of_pos_right hs_pos).mp this
+    exact (div_le_iff₀ hn_pos).mp h1
+  have h_denom_pos : 0 < (d : ℝ) + spectralExpansionParameter G := by positivity
+  rw [div_mul_eq_mul_div, le_div_iff₀ h_denom_pos]
   linarith
 
-/-- Evaluation of $Q_N$ on primitive generator pair $(u, w)$: $Q_N(u, w) = 1$. -/
-theorem Q_N_u_w :
-    Q_N PicardFuchsMirrorMonodromy.u PicardFuchsMirrorMonodromy.w = 1 :=
-  rfl
+/--
+**Lower Bound on Chromatic Number via Spectral Expansion**:
+For any $d$-regular graph $G$, $\chi(G) \ge 1 + \frac{d}{\lambda(G)}$.
+-/
+theorem chromatic_number_spectral_bound (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (χ : ℕ)
+    (hcol : G.Colorable χ) (hpos : 0 < spectralExpansionParameter G) :
+    1 + (d : ℝ) / spectralExpansionParameter G ≤ (χ : ℝ) := by
+  obtain ⟨c⟩ := hcol
+  have hn_pos : 0 < (Fintype.card V : ℝ) := Nat.cast_pos.mpr (Nat.pos_of_ne_zero hn)
+  have h_fiber : (Fintype.card V : ℝ) = ∑ i : Fin χ, ((Finset.filter (fun v => c v = i) Finset.univ).card : ℝ) := by
+    have h_card := Finset.card_eq_sum_card_fiberwise (f := c) (s := Finset.univ) (t := Finset.univ)
+      (fun x _ => Finset.mem_univ (c x))
+    rw [Finset.card_univ] at h_card
+    rw [h_card, Nat.cast_sum]
+  have h_bound_i : ∀ i : Fin χ,
+      ((Finset.filter (fun v => c v = i) Finset.univ).card : ℝ) ≤
+      (spectralExpansionParameter G / (d + spectralExpansionParameter G)) * (Fintype.card V : ℝ) := by
+    intro i
+    let S := Finset.filter (fun v => c v = i) Finset.univ
+    have hindep : edgeCountBetween G S S = 0 := by
+      dsimp [edgeCountBetween]
+      have h_zero : ∀ u ∈ S, ∀ v ∈ S, adjacencyMatrix G u v = 0 := by
+        intro u hu v hv
+        dsimp [S] at hu hv
+        simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hu hv
+        dsimp [adjacencyMatrix]
+        split_ifs with hadj
+        · exfalso
+          have h_diff := c.valid hadj
+          rw [hu, hv] at h_diff
+          exact h_diff rfl
+        · rfl
+      have h_inner_zero : ∀ u ∈ S, (∑ v ∈ S, adjacencyMatrix G u v) = 0 := by
+        intro u hu
+        rw [Finset.sum_congr rfl (fun v hv => h_zero u hu v hv), Finset.sum_const_zero]
+      rw [Finset.sum_congr rfl (fun u hu => h_inner_zero u hu), Finset.sum_const_zero]
+    exact hoffman_independence_bound G hreg hn S hindep hpos
+  have h_sum_le : (Fintype.card V : ℝ) ≤
+      (χ : ℝ) * ((spectralExpansionParameter G / (d + spectralExpansionParameter G)) * (Fintype.card V : ℝ)) := by
+    calc (Fintype.card V : ℝ)
+      _ = ∑ i : Fin χ, ((Finset.filter (fun v => c v = i) Finset.univ).card : ℝ) := h_fiber
+      _ ≤ ∑ i : Fin χ, (spectralExpansionParameter G / (d + spectralExpansionParameter G)) * (Fintype.card V : ℝ) :=
+        Finset.sum_le_sum (fun i _ => h_bound_i i)
+      _ = (χ : ℝ) * ((spectralExpansionParameter G / (d + spectralExpansionParameter G)) * (Fintype.card V : ℝ)) := by
+        simp [nsmul_eq_mul]
+  have h_denom_pos : 0 < (d : ℝ) + spectralExpansionParameter G := by positivity
+  have h_div_n : 1 ≤ (χ : ℝ) * (spectralExpansionParameter G / ((d : ℝ) + spectralExpansionParameter G)) := by
+    have h_re : 1 * (Fintype.card V : ℝ) ≤
+        ((χ : ℝ) * (spectralExpansionParameter G / ((d : ℝ) + spectralExpansionParameter G))) * (Fintype.card V : ℝ) := by
+      calc 1 * (Fintype.card V : ℝ) = (Fintype.card V : ℝ) := by ring
+      _ ≤ (χ : ℝ) * ((spectralExpansionParameter G / ((d : ℝ) + spectralExpansionParameter G)) * (Fintype.card V : ℝ)) := h_sum_le
+      _ = ((χ : ℝ) * (spectralExpansionParameter G / ((d : ℝ) + spectralExpansionParameter G))) * (Fintype.card V : ℝ) := by ring
+    exact (mul_le_mul_iff_of_pos_right hn_pos).mp h_re
+  have h_mult : ((d : ℝ) + spectralExpansionParameter G) / spectralExpansionParameter G ≤ (χ : ℝ) := by
+    have h_step : 1 * (((d : ℝ) + spectralExpansionParameter G) / spectralExpansionParameter G) ≤
+        ((χ : ℝ) * (spectralExpansionParameter G / ((d : ℝ) + spectralExpansionParameter G))) *
+        (((d : ℝ) + spectralExpansionParameter G) / spectralExpansionParameter G) := by
+      exact mul_le_mul_of_nonneg_right h_div_n (by positivity)
+    have h_cancel : ((χ : ℝ) * (spectralExpansionParameter G / ((d : ℝ) + spectralExpansionParameter G))) *
+        (((d : ℝ) + spectralExpansionParameter G) / spectralExpansionParameter G) = (χ : ℝ) := by
+      have hd_ne : (d : ℝ) + spectralExpansionParameter G ≠ 0 := ne_of_gt h_denom_pos
+      have hl_ne : spectralExpansionParameter G ≠ 0 := ne_of_gt hpos
+      have : (spectralExpansionParameter G / ((d : ℝ) + spectralExpansionParameter G)) *
+          (((d : ℝ) + spectralExpansionParameter G) / spectralExpansionParameter G) = 1 := by
+        rw [div_mul_div_comm, mul_comm (spectralExpansionParameter G) _, div_self (mul_ne_zero hd_ne hl_ne)]
+      rw [mul_assoc, this, mul_one]
+    rw [h_cancel] at h_step
+    linarith
+  have h_split : ((d : ℝ) + spectralExpansionParameter G) / spectralExpansionParameter G =
+      1 + (d : ℝ) / spectralExpansionParameter G := by
+    have hl_ne : spectralExpansionParameter G ≠ 0 := ne_of_gt hpos
+    rw [add_div, div_self hl_ne, add_comm]
+  rw [← h_split]
+  exact h_mult
 
-/-- Evaluation of $Q_N$ on primitive generator pair $(w, u)$: $Q_N(w, u) = 1$. -/
-theorem Q_N_w_u :
-    Q_N PicardFuchsMirrorMonodromy.w PicardFuchsMirrorMonodromy.u = 1 :=
-  rfl
-
-/-- $Q_N$ vanishes on $(u, u)$: $Q_N(u, u) = 0$. -/
-theorem Q_N_u_u :
-    Q_N PicardFuchsMirrorMonodromy.u PicardFuchsMirrorMonodromy.u = 0 :=
-  rfl
-
-/-- $Q_N$ vanishes on $(w, w)$: $Q_N(w, w) = 0$. -/
-theorem Q_N_w_w :
-    Q_N PicardFuchsMirrorMonodromy.w PicardFuchsMirrorMonodromy.w = 0 :=
-  rfl
-
-/-- Strict positivity on diagonal primitive subspace generator $u + w$: $Q_N(u+w, u+w) = 2 > 0$. -/
-theorem Q_N_u_add_w_eval :
-    Q_N (PicardFuchsMirrorMonodromy.u + PicardFuchsMirrorMonodromy.w)
-        (PicardFuchsMirrorMonodromy.u + PicardFuchsMirrorMonodromy.w) = 2 :=
-  rfl
-
-/-- Positivity certificate: $Q_N(u+w, u+w) > 0$. -/
-theorem Q_N_u_add_w_strictly_positive :
-    0 < Q_N (PicardFuchsMirrorMonodromy.u + PicardFuchsMirrorMonodromy.w)
-            (PicardFuchsMirrorMonodromy.u + PicardFuchsMirrorMonodromy.w) := by
-  decide
-
-/-- Polarized bilinear form for the $S_6$ Seifert family: $Q_{N_{S_6}}(v, w) = \langle v, N_{S_6} w \rangle_{\Omega_6}$. -/
-def Q_N_S6 (v w : Fin 4 → ℤ) : ℤ :=
-  symplecticPairingOmega6 v (ModularFamilyS6.N *ᵥ w)
-
-/-- Symmetry of the $S_6$ polarized bilinear form: $Q_{N_{S_6}}(v, w) = Q_{N_{S_6}}(w, v)$. -/
-theorem Q_N_S6_symm (v w : Fin 4 → ℤ) : Q_N_S6 v w = Q_N_S6 w v := by
-  dsimp [Q_N_S6]
-  have h := symplecticPairingOmega6_N_invariant w v
-  have hskew := symplecticPairingOmega6_skew (ModularFamilyS6.N *ᵥ w) v
+/--
+**Connectivity and Positive Edge Density**:
+If two sets $S, T \subseteq V$ satisfy $|S| |T| > \frac{\lambda(G) n^2}{d}$,
+then there is at least one edge between $S$ and $T$ ($e(S, T) > 0$).
+-/
+theorem positive_edge_density_of_large_sets (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
+    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (hd : 0 < d)
+    (S T : Finset V)
+    (h_size : spectralExpansionParameter G * (Fintype.card V : ℝ) ^ 2 / (d : ℝ) < (S.card : ℝ) * (T.card : ℝ)) :
+    0 < edgeCountBetween G S T := by
+  have hn_pos : 0 < (Fintype.card V : ℝ) := Nat.cast_pos.mpr (Nat.pos_of_ne_zero hn)
+  have hd_pos : 0 < (d : ℝ) := Nat.cast_pos.mpr hd
+  have hs_le : (S.card : ℝ) ≤ (Fintype.card V : ℝ) := Nat.cast_le.mpr (Finset.card_le_univ S)
+  have ht_le : (T.card : ℝ) ≤ (Fintype.card V : ℝ) := Nat.cast_le.mpr (Finset.card_le_univ T)
+  have h_sqrt_le : Real.sqrt ((S.card : ℝ) * (T.card : ℝ)) ≤ (Fintype.card V : ℝ) := by
+    have : (S.card : ℝ) * (T.card : ℝ) ≤ (Fintype.card V : ℝ) ^ 2 := by
+      have : (S.card : ℝ) * (T.card : ℝ) ≤ (Fintype.card V : ℝ) * (Fintype.card V : ℝ) :=
+        mul_le_mul hs_le ht_le (Nat.cast_nonneg _) (le_of_lt hn_pos)
+      nlinarith
+    calc Real.sqrt ((S.card : ℝ) * (T.card : ℝ))
+      _ ≤ Real.sqrt ((Fintype.card V : ℝ) ^ 2) := Real.sqrt_le_sqrt this
+      _ = (Fintype.card V : ℝ) := Real.sqrt_sq (le_of_lt hn_pos)
+  have h_lam_sqrt_le : spectralExpansionParameter G * Real.sqrt ((S.card : ℝ) * (T.card : ℝ)) ≤
+      spectralExpansionParameter G * (Fintype.card V : ℝ) :=
+    mul_le_mul_of_nonneg_left h_sqrt_le (spectralExpansionParameter_nonneg G)
+  have h_main_lt : spectralExpansionParameter G * (Fintype.card V : ℝ) <
+      (d : ℝ) * (S.card : ℝ) * (T.card : ℝ) / (Fintype.card V : ℝ) := by
+    have h1 : spectralExpansionParameter G * (Fintype.card V : ℝ) ^ 2 <
+        (S.card : ℝ) * (T.card : ℝ) * (d : ℝ) := (div_lt_iff₀ hd_pos).mp h_size
+    have h2 : spectralExpansionParameter G * (Fintype.card V : ℝ) ^ 2 =
+        (spectralExpansionParameter G * (Fintype.card V : ℝ)) * (Fintype.card V : ℝ) := by ring
+    have h3 : (S.card : ℝ) * (T.card : ℝ) * (d : ℝ) =
+        ((d : ℝ) * (S.card : ℝ) * (T.card : ℝ) / (Fintype.card V : ℝ)) * (Fintype.card V : ℝ) := by
+      have : (S.card : ℝ) * (T.card : ℝ) * (d : ℝ) = (d : ℝ) * (S.card : ℝ) * (T.card : ℝ) := by ring
+      rw [this, div_mul_cancel₀ _ (ne_of_gt hn_pos)]
+    rw [h2, h3] at h1
+    exact (mul_lt_mul_iff_of_pos_right hn_pos).mp h1
+  have ⟨h_low, _⟩ := abs_le.mp (expander_mixing_lemma_simplified G hreg hn S T)
   linarith
 
-/-- Evaluation of $S_6$ polarized form on primitive generator $w$: $Q_{N_{S_6}}(w, w) = 6$. -/
-theorem Q_N_S6_w_pos :
-    Q_N_S6 w w = 6 :=
-  rfl
-
-/-- Strict positivity on primitive generator $w$: $Q_{N_{S_6}}(w, w) > 0$. -/
-theorem Q_N_S6_w_strictly_positive :
-    0 < Q_N_S6 w w := by
-  rw [Q_N_S6_w_pos]; decide
-
-/-- Evaluation of $S_6$ polarized form on primitive generator $\delta$: $Q_{N_{S_6}}(\delta, \delta) = -1$. -/
-theorem Q_N_S6_delta_eval :
-    Q_N_S6 delta delta = -1 :=
-  rfl
-
-/-- Non-degeneracy on primitive generator $\delta$: $Q_{N_{S_6}}(\delta, \delta) \ne 0$. -/
-theorem Q_N_S6_delta_nondegenerate :
-    Q_N_S6 delta delta ≠ 0 := by
-  rw [Q_N_S6_delta_eval]; decide
-
-end UniversalMonodromyWeightFiltration
+end ExpanderMixing
