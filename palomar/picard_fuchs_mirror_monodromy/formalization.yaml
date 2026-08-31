@@ -40,6 +40,9 @@ sources:
     year: 1999
     venue: "Mathematical Surveys and Monographs, Vol. 68, American Mathematical Society"
     relationship: adapts
+    note: >-
+      Formalization adapts Cox and Katz's algebraic formulation of Picard–Fuchs differential systems and
+      mirror Yukawa coupling expansions.
   - title: "Periods of integrals on algebraic manifolds, III: Abelian integrals and the Abel-Jacobi mapping"
     type: paper
     authors:

@@ -35,6 +35,9 @@ sources:
     year: 1968
     venue: "Annals of Mathematics Studies, No. 61, Princeton University Press"
     relationship: adapts
+    note: >-
+      Formalization adapts Milnor's fibration theorem and signature formula for isolated hypersurface
+      singularities to compute Casson invariants of Brieskorn spheres.
   - title: "Groups of homotopy spheres: I"
     type: paper
     authors:

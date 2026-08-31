@@ -45,6 +45,9 @@ sources:
     venue: "Bulletin of the Research Council of Israel"
     year: 1961
     relationship: adapts
+    note: >-
+      Formalization adapts the Erdős–Ginzburg–Ziv zero-sum reduction via iterative Cauchy–Davenport sumset
+      expansion.
 
 related_formalizations:
   - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Combinatorics/Additive/CauchyDavenport.lean"

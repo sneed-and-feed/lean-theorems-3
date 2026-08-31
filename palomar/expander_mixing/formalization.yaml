@@ -37,6 +37,9 @@ sources:
     venue: "Theory of Computing Systems"
     year: 1986
     relationship: adapts
+    note: >-
+      Formalization adapts Alon's spectral expansion bounds relating the second eigenvalue to chromatic number
+      and vertex expansion.
   - title: "Expander graphs and their applications"
     type: paper
     authors:

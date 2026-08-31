@@ -37,6 +37,9 @@ sources:
     year: 1990
     venue: "Geometry of Low-Dimensional Manifolds: 1, London Math. Soc. Lecture Note Series 150, 103-125"
     relationship: adapts
+    note: >-
+      Formalization adapts Fintushel and Stern's instanton homology and surgery formulas relating SU(2)
+      representation counts to the Casson invariant.
   - title: "An invariant for decorated 3-manifolds"
     type: lecture-notes
     authors:

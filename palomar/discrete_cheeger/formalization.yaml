@@ -23,7 +23,7 @@ classification:
   msc2020: ["05C50", "05C75", "15A18", "60J10"]
 
 sources:
-  - title: "\lambda_1, isoperimetric inequalities for graphs, and superconcentrators"
+  - title: "\\lambda_1, isoperimetric inequalities for graphs, and superconcentrators"
     type: paper
     authors:
       - "Noga Alon"
@@ -38,6 +38,9 @@ sources:
     venue: "Transactions of the American Mathematical Society"
     year: 1984
     relationship: adapts
+    note: >-
+      Formalization adapts Dodziuk's discrete Riemannian isoperimetric and combinatorial Laplacian methods to
+      establish the discrete Cheeger inequality.
   - title: "Approximate counting, uniform generation and rapidly mixing Markov chains"
     type: paper
     authors:

@@ -37,6 +37,9 @@ sources:
     year: 1973
     venue: "Inventiones Mathematicae, 22(3-4), 211-319"
     relationship: adapts
+    note: >-
+      Formalization adapts Schmid's nilpotent orbit theorem and limiting Hodge structure weight filtrations to
+      general nilpotent monodromy operators.
   - title: "Periods of integrals on algebraic manifolds, I"
     type: paper
     authors:

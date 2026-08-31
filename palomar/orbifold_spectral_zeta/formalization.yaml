@@ -36,6 +36,9 @@ sources:
     year: 1956
     venue: "Journal of the Indian Mathematical Society, 20, 47-87"
     relationship: adapts
+    note: >-
+      Formalization adapts Selberg's trace formula to 1-cusped hyperbolic 2-orbifolds, decomposing the
+      spectrum into discrete cusp forms and Eisenstein integrals.
   - title: "Spectral theory of the Riemann zeta-function"
     type: book
     authors:

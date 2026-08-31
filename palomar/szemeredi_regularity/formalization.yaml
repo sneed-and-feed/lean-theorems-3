@@ -36,6 +36,9 @@ sources:
     venue: "Combinatorics (Keszthely), Colloq. Math. Soc. J. Bolyai"
     year: 1978
     relationship: adapts
+    note: >-
+      Formalization adapts Ruzsa and Szemerédi's graph removal method and energy increment bounds to formalize
+      the Triangle Removal Lemma.
 
 related_formalizations:
   - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Combinatorics/SimpleGraph/Regularity/Lemma.lean"
