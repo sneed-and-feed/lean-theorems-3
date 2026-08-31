@@ -1,8 +1,8 @@
 # Palomar Submission Master Priority Queue: Repo 3
 
 All 15 theorem packages have completed pre-flight verification audits.
-- **Tier-1 Verified Submission Queue**: 12 landmark research-grade packages, 100% verified (0 custom axioms, 0 `sorry`), with dedicated immutable 40-character Git commit SHAs.
-- **High-Value Research Scaffolds**: 2 spectral expander packages with clearly isolated minimal axioms.
+- **Tier-1 Verified Submission Queue**: 13 landmark research-grade packages, 100% verified (0 custom axioms, 0 `sorry`), with dedicated immutable 40-character Git commit SHAs.
+- **High-Value Research Scaffolds**: 1 spectral expander package with clearly isolated minimal axioms.
 - **Retired Candidates**: 1 package crossed off early (superseded by `kelley_meka`).
 
 ### Submission Settings (`submit.palomar-registry.org`):
@@ -30,6 +30,7 @@ All 15 theorem packages have completed pre-flight verification audits.
 | **10** | **Ruzsa Distance, Plünnecke–Ruzsa Bounds & Petridis Magnification** | `ruzsa_freiman` | `e9f647dbe83af9b300ece231a240142ec21af11d` | Additive Combinatorics / Sumsets |
 | **11** | **Szemerédi's Regularity Lemma and Partition Energy Dynamics** | `szemeredi_regularity` | `ca91141a2d5c5c5733723a43abf3b3e88472884b` | Extremal Graph Theory / Regularity |
 | **12** | **The Cauchy–Davenport Theorem and Iterated Sumsets** | `cauchy_davenport` | `cb87e2ab9085a5d459cd70163e33755670e57b5a` | Additive Number Theory / Finite Fields |
+| **13** | **The Expander Mixing Lemma and Spectral Discrepancy** | `expander_mixing` | `4b4e986f1539894227416e9dce6dfb891c80b687` | Spectral Graph Theory / Discrepancy |
 
 ---
 
@@ -38,7 +39,6 @@ All 15 theorem packages have completed pre-flight verification audits.
 | # | Theorem Title | Slug | Dedicated Commit SHA | Minimal Missing Prerequisites |
 | :---: | :--- | :--- | :--- | :--- |
 | **1** | **The Alon–Boppana Spectral Bound and Ramanujan Expanders** | `alon_boppana` | `f78939a02d8893328ee17a24a1e75d2f32edc29f` | 2 axioms: Nilli spherical Chebyshev trace on universal tree $\mathbb{T}_d$ |
-| **2** | **The Expander Mixing Lemma and Spectral Discrepancy** | `expander_mixing` | `e659a70188570a755dc24f701fd4ae95ddd87ba4` | 1 axiom: Rayleigh quotient operator norm bound (provable via `tanner_expansion`) |
 
 ---
 
