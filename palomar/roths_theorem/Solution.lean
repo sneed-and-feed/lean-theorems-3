@@ -7,11 +7,13 @@ import Mathlib.Algebra.BigOperators.Group.Finset.Basic
 import Mathlib.Tactic.Positivity
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Linarith
+import Mathlib.Tactic.LinearCombination
 
 open scoped BigOperators Finset
 open Classical
 
 set_option linter.unusedSectionVars false
+set_option linter.unusedVariables false
 
 namespace RothsTheorem
 

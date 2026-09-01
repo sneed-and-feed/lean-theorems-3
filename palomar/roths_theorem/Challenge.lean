@@ -12,6 +12,7 @@ open scoped BigOperators Finset
 open Classical
 
 set_option linter.unusedSectionVars false
+set_option linter.unusedVariables false
 
 /-!
 # Roth's Theorem: 3-AP Counting, Progressions, and Density Increment Bounds

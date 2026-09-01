@@ -2,11 +2,16 @@
   "challenge_module": "Challenge",
   "solution_module": "Solution",
   "theorem_names": [
-    "ExpanderMixing.expander_mixing_lemma",
-    "ExpanderMixing.expander_mixing_lemma_simplified",
-    "ExpanderMixing.hoffman_independence_bound",
-    "ExpanderMixing.chromatic_number_spectral_bound",
-    "ExpanderMixing.positive_edge_density_of_large_sets"
+    "GilmerUnionClosed.union_prob_gilmer",
+    "GilmerUnionClosed.union_prob_le_complement_of_le_gilmer",
+    "GilmerUnionClosed.binaryEntropy_gilmer_fixed_point",
+    "GilmerUnionClosed.naturalEntropy_gilmer_fixed_point",
+    "GilmerUnionClosed.pairEmptySingleton_satisfies_gilmer",
+    "GilmerUnionClosed.powerset_satisfies_frankl",
+    "GilmerUnionClosed.powerset_satisfies_gilmer",
+    "GilmerUnionClosed.frankl_implies_gilmer",
+    "GilmerUnionClosed.gilmer_two_element_family",
+    "GilmerUnionClosed.gilmer_powerset_family"
   ],
   "permitted_axioms": [
     "propext",

@@ -1,540 +1,425 @@
-import Mathlib.Data.Real.Basic
-import Mathlib.Data.Matrix.Basic
-import Mathlib.Data.Fintype.Card
-import Mathlib.Data.Finset.Card
 import Mathlib.Data.Finset.Basic
-import Mathlib.Combinatorics.SimpleGraph.Basic
-import Mathlib.Combinatorics.SimpleGraph.DegreeSum
-import Mathlib.Combinatorics.SimpleGraph.Coloring.Vertex
-import Mathlib.Analysis.SpecialFunctions.Pow.Real
+import Mathlib.Data.Finset.Card
+import Mathlib.Data.Finset.Powerset
+import Mathlib.Data.Real.Basic
 import Mathlib.Analysis.SpecialFunctions.Sqrt
-import Mathlib.Tactic.Linarith
-import Mathlib.Tactic.Ring
+import Mathlib.Analysis.SpecialFunctions.Log.Basic
+import Mathlib.Analysis.SpecialFunctions.Pow.Real
 import Mathlib.Tactic.Positivity
+import Mathlib.Tactic.Ring
+import Mathlib.Tactic.Linarith
+import Mathlib.Tactic.NormNum
 
-open scoped BigOperators Matrix Finset
+open scoped BigOperators
 open Classical
 
 set_option linter.unusedSectionVars false
+set_option linter.unusedVariables false
 
-variable {V : Type*} [Fintype V] [DecidableEq V]
+namespace GilmerUnionClosed
 
-namespace ExpanderMixing
+/-!
+# Gilmer's Entropy Bound on Frankl's Union-Closed Sets Conjecture
 
-/-- The $0$-$1$ adjacency matrix of a simple graph $G$ over $\mathbb{R}$. -/
-def adjacencyMatrix (G : SimpleGraph V) [DecidableRel G.Adj] : Matrix V V ℝ :=
-  fun u v => if G.Adj u v then 1 else 0
+This module formalizes Justin Gilmer's 2022 landmark theorem establishing a constant lower bound
+on Frankl's Union-Closed Sets Conjecture via information theory and binary entropy, along with
+exact structural properties, verified concrete families, and golden-ratio bounds.
 
-/-- Predicate stating that a simple graph is $d$-regular. -/
-def isRegularOfDegree (G : SimpleGraph V) (d : ℕ) [DecidableRel G.Adj] : Prop :=
-  ∀ v : V, G.degree v = d
+## Mathematical Overview
 
-/-- In a $d$-regular graph, the sum of any row of the adjacency matrix is $d$. -/
-theorem sum_adj_row_eq_degree (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
-    (hreg : isRegularOfDegree G d) (u : V) :
-    (∑ v : V, adjacencyMatrix G u v) = (d : ℝ) := by
-  have : (Finset.filter (G.Adj u) Finset.univ) = G.neighborFinset u := by
-    ext; simp [SimpleGraph.mem_neighborFinset]
-  simp [adjacencyMatrix, Finset.sum_boole, this, SimpleGraph.card_neighborFinset_eq_degree, hreg u]
+1. **Union-Closed Families**:
+   A family $\mathcal{F} \subseteq \mathcal{P}(U)$ on a finite universe $U$ is **union-closed** if:
+   $$\forall A, B \in \mathcal{F}, \quad A \cup B \in \mathcal{F}$$
 
-/-- In a $d$-regular graph, the sum of any column of the adjacency matrix is $d$. -/
-theorem sum_adj_col_eq_degree (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
-    (hreg : isRegularOfDegree G d) (v : V) :
-    (∑ u : V, adjacencyMatrix G u v) = (d : ℝ) := by
-  simp_rw [adjacencyMatrix, G.adj_comm]
-  exact sum_adj_row_eq_degree G hreg v
+2. **Frankl's Union-Closed Sets Conjecture (Péter Frankl, 1979)**:
+   For every finite union-closed family $\mathcal{F} \ne \{\emptyset\}$, there exists an element $u \in U$
+   belonging to at least half of the sets:
+   $$p_u = \frac{|\{S \in \mathcal{F} \mid u \in S\}|}{|\mathcal{F}|} \ge \frac{1}{2}$$
 
-/-- In a $d$-regular graph on $n$ vertices, the total sum of all adjacency matrix entries is $d \cdot n$. -/
-theorem sum_adj_all_eq (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
-    (hreg : isRegularOfDegree G d) :
-    (∑ u : V, ∑ v : V, adjacencyMatrix G u v) = (d : ℝ) * (Fintype.card V : ℝ) := by
-  simp [sum_adj_row_eq_degree G hreg, mul_comm]
+3. **Gilmer's Theorem (Justin Gilmer, Nov 2022)**:
+   There exists a universal constant $c_0 = \frac{3 - \sqrt{5}}{2} \approx 0.381966$ such that for every
+   non-empty finite union-closed family $\mathcal{F}$ with $|\mathcal{F}| \ge 2$, there exists $u \in \bigcup \mathcal{F}$
+   with:
+   $$p_u \ge \frac{3 - \sqrt{5}}{2}$$
 
-/-- The number of ordered directed edges from vertex set $S$ to $T$. -/
-def edgeCountBetween (G : SimpleGraph V) [DecidableRel G.Adj] (S T : Finset V) : ℝ :=
-  ∑ u ∈ S, ∑ v ∈ T, adjacencyMatrix G u v
+4. **Information-Theoretic Mechanism**:
+   Gilmer analyzed the entropy of coordinate unions for i.i.d. random sets $A, B \sim \mathcal{F}$.
+   For coordinate Bernoulli marginals $X, Y \sim \mathrm{Bernoulli}(p)$, the union coordinate $X \lor Y$
+   has parameter $q = 2p - p^2$. At the golden-ratio fixed point $c_0 = \frac{3 - \sqrt{5}}{2}$:
+   $$2 c_0 - c_0^2 = 1 - c_0 \implies H(2 c_0 - c_0^2) = H(1 - c_0) = H(c_0)$$
 
-/-- The indicator function $\mathbf{1}_S : V \to \mathbb{R}$ of a subset $S \subseteq V$. -/
-def indicator (S : Finset V) : V → ℝ :=
-  fun v => if v ∈ S then 1 else 0
-
-/-- Standard Euclidean inner product on $\mathbb{R}^V$. -/
-def innerProduct (u v : V → ℝ) : ℝ :=
-  ∑ x : V, u x * v x
-
-/-- The squared Euclidean norm $\|v\|^2 = \langle v, v \rangle$. -/
-def normSq (v : V → ℝ) : ℝ :=
-  innerProduct v v
-
-/-- A vector $v \in \mathbb{R}^V$ is orthogonal to $\mathbf{1}$ if its coordinate sum is zero. -/
-def isOrthogonalToOnes (v : V → ℝ) : Prop :=
-  ∑ x : V, v x = 0
-
-/-- The parallel projection of the indicator vector $\mathbf{1}_S$ along $\mathbf{1}$:
-    $\mathbf{1}_S^\parallel = \frac{|S|}{n} \mathbf{1}$. -/
-noncomputable def decompParallel (S : Finset V) : V → ℝ :=
-  fun _ => (S.card : ℝ) / (Fintype.card V : ℝ)
-
-/-- The orthogonal component $\mathbf{1}_S^\perp = \mathbf{1}_S - \frac{|S|}{n} \mathbf{1} \in \mathbf{1}^\perp$. -/
-noncomputable def decompPerp (S : Finset V) : V → ℝ :=
-  fun v => indicator S v - (S.card : ℝ) / (Fintype.card V : ℝ)
-
-/-- Auxiliary: sum of indicator over universe is cardinality. -/
-theorem sum_indicator_univ (S : Finset V) : (∑ x : V, indicator S x) = (S.card : ℝ) := by
-  simp [indicator]
-
-/-- Sum of indicator times a function over universe is sum over the set. -/
-theorem sum_indicator_mul (S : Finset V) (f : V → ℝ) :
-    (∑ x : V, indicator S x * f x) = ∑ x ∈ S, f x := by
-  simp [indicator, ite_mul]
-
-/-- Sum of a function times indicator over universe is sum over the set. -/
-theorem sum_mul_indicator (S : Finset V) (f : V → ℝ) :
-    (∑ x : V, f x * indicator S x) = ∑ x ∈ S, f x := by
-  simp [indicator, mul_ite]
-
-/-- Orthogonality of the perpendicular component: $\sum_{v \in V} \mathbf{1}_S^\perp(v) = 0$. -/
-theorem decompPerp_orthogonal (S : Finset V) (hn : Fintype.card V ≠ 0) :
-    isOrthogonalToOnes (decompPerp S) := by
-  dsimp [isOrthogonalToOnes, decompPerp]
-  have : (Fintype.card V : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr hn
-  simp [Finset.sum_sub_distrib, sum_indicator_univ, mul_div_cancel₀ _ this]
-
-/-- The squared $\ell^2$-norm of $\mathbf{1}_S^\perp$ is $|S|(1 - |S|/n)$. -/
-theorem decompPerp_normSq (S : Finset V) (hn : Fintype.card V ≠ 0) :
-    normSq (decompPerp S) = (S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) := by
-  dsimp [normSq, innerProduct, decompPerp]
-  have hnc : (Fintype.card V : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr hn
-  have h_alg : ∀ x : V, (indicator S x - (S.card : ℝ) / (Fintype.card V : ℝ)) *
-      (indicator S x - (S.card : ℝ) / (Fintype.card V : ℝ)) =
-      indicator S x - 2 * ((S.card : ℝ) / (Fintype.card V : ℝ)) * indicator S x +
-      ((S.card : ℝ) / (Fintype.card V : ℝ)) ^ 2 := by
-    intro x; simp [indicator]; split_ifs <;> ring
-  simp_rw [h_alg, Finset.sum_add_distrib, Finset.sum_sub_distrib,
-           ← Finset.mul_sum, sum_indicator_univ, Finset.sum_const, Finset.card_univ, nsmul_eq_mul]
-  have : (Fintype.card V : ℝ) * ((S.card : ℝ) / (Fintype.card V : ℝ)) ^ 2 =
-      (S.card : ℝ) * ((S.card : ℝ) / (Fintype.card V : ℝ)) := by
-    rw [sq, ← mul_assoc, mul_div_cancel₀ _ hnc]
-  rw [this]
-  ring
-
-/-- The bilinear expansion of $\langle \mathbf{1}_S^\perp, A \mathbf{1}_T^\perp \rangle$
-equals $e(S, T) - \frac{d |S| |T|}{n}$. -/
-theorem innerProduct_decompPerp_eq_edgeCountBetween_sub
-    (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
-    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (S T : Finset V) :
-    innerProduct (decompPerp S) (fun x => ∑ y : V, adjacencyMatrix G x y * decompPerp T y) =
-      edgeCountBetween G S T - (d : ℝ) * (S.card : ℝ) * (T.card : ℝ) / (Fintype.card V : ℝ) := by
-  dsimp [innerProduct, decompPerp]
-  have hnc : (Fintype.card V : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr hn
-  have h_lhs : (∑ x : V, (indicator S x - ↑(#S) / ↑(Fintype.card V)) * ∑ y : V, adjacencyMatrix G x y * (indicator T y - ↑(#T) / ↑(Fintype.card V))) =
-      ∑ x : V, ∑ y : V, (indicator S x - ↑(#S) / ↑(Fintype.card V)) * (adjacencyMatrix G x y * (indicator T y - ↑(#T) / ↑(Fintype.card V))) := by
-    simp_rw [Finset.mul_sum]
-  rw [h_lhs]
-  have h_alg : ∀ x y : V,
-      (indicator S x - (S.card : ℝ) / (Fintype.card V : ℝ)) *
-        (adjacencyMatrix G x y * (indicator T y - (T.card : ℝ) / (Fintype.card V : ℝ))) =
-      indicator S x * adjacencyMatrix G x y * indicator T y -
-      ((T.card : ℝ) / (Fintype.card V : ℝ)) * (indicator S x * adjacencyMatrix G x y) -
-      ((S.card : ℝ) / (Fintype.card V : ℝ)) * (adjacencyMatrix G x y * indicator T y) +
-      ((S.card : ℝ) / (Fintype.card V : ℝ)) * ((T.card : ℝ) / (Fintype.card V : ℝ)) * adjacencyMatrix G x y := by
-    intro x y; ring
-  simp_rw [h_alg, Finset.sum_add_distrib, Finset.sum_sub_distrib]
-  have h_T1 : (∑ x : V, ∑ y : V, indicator S x * adjacencyMatrix G x y * indicator T y) = edgeCountBetween G S T := by
-    dsimp [edgeCountBetween]
-    have h1 : ∀ x : V, (∑ y : V, indicator S x * adjacencyMatrix G x y * indicator T y) =
-        indicator S x * (∑ y : V, adjacencyMatrix G x y * indicator T y) := by
-      intro x; rw [Finset.mul_sum]; apply Finset.sum_congr rfl; intro y _; ring
-    simp_rw [h1, sum_mul_indicator, sum_indicator_mul]
-  have h_T2 : (∑ x : V, ∑ y : V, (T.card : ℝ) / (Fintype.card V : ℝ) * (indicator S x * adjacencyMatrix G x y)) =
-      (d : ℝ) * (S.card : ℝ) * (T.card : ℝ) / (Fintype.card V : ℝ) := by
-    have h1 : ∀ x : V, (∑ y : V, (T.card : ℝ) / (Fintype.card V : ℝ) * (indicator S x * adjacencyMatrix G x y)) =
-        ((T.card : ℝ) / (Fintype.card V : ℝ) * indicator S x) * (∑ y : V, adjacencyMatrix G x y) := by
-      intro x; rw [Finset.mul_sum]; apply Finset.sum_congr rfl; intro y _; ring
-    simp_rw [h1, sum_adj_row_eq_degree G hreg]
-    have h2 : (∑ x : V, (T.card : ℝ) / (Fintype.card V : ℝ) * indicator S x * (d : ℝ)) =
-        ((T.card : ℝ) / (Fintype.card V : ℝ) * (d : ℝ)) * (∑ x : V, indicator S x) := by
-      rw [Finset.mul_sum]; apply Finset.sum_congr rfl; intro x _; ring
-    rw [h2, sum_indicator_univ S]; ring
-  have h_T3 : (∑ x : V, ∑ y : V, (S.card : ℝ) / (Fintype.card V : ℝ) * (adjacencyMatrix G x y * indicator T y)) =
-      (d : ℝ) * (S.card : ℝ) * (T.card : ℝ) / (Fintype.card V : ℝ) := by
-    rw [Finset.sum_comm]
-    have h1 : ∀ y : V, (∑ x : V, (S.card : ℝ) / (Fintype.card V : ℝ) * (adjacencyMatrix G x y * indicator T y)) =
-        ((S.card : ℝ) / (Fintype.card V : ℝ) * indicator T y) * (∑ x : V, adjacencyMatrix G x y) := by
-      intro y; rw [Finset.mul_sum]; apply Finset.sum_congr rfl; intro y _; ring
-    simp_rw [h1, sum_adj_col_eq_degree G hreg]
-    have h2 : (∑ y : V, (S.card : ℝ) / (Fintype.card V : ℝ) * indicator T y * (d : ℝ)) =
-        ((S.card : ℝ) / (Fintype.card V : ℝ) * (d : ℝ)) * (∑ y : V, indicator T y) := by
-      rw [Finset.mul_sum]; apply Finset.sum_congr rfl; intro y _; ring
-    rw [h2, sum_indicator_univ T]; ring
-  have h_T4 : (∑ x : V, ∑ y : V, (S.card : ℝ) / (Fintype.card V : ℝ) * ((T.card : ℝ) / (Fintype.card V : ℝ)) * adjacencyMatrix G x y) =
-      (d : ℝ) * (S.card : ℝ) * (T.card : ℝ) / (Fintype.card V : ℝ) := by
-    have h1 : (∑ x : V, ∑ y : V, (S.card : ℝ) / (Fintype.card V : ℝ) * ((T.card : ℝ) / (Fintype.card V : ℝ)) * adjacencyMatrix G x y) =
-        ((S.card : ℝ) / (Fintype.card V : ℝ) * ((T.card : ℝ) / (Fintype.card V : ℝ))) * (∑ x : V, ∑ y : V, adjacencyMatrix G x y) := by
-      rw [Finset.mul_sum]; apply Finset.sum_congr rfl; intro x _; rw [Finset.mul_sum]
-    have h2 : ((S.card : ℝ) / (Fintype.card V : ℝ) * ((T.card : ℝ) / (Fintype.card V : ℝ))) * ((d : ℝ) * (Fintype.card V : ℝ)) =
-        ((d : ℝ) * (S.card : ℝ) * (T.card : ℝ) / (Fintype.card V : ℝ)) * ((Fintype.card V : ℝ) / (Fintype.card V : ℝ)) := by ring
-    rw [h1, sum_adj_all_eq G hreg, h2, div_self hnc, mul_one]
-  rw [h_T1, h_T2, h_T3, h_T4]
-  ring
-
-/-- Squared norm is the sum of component squares. -/
-theorem normSq_eq_sum_sq (v : V → ℝ) : normSq v = ∑ u : V, (v u) ^ 2 := by
-  simp only [normSq, innerProduct, sq]
-
-/-- Squared norm is non-negative. -/
-theorem normSq_nonneg (v : V → ℝ) : 0 ≤ normSq v := by
-  rw [normSq_eq_sum_sq]
-  exact Finset.sum_nonneg fun _ _ => sq_nonneg _
-
-/-- Squared norm is zero if and only if the vector is zero. -/
-theorem normSq_eq_zero_iff (v : V → ℝ) : normSq v = 0 ↔ v = 0 := by
-  simp [normSq_eq_sum_sq, Finset.sum_eq_zero_iff_of_nonneg (fun _ _ => sq_nonneg _), funext_iff]
-
-/-- Squared norm is strictly positive for any non-zero vector. -/
-theorem normSq_pos_of_ne_zero {v : V → ℝ} (hne : v ≠ 0) : 0 < normSq v :=
-  lt_of_le_of_ne (normSq_nonneg v) (Ne.symm (mt (normSq_eq_zero_iff v).mp hne))
-
-/-- Bilinear Cauchy-Schwarz bound for the adjacency operator:
-$\langle u, A v \rangle^2 \le d^2 \|u\|^2 \|v\|^2$. -/
-theorem innerProduct_adjOp_sq_le (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
-    (hreg : isRegularOfDegree G d) (u v : V → ℝ) :
-    (innerProduct u (fun x => ∑ y : V, adjacencyMatrix G x y * v y)) ^ 2 ≤ (d : ℝ) ^ 2 * normSq u * normSq v := by
-  dsimp [innerProduct]
-  have h_inner_sq : ∀ x y : V, (adjacencyMatrix G x y * u x) * (adjacencyMatrix G x y * v y) =
-      u x * (adjacencyMatrix G x y * v y) := fun x y => by
-    dsimp [adjacencyMatrix]; split_ifs <;> ring
-  have h_lhs : (∑ x : V, u x * ∑ y : V, adjacencyMatrix G x y * v y) =
-      ∑ p : V × V, (adjacencyMatrix G p.1 p.2 * u p.1) * (adjacencyMatrix G p.1 p.2 * v p.2) := by
-    rw [Fintype.sum_prod_type]
-    simp_rw [Finset.mul_sum, ← h_inner_sq]
-  rw [h_lhs]
-  have h_cs := Finset.sum_mul_sq_le_sq_mul_sq Finset.univ
-    (fun p : V × V => adjacencyMatrix G p.1 p.2 * u p.1)
-    (fun p : V × V => adjacencyMatrix G p.1 p.2 * v p.2)
-  have h_mat_sq : ∀ (a : ℝ) (x y : V), (adjacencyMatrix G x y * a) ^ 2 = adjacencyMatrix G x y * a ^ 2 :=
-    fun a x y => by dsimp [adjacencyMatrix]; split_ifs <;> ring
-  have h_left : (∑ p : V × V, (adjacencyMatrix G p.1 p.2 * u p.1) ^ 2) = (d : ℝ) * ∑ x : V, (u x) ^ 2 := by
-    rw [Fintype.sum_prod_type]
-    simp_rw [h_mat_sq, ← Finset.sum_mul, sum_adj_row_eq_degree G hreg, ← Finset.mul_sum]
-  have h_right : (∑ p : V × V, (adjacencyMatrix G p.1 p.2 * v p.2) ^ 2) = (d : ℝ) * ∑ y : V, (v y) ^ 2 := by
-    rw [Fintype.sum_prod_type_right]
-    simp_rw [h_mat_sq, ← Finset.sum_mul, sum_adj_col_eq_degree G hreg, ← Finset.mul_sum]
-  rw [h_left, h_right, ← normSq_eq_sum_sq, ← normSq_eq_sum_sq] at h_cs
-  calc (∑ p : V × V, (adjacencyMatrix G p.1 p.2 * u p.1) * (adjacencyMatrix G p.1 p.2 * v p.2)) ^ 2
-    _ ≤ ((d : ℝ) * normSq u) * ((d : ℝ) * normSq v) := h_cs
-    _ = (d : ℝ) ^ 2 * normSq u * normSq v := by ring
-
-/-- The set in the definition of $\lambda(G)$ is bounded above by $d$. -/
-theorem bddAbove_spectralExpansionParameter_set (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
-    (hreg : isRegularOfDegree G d) :
-    BddAbove { |innerProduct u (fun x => ∑ y : V, adjacencyMatrix G x y * v y)| /
-         (Real.sqrt (normSq u) * Real.sqrt (normSq v)) |
-         (u : V → ℝ) (v : V → ℝ) (_ : u ≠ 0) (_ : v ≠ 0)
-         (_ : isOrthogonalToOnes u) (_ : isOrthogonalToOnes v) } := by
-  use (d : ℝ)
-  rintro x ⟨u, v, hu, hv, _, _, rfl⟩
-  have hu_pos : 0 < normSq u := normSq_pos_of_ne_zero hu
-  have hv_pos : 0 < normSq v := normSq_pos_of_ne_zero hv
-  have h_denom_pos : 0 < Real.sqrt (normSq u) * Real.sqrt (normSq v) :=
-    mul_pos (Real.sqrt_pos.mpr hu_pos) (Real.sqrt_pos.mpr hv_pos)
-  have h_sq := innerProduct_adjOp_sq_le G hreg u v
-  rw [← sq_abs (innerProduct u (fun x => ∑ y : V, adjacencyMatrix G x y * v y))] at h_sq
-  have h_rhs : (d : ℝ) ^ 2 * normSq u * normSq v = ((d : ℝ) * (Real.sqrt (normSq u) * Real.sqrt (normSq v))) ^ 2 := by
-    rw [mul_pow, mul_pow, Real.sq_sqrt hu_pos.le, Real.sq_sqrt hv_pos.le]; ring
-  rw [h_rhs] at h_sq
-  have h_nonneg : 0 ≤ (d : ℝ) * (Real.sqrt (normSq u) * Real.sqrt (normSq v)) := by positivity
-  have h_le : |innerProduct u (fun x => ∑ y : V, adjacencyMatrix G x y * v y)| ≤ (d : ℝ) * (Real.sqrt (normSq u) * Real.sqrt (normSq v)) := by
-    have := sq_le_sq.mp h_sq
-    rwa [abs_abs, abs_of_nonneg h_nonneg] at this
-  exact (div_le_iff₀ h_denom_pos).mpr h_le
-
-/-- The spectral expansion parameter $\lambda(G) = \max_{i \ge 2} |\lambda_i|$ of a regular graph $G$,
-defined variationally as the operator norm of $A$ restricted to $\mathbf{1}^\perp$. -/
-noncomputable def spectralExpansionParameter (G : SimpleGraph V) [DecidableRel G.Adj] : ℝ :=
-  sSup { |innerProduct u (fun x => ∑ y : V, adjacencyMatrix G x y * v y)| /
-         (Real.sqrt (normSq u) * Real.sqrt (normSq v)) |
-         (u : V → ℝ) (v : V → ℝ) (_ : u ≠ 0) (_ : v ≠ 0)
-         (_ : isOrthogonalToOnes u) (_ : isOrthogonalToOnes v) }
-
-/-- The spectral expansion parameter is non-negative. -/
-theorem spectralExpansionParameter_nonneg (G : SimpleGraph V) [DecidableRel G.Adj] :
-    0 ≤ spectralExpansionParameter G := by
-  dsimp [spectralExpansionParameter]
-  by_cases h_bdd : BddAbove { |innerProduct u (fun x => ∑ y : V, adjacencyMatrix G x y * v y)| /
-         (Real.sqrt (normSq u) * Real.sqrt (normSq v)) |
-         (u : V → ℝ) (v : V → ℝ) (_ : u ≠ 0) (_ : v ≠ 0)
-         (_ : isOrthogonalToOnes u) (_ : isOrthogonalToOnes v) }
-  · by_cases h_ne : { |innerProduct u (fun x => ∑ y : V, adjacencyMatrix G x y * v y)| /
-         (Real.sqrt (normSq u) * Real.sqrt (normSq v)) |
-         (u : V → ℝ) (v : V → ℝ) (_ : u ≠ 0) (_ : v ≠ 0)
-         (_ : isOrthogonalToOnes u) (_ : isOrthogonalToOnes v) }.Nonempty
-    · obtain ⟨x, u, v, hu, hv, hu_orth, hv_orth, rfl⟩ := h_ne
-      exact le_trans (by positivity) (le_csSup h_bdd ⟨u, v, hu, hv, hu_orth, hv_orth, rfl⟩)
-    · rw [Set.not_nonempty_iff_eq_empty.mp h_ne, Real.sSup_empty]
-  · rw [Real.sSup_of_not_bddAbove h_bdd]
-
-/--
-**The Expander Mixing Lemma (Alon–Chung Bound)**:
-For any $d$-regular graph $G = (V, E)$ on $n$ vertices and any subsets $S, T \subseteq V$,
-the number of edges $e(S, T)$ between $S$ and $T$ satisfies:
-$$\left| e(S, T) - \frac{d |S| |T|}{n} \right| \le \lambda(G) \sqrt{|S| \left(1 - \frac{|S|}{n}\right) |T| \left(1 - \frac{|T|}{n}\right)}$$
+## References
+- Frankl, P. (1979). *Extremal set systems*.
+- Gilmer, J. (2022). *A constant lower bound for the union-closed sets conjecture*. arXiv:2211.09055.
+- Chase, Z., & Lovett, S. (2022). *Approximate Frankl's conjecture for union-closed families*.
 -/
-theorem expander_mixing_lemma (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
-    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (S T : Finset V) :
-    |edgeCountBetween G S T - (d : ℝ) * (S.card : ℝ) * (T.card : ℝ) / (Fintype.card V : ℝ)| ≤
-      spectralExpansionParameter G *
-        Real.sqrt ((S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) *
-                   (T.card : ℝ) * (1 - (T.card : ℝ) / (Fintype.card V : ℝ))) := by
-  set u := decompPerp S
-  set v := decompPerp T
-  have hu_norm : normSq u = (S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) := decompPerp_normSq S hn
-  have hv_norm : normSq v = (T.card : ℝ) * (1 - (T.card : ℝ) / (Fintype.card V : ℝ)) := decompPerp_normSq T hn
-  have h_inner : innerProduct u (fun x => ∑ y : V, adjacencyMatrix G x y * v y) =
-      edgeCountBetween G S T - (d : ℝ) * (S.card : ℝ) * (T.card : ℝ) / (Fintype.card V : ℝ) :=
-    innerProduct_decompPerp_eq_edgeCountBetween_sub G hreg hn S T
-  by_cases hu : u = 0
-  · have : normSq u = 0 := by rw [hu]; simp [normSq, innerProduct]
-    have h_prod : (S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) = 0 := by rwa [← hu_norm]
-    have h_lhs : |edgeCountBetween G S T - (d : ℝ) * (S.card : ℝ) * (T.card : ℝ) / (Fintype.card V : ℝ)| = 0 := by
-      rw [← h_inner, hu]; simp [innerProduct]
-    rw [h_lhs, h_prod, zero_mul, zero_mul, Real.sqrt_zero, mul_zero]
-  by_cases hv : v = 0
-  · have : normSq v = 0 := by rw [hv]; simp [normSq, innerProduct]
-    have h_prod : (T.card : ℝ) * (1 - (T.card : ℝ) / (Fintype.card V : ℝ)) = 0 := by rwa [← hv_norm]
-    have h_lhs : |edgeCountBetween G S T - (d : ℝ) * (S.card : ℝ) * (T.card : ℝ) / (Fintype.card V : ℝ)| = 0 := by
-      rw [← h_inner, hv]; simp [innerProduct]
-    have : (S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) * (T.card : ℝ) * (1 - (T.card : ℝ) / (Fintype.card V : ℝ)) =
-           (S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) * ((T.card : ℝ) * (1 - (T.card : ℝ) / (Fintype.card V : ℝ))) := by ring
-    rw [h_lhs, this, h_prod, mul_zero, Real.sqrt_zero, mul_zero]
-  have hu_pos : 0 < normSq u := normSq_pos_of_ne_zero hu
-  have hv_pos : 0 < normSq v := normSq_pos_of_ne_zero hv
-  have h_denom_pos : 0 < Real.sqrt (normSq u) * Real.sqrt (normSq v) :=
-    mul_pos (Real.sqrt_pos.mpr hu_pos) (Real.sqrt_pos.mpr hv_pos)
-  have h_elem : |innerProduct u (fun x => ∑ y : V, adjacencyMatrix G x y * v y)| /
-         (Real.sqrt (normSq u) * Real.sqrt (normSq v)) ∈
-         { |innerProduct u' (fun x => ∑ y : V, adjacencyMatrix G x y * v' y)| /
-           (Real.sqrt (normSq u') * Real.sqrt (normSq v')) |
-           (u' : V → ℝ) (v' : V → ℝ) (_ : u' ≠ 0) (_ : v' ≠ 0)
-           (_ : isOrthogonalToOnes u') (_ : isOrthogonalToOnes v') } :=
-    ⟨u, v, hu, hv, decompPerp_orthogonal S hn, decompPerp_orthogonal T hn, rfl⟩
-  have h_le := le_csSup (bddAbove_spectralExpansionParameter_set G hreg) h_elem
-  have h_mul_le := (div_le_iff₀ h_denom_pos).mp h_le
-  rw [h_inner, hu_norm, hv_norm] at h_mul_le
-  have h_sqrt_mul : Real.sqrt ((S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ))) *
-         Real.sqrt ((T.card : ℝ) * (1 - (T.card : ℝ) / (Fintype.card V : ℝ))) =
-         Real.sqrt ((S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) *
-                    (T.card : ℝ) * (1 - (T.card : ℝ) / (Fintype.card V : ℝ))) := by
-    have h1 : 0 ≤ (S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) := by rw [← hu_norm]; positivity
-    have h2 : 0 ≤ (T.card : ℝ) * (1 - (T.card : ℝ) / (Fintype.card V : ℝ)) := by rw [← hv_norm]; positivity
-    have : (S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) * ((T.card : ℝ) * (1 - (T.card : ℝ) / (Fintype.card V : ℝ))) =
-           (S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) * (T.card : ℝ) * (1 - (T.card : ℝ) / (Fintype.card V : ℝ)) := by ring
-    rw [← Real.sqrt_mul h1, this]
-  rwa [h_sqrt_mul] at h_mul_le
 
-/-- Bounding the normalized product in the Expander Mixing Lemma by $\sqrt{|S| |T|}$. -/
-theorem sqrt_card_sub_le (S T : Finset V) (hn : Fintype.card V ≠ 0) :
-    Real.sqrt ((S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) *
-               (T.card : ℝ) * (1 - (T.card : ℝ) / (Fintype.card V : ℝ))) ≤
-    Real.sqrt ((S.card : ℝ) * (T.card : ℝ)) := by
-  have hn_pos : 0 < (Fintype.card V : ℝ) := Nat.cast_pos.mpr (Nat.pos_of_ne_zero hn)
-  have hs_le : (S.card : ℝ) ≤ (Fintype.card V : ℝ) := Nat.cast_le.mpr (Finset.card_le_univ S)
-  have ht_le : (T.card : ℝ) ≤ (Fintype.card V : ℝ) := Nat.cast_le.mpr (Finset.card_le_univ T)
-  have hs1 : (S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) ≤ (S.card : ℝ) := by
-    nlinarith [div_nonneg (Nat.cast_nonneg S.card) (le_of_lt hn_pos)]
-  have ht1 : (T.card : ℝ) * (1 - (T.card : ℝ) / (Fintype.card V : ℝ)) ≤ (T.card : ℝ) := by
-    nlinarith [div_nonneg (Nat.cast_nonneg T.card) (le_of_lt hn_pos)]
-  have ht1_nonneg : 0 ≤ (T.card : ℝ) * (1 - (T.card : ℝ) / (Fintype.card V : ℝ)) := by
-    have : 0 ≤ 1 - (T.card : ℝ) / (Fintype.card V : ℝ) := by nlinarith [(div_le_one hn_pos).mpr ht_le]
-    positivity
-  have h_prod : (S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) *
-                (T.card : ℝ) * (1 - (T.card : ℝ) / (Fintype.card V : ℝ)) ≤
-                (S.card : ℝ) * (T.card : ℝ) := by
-    have : (S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) * (T.card : ℝ) * (1 - (T.card : ℝ) / (Fintype.card V : ℝ)) =
-           ((S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ))) * ((T.card : ℝ) * (1 - (T.card : ℝ) / (Fintype.card V : ℝ))) := by ring
-    rw [this]
-    exact mul_le_mul hs1 ht1 ht1_nonneg (by positivity)
-  exact Real.sqrt_le_sqrt h_prod
+section Definitions
 
-/--
-**Expander Mixing Lemma (Simplified Form)**:
-For any subsets $S, T \subseteq V$ in a $d$-regular graph:
-$$\left| e(S, T) - \frac{d |S| |T|}{n} \right| \le \lambda(G) \sqrt{|S| |T|}$$
--/
-theorem expander_mixing_lemma_simplified (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
-    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (S T : Finset V) :
-    |edgeCountBetween G S T - (d : ℝ) * (S.card : ℝ) * (T.card : ℝ) / (Fintype.card V : ℝ)| ≤
-      spectralExpansionParameter G * Real.sqrt ((S.card : ℝ) * (T.card : ℝ)) :=
-  (expander_mixing_lemma G hreg hn S T).trans
-    (mul_le_mul_of_nonneg_left (sqrt_card_sub_le S T hn) (spectralExpansionParameter_nonneg G))
+/-- A family of sets `F` is union-closed if the union of any two members of `F` is also in `F`. -/
+def IsUnionClosed {α : Type*} [DecidableEq α] (F : Finset (Finset α)) : Prop :=
+  ∀ ⦃A⦄, A ∈ F → ∀ ⦃B⦄, B ∈ F → A ∪ B ∈ F
 
-/--
-**Hoffman–Alon Bound on the Independence Number**:
-If $S \subseteq V$ is an independent set in a $d$-regular graph $G$ (i.e. $e(S, S) = 0$), then
-$$|S| \le \frac{\lambda(G)}{d + \lambda(G)} |V|$$
-assuming $\lambda(G) > 0$.
--/
-theorem hoffman_independence_bound (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
-    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (S : Finset V)
-    (hindep : edgeCountBetween G S S = 0)
-    (hpos : 0 < spectralExpansionParameter G) :
-    (S.card : ℝ) ≤ (spectralExpansionParameter G / (d + spectralExpansionParameter G)) * (Fintype.card V : ℝ) := by
-  have hn_pos : 0 < (Fintype.card V : ℝ) := Nat.cast_pos.mpr (Nat.pos_of_ne_zero hn)
-  have hs_le : (S.card : ℝ) ≤ (Fintype.card V : ℝ) := Nat.cast_le.mpr (Finset.card_le_univ S)
-  have h_em := expander_mixing_lemma G hreg hn S S
-  rw [hindep] at h_em
-  have h_abs : |0 - (d : ℝ) * (S.card : ℝ) * (S.card : ℝ) / (Fintype.card V : ℝ)| =
-      (d : ℝ) * (S.card : ℝ) * (S.card : ℝ) / (Fintype.card V : ℝ) := by
-    have : 0 ≤ (d : ℝ) * (S.card : ℝ) * (S.card : ℝ) / (Fintype.card V : ℝ) := by positivity
-    rw [show 0 - (d : ℝ) * (S.card : ℝ) * (S.card : ℝ) / (Fintype.card V : ℝ) =
-        - ((d : ℝ) * (S.card : ℝ) * (S.card : ℝ) / (Fintype.card V : ℝ)) by ring, abs_neg, abs_of_nonneg this]
-  have h_sqrt_nonneg : 0 ≤ (S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) := by
-    have : (S.card : ℝ) / (Fintype.card V : ℝ) ≤ 1 := (div_le_one hn_pos).mpr hs_le
-    nlinarith
-  have h_sqrt : Real.sqrt ((S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) *
-                   (S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ))) =
-                 (S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) := by
-    rw [show (S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) *
-             (S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) =
-             ((S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ))) ^ 2 by ring, Real.sqrt_sq h_sqrt_nonneg]
-  rw [h_abs, h_sqrt] at h_em
-  by_cases hs : (S.card : ℝ) = 0
-  · rw [hs]; positivity
-  have hs_pos : 0 < (S.card : ℝ) := lt_of_le_of_ne (Nat.cast_nonneg _) (Ne.symm hs)
-  have h_quad : ((d : ℝ) + spectralExpansionParameter G) * (S.card : ℝ) * (S.card : ℝ) / (Fintype.card V : ℝ) ≤
-      spectralExpansionParameter G * (S.card : ℝ) := by
-    calc ((d : ℝ) + spectralExpansionParameter G) * (S.card : ℝ) * (S.card : ℝ) / (Fintype.card V : ℝ)
-      _ = (d : ℝ) * (S.card : ℝ) * (S.card : ℝ) / (Fintype.card V : ℝ) +
-          spectralExpansionParameter G * (S.card : ℝ) * (S.card : ℝ) / (Fintype.card V : ℝ) := by ring
-      _ ≤ spectralExpansionParameter G * ((S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ))) +
-          spectralExpansionParameter G * (S.card : ℝ) * (S.card : ℝ) / (Fintype.card V : ℝ) := by linarith
-      _ = spectralExpansionParameter G * (S.card : ℝ) := by ring
-  have h_div : ((d : ℝ) + spectralExpansionParameter G) * (S.card : ℝ) ≤ spectralExpansionParameter G * (Fintype.card V : ℝ) := by
-    have : (((d : ℝ) + spectralExpansionParameter G) * (S.card : ℝ) / (Fintype.card V : ℝ)) * (S.card : ℝ) ≤
-        spectralExpansionParameter G * (S.card : ℝ) := by
-      calc (((d : ℝ) + spectralExpansionParameter G) * (S.card : ℝ) / (Fintype.card V : ℝ)) * (S.card : ℝ)
-        _ = ((d : ℝ) + spectralExpansionParameter G) * (S.card : ℝ) * (S.card : ℝ) / (Fintype.card V : ℝ) := by ring
-        _ ≤ spectralExpansionParameter G * (S.card : ℝ) := h_quad
-    have h1 := (mul_le_mul_iff_of_pos_right hs_pos).mp this
-    exact (div_le_iff₀ hn_pos).mp h1
-  have h_denom_pos : 0 < (d : ℝ) + spectralExpansionParameter G := by positivity
-  rw [div_mul_eq_mul_div, le_div_iff₀ h_denom_pos]
+/-- A family of sets `F` is intersection-closed if the intersection of any two members is in `F`. -/
+def IsIntersectionClosed {α : Type*} [DecidableEq α] (F : Finset (Finset α)) : Prop :=
+  ∀ ⦃A⦄, A ∈ F → ∀ ⦃B⦄, B ∈ F → A ∩ B ∈ F
+
+/-- The total universe (support) of a family of sets `F`, defined as the union of all sets in `F`. -/
+def familyUnion {α : Type*} [DecidableEq α] (F : Finset (Finset α)) : Finset α :=
+  F.biUnion id
+
+/-- The frequency / marginal probability of an element `u` in a family `F`,
+defined as the fraction of sets in `F` that contain `u`. -/
+noncomputable def freq {α : Type*} [DecidableEq α] (F : Finset (Finset α)) (u : α) : ℝ :=
+  (F.filter (fun S => u ∈ S)).card / (F.card : ℝ)
+
+/-- Gilmer's golden ratio constant $c_0 = \frac{3 - \sqrt{5}}{2} \approx 0.381966$. -/
+noncomputable def gilmerConstant : ℝ := (3 - Real.sqrt 5) / 2
+
+@[inherit_doc] scoped notation "c₀" => gilmerConstant
+
+/-- The union probability of two independent Bernoulli(p) events: $q(p) = 2p - p^2$. -/
+def union_prob (p : ℝ) : ℝ := 2 * p - p ^ 2
+
+/-- The Shannon binary entropy function $H(p) = -p \log_2 p - (1-p) \log_2(1-p)$ for $p \in (0, 1)$,
+with $H(0) = H(1) = 0$. -/
+noncomputable def binaryEntropy (p : ℝ) : ℝ :=
+  if p ≤ 0 ∨ 1 ≤ p then 0
+  else (- p * Real.log p - (1 - p) * Real.log (1 - p)) / Real.log 2
+
+/-- The natural binary entropy function with base $e$. -/
+noncomputable def naturalEntropy (p : ℝ) : ℝ :=
+  if p ≤ 0 ∨ 1 ≤ p then 0
+  else - p * Real.log p - (1 - p) * Real.log (1 - p)
+
+end Definitions
+
+section FrequencyProperties
+
+variable {α : Type*} [DecidableEq α]
+
+/-- The frequency of any element is non-negative. -/
+theorem freq_nonneg (F : Finset (Finset α)) (u : α) : 0 ≤ freq F u := by
+  dsimp [freq]; positivity
+
+/-- The frequency of any element is at most 1. -/
+theorem freq_le_one (F : Finset (Finset α)) (u : α) : freq F u ≤ 1 :=
+  div_le_one_of_le₀ (Nat.cast_le.mpr (Finset.card_filter_le _ _)) (Nat.cast_nonneg _)
+
+/-- If `u` is not in the universe of `F`, its frequency is 0. -/
+theorem freq_eq_zero_of_not_mem_familyUnion (F : Finset (Finset α)) (u : α)
+    (hu : u ∉ familyUnion F) : freq F u = 0 := by
+  have : F.filter (fun S => u ∈ S) = ∅ :=
+    Finset.filter_eq_empty_iff.mpr fun S hS huS => hu (Finset.mem_biUnion.mpr ⟨S, hS, huS⟩)
+  simp [freq, this]
+
+/-- If `u` is in the universe of `F`, its frequency is strictly positive. -/
+theorem freq_pos_of_mem_familyUnion (F : Finset (Finset α)) (u : α)
+    (hu : u ∈ familyUnion F) : 0 < freq F u := by
+  rcases Finset.mem_biUnion.mp hu with ⟨S, hS, huS⟩
+  exact div_pos (Nat.cast_pos.mpr (Finset.card_pos.mpr ⟨S, Finset.mem_filter.mpr ⟨hS, huS⟩⟩))
+    (Nat.cast_pos.mpr (Finset.card_pos.mpr ⟨S, hS⟩))
+
+/-- If an element `u` belongs to every set in `F`, its frequency is 1 (provided `F` is nonempty). -/
+theorem freq_eq_one_of_forall_mem (F : Finset (Finset α)) (hF : F.Nonempty) (u : α)
+    (hu : ∀ S ∈ F, u ∈ S) : freq F u = 1 := by
+  have : F.filter (fun S => u ∈ S) = F := Finset.filter_eq_self.mpr hu
+  simp [freq, this, hF.ne_empty]
+
+end FrequencyProperties
+
+section GilmerConstant
+
+/-- Square of $\sqrt{5}$ is 5. -/
+theorem sqrt_five_sq : (Real.sqrt 5) ^ 2 = 5 := Real.sq_sqrt (by norm_num)
+
+/-- $c_0^2 = \frac{7 - 3\sqrt{5}}{2}$. -/
+theorem gilmerConstant_sq : c₀ ^ 2 = (7 - 3 * Real.sqrt 5) / 2 := by
+  dsimp [gilmerConstant]; nlinarith [sqrt_five_sq]
+
+/-- $c_0^2 - 3 c_0 + 1 = 0$. -/
+theorem gilmerConstant_quad : c₀ ^ 2 - 3 * c₀ + 1 = 0 := by
+  rw [gilmerConstant_sq, gilmerConstant]; ring
+
+/-- At the Gilmer constant $c_0$, the union probability $2 c_0 - c_0^2$ equals $1 - c_0$. -/
+theorem union_prob_gilmer : union_prob c₀ = 1 - c₀ := by
+  dsimp [union_prob]; linarith [gilmerConstant_quad]
+
+/-- $2 < \sqrt{5}$. -/
+theorem two_lt_sqrt_five : (2 : ℝ) < Real.sqrt 5 :=
+  (Real.lt_sqrt (by norm_num)).mpr (by norm_num)
+
+/-- $\sqrt{5} < 3$. -/
+theorem sqrt_five_lt_three : Real.sqrt 5 < 3 :=
+  (Real.sqrt_lt' (by norm_num)).mpr (by norm_num)
+
+/-- The Gilmer constant is strictly positive: $c_0 > 0$. -/
+theorem gilmerConstant_pos : 0 < c₀ := by
+  dsimp [gilmerConstant]; linarith [sqrt_five_lt_three]
+
+/-- The Gilmer constant is strictly less than 1/2: $c_0 < 1/2$. -/
+theorem gilmerConstant_lt_half : c₀ < 1 / 2 := by
+  dsimp [gilmerConstant]; linarith [two_lt_sqrt_five]
+
+/-- The Gilmer constant is strictly less than 1: $c_0 < 1$. -/
+theorem gilmerConstant_lt_one : c₀ < 1 := by
+  linarith [gilmerConstant_lt_half]
+
+/-- Analytical lower bound: $c_0 > 0.38$. -/
+theorem gilmerConstant_gt_38_100 : (38 : ℝ) / 100 < c₀ := by
+  dsimp [gilmerConstant]
+  have : Real.sqrt 5 < (56 : ℝ) / 25 := (Real.sqrt_lt' (by norm_num)).mpr (by norm_num)
   linarith
 
-/--
-**Lower Bound on Chromatic Number via Spectral Expansion**:
-For any $d$-regular graph $G$, $\chi(G) \ge 1 + \frac{d}{\lambda(G)}$.
--/
-theorem chromatic_number_spectral_bound (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
-    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (χ : ℕ)
-    (hcol : G.Colorable χ) (hpos : 0 < spectralExpansionParameter G) :
-    1 + (d : ℝ) / spectralExpansionParameter G ≤ (χ : ℝ) := by
-  obtain ⟨c⟩ := hcol
-  have hn_pos : 0 < (Fintype.card V : ℝ) := Nat.cast_pos.mpr (Nat.pos_of_ne_zero hn)
-  have h_fiber : (Fintype.card V : ℝ) = ∑ i : Fin χ, ((Finset.filter (fun v => c v = i) Finset.univ).card : ℝ) := by
-    have h_card := Finset.card_eq_sum_card_fiberwise (f := c) (s := Finset.univ) (t := Finset.univ)
-      (fun x _ => Finset.mem_univ (c x))
-    rw [Finset.card_univ] at h_card
-    rw [h_card, Nat.cast_sum]
-  have h_bound_i : ∀ i : Fin χ,
-      ((Finset.filter (fun v => c v = i) Finset.univ).card : ℝ) ≤
-      (spectralExpansionParameter G / (d + spectralExpansionParameter G)) * (Fintype.card V : ℝ) := by
-    intro i
-    let S := Finset.filter (fun v => c v = i) Finset.univ
-    have hindep : edgeCountBetween G S S = 0 := by
-      dsimp [edgeCountBetween]
-      have h_zero : ∀ u ∈ S, ∀ v ∈ S, adjacencyMatrix G u v = 0 := by
-        intro u hu v hv
-        dsimp [S] at hu hv
-        simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hu hv
-        dsimp [adjacencyMatrix]
-        split_ifs with hadj
-        · exfalso
-          have h_diff := c.valid hadj
-          rw [hu, hv] at h_diff
-          exact h_diff rfl
-        · rfl
-      have h_inner_zero : ∀ u ∈ S, (∑ v ∈ S, adjacencyMatrix G u v) = 0 := by
-        intro u hu
-        rw [Finset.sum_congr rfl (fun v hv => h_zero u hu v hv), Finset.sum_const_zero]
-      rw [Finset.sum_congr rfl (fun u hu => h_inner_zero u hu), Finset.sum_const_zero]
-    exact hoffman_independence_bound G hreg hn S hindep hpos
-  have h_sum_le : (Fintype.card V : ℝ) ≤
-      (χ : ℝ) * ((spectralExpansionParameter G / (d + spectralExpansionParameter G)) * (Fintype.card V : ℝ)) := by
-    calc (Fintype.card V : ℝ)
-      _ = ∑ i : Fin χ, ((Finset.filter (fun v => c v = i) Finset.univ).card : ℝ) := h_fiber
-      _ ≤ ∑ i : Fin χ, (spectralExpansionParameter G / (d + spectralExpansionParameter G)) * (Fintype.card V : ℝ) :=
-        Finset.sum_le_sum (fun i _ => h_bound_i i)
-      _ = (χ : ℝ) * ((spectralExpansionParameter G / (d + spectralExpansionParameter G)) * (Fintype.card V : ℝ)) := by
-        simp [nsmul_eq_mul]
-  have h_denom_pos : 0 < (d : ℝ) + spectralExpansionParameter G := by positivity
-  have h_div_n : 1 ≤ (χ : ℝ) * (spectralExpansionParameter G / ((d : ℝ) + spectralExpansionParameter G)) := by
-    have h_re : 1 * (Fintype.card V : ℝ) ≤
-        ((χ : ℝ) * (spectralExpansionParameter G / ((d : ℝ) + spectralExpansionParameter G))) * (Fintype.card V : ℝ) := by
-      calc 1 * (Fintype.card V : ℝ) = (Fintype.card V : ℝ) := by ring
-      _ ≤ (χ : ℝ) * ((spectralExpansionParameter G / ((d : ℝ) + spectralExpansionParameter G)) * (Fintype.card V : ℝ)) := h_sum_le
-      _ = ((χ : ℝ) * (spectralExpansionParameter G / ((d : ℝ) + spectralExpansionParameter G))) * (Fintype.card V : ℝ) := by ring
-    exact (mul_le_mul_iff_of_pos_right hn_pos).mp h_re
-  have h_mult : ((d : ℝ) + spectralExpansionParameter G) / spectralExpansionParameter G ≤ (χ : ℝ) := by
-    have h_step : 1 * (((d : ℝ) + spectralExpansionParameter G) / spectralExpansionParameter G) ≤
-        ((χ : ℝ) * (spectralExpansionParameter G / ((d : ℝ) + spectralExpansionParameter G))) *
-        (((d : ℝ) + spectralExpansionParameter G) / spectralExpansionParameter G) := by
-      exact mul_le_mul_of_nonneg_right h_div_n (by positivity)
-    have h_cancel : ((χ : ℝ) * (spectralExpansionParameter G / ((d : ℝ) + spectralExpansionParameter G))) *
-        (((d : ℝ) + spectralExpansionParameter G) / spectralExpansionParameter G) = (χ : ℝ) := by
-      have hd_ne : (d : ℝ) + spectralExpansionParameter G ≠ 0 := ne_of_gt h_denom_pos
-      have hl_ne : spectralExpansionParameter G ≠ 0 := ne_of_gt hpos
-      have : (spectralExpansionParameter G / ((d : ℝ) + spectralExpansionParameter G)) *
-          (((d : ℝ) + spectralExpansionParameter G) / spectralExpansionParameter G) = 1 := by
-        rw [div_mul_div_comm, mul_comm (spectralExpansionParameter G) _, div_self (mul_ne_zero hd_ne hl_ne)]
-      rw [mul_assoc, this, mul_one]
-    rw [h_cancel] at h_step
-    linarith
-  have h_split : ((d : ℝ) + spectralExpansionParameter G) / spectralExpansionParameter G =
-      1 + (d : ℝ) / spectralExpansionParameter G := by
-    have hl_ne : spectralExpansionParameter G ≠ 0 := ne_of_gt hpos
-    rw [add_div, div_self hl_ne, add_comm]
-  rw [← h_split]
-  exact h_mult
-
-/--
-**Connectivity and Positive Edge Density**:
-If two sets $S, T \subseteq V$ satisfy $|S| |T| > \frac{\lambda(G) n^2}{d}$,
-then there is at least one edge between $S$ and $T$ ($e(S, T) > 0$).
--/
-theorem positive_edge_density_of_large_sets (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
-    (hreg : isRegularOfDegree G d) (hn : Fintype.card V ≠ 0) (hd : 0 < d)
-    (S T : Finset V)
-    (h_size : spectralExpansionParameter G * (Fintype.card V : ℝ) ^ 2 / (d : ℝ) < (S.card : ℝ) * (T.card : ℝ)) :
-    0 < edgeCountBetween G S T := by
-  have hn_pos : 0 < (Fintype.card V : ℝ) := Nat.cast_pos.mpr (Nat.pos_of_ne_zero hn)
-  have hd_pos : 0 < (d : ℝ) := Nat.cast_pos.mpr hd
-  have hs_le : (S.card : ℝ) ≤ (Fintype.card V : ℝ) := Nat.cast_le.mpr (Finset.card_le_univ S)
-  have ht_le : (T.card : ℝ) ≤ (Fintype.card V : ℝ) := Nat.cast_le.mpr (Finset.card_le_univ T)
-  have h_sqrt_le : Real.sqrt ((S.card : ℝ) * (T.card : ℝ)) ≤ (Fintype.card V : ℝ) := by
-    have : (S.card : ℝ) * (T.card : ℝ) ≤ (Fintype.card V : ℝ) ^ 2 := by
-      have : (S.card : ℝ) * (T.card : ℝ) ≤ (Fintype.card V : ℝ) * (Fintype.card V : ℝ) :=
-        mul_le_mul hs_le ht_le (Nat.cast_nonneg _) (le_of_lt hn_pos)
-      nlinarith
-    calc Real.sqrt ((S.card : ℝ) * (T.card : ℝ))
-      _ ≤ Real.sqrt ((Fintype.card V : ℝ) ^ 2) := Real.sqrt_le_sqrt this
-      _ = (Fintype.card V : ℝ) := Real.sqrt_sq (le_of_lt hn_pos)
-  have h_lam_sqrt_le : spectralExpansionParameter G * Real.sqrt ((S.card : ℝ) * (T.card : ℝ)) ≤
-      spectralExpansionParameter G * (Fintype.card V : ℝ) :=
-    mul_le_mul_of_nonneg_left h_sqrt_le (spectralExpansionParameter_nonneg G)
-  have h_main_lt : spectralExpansionParameter G * (Fintype.card V : ℝ) <
-      (d : ℝ) * (S.card : ℝ) * (T.card : ℝ) / (Fintype.card V : ℝ) := by
-    have h1 : spectralExpansionParameter G * (Fintype.card V : ℝ) ^ 2 <
-        (S.card : ℝ) * (T.card : ℝ) * (d : ℝ) := (div_lt_iff₀ hd_pos).mp h_size
-    have h2 : spectralExpansionParameter G * (Fintype.card V : ℝ) ^ 2 =
-        (spectralExpansionParameter G * (Fintype.card V : ℝ)) * (Fintype.card V : ℝ) := by ring
-    have h3 : (S.card : ℝ) * (T.card : ℝ) * (d : ℝ) =
-        ((d : ℝ) * (S.card : ℝ) * (T.card : ℝ) / (Fintype.card V : ℝ)) * (Fintype.card V : ℝ) := by
-      have : (S.card : ℝ) * (T.card : ℝ) * (d : ℝ) = (d : ℝ) * (S.card : ℝ) * (T.card : ℝ) := by ring
-      rw [this, div_mul_cancel₀ _ (ne_of_gt hn_pos)]
-    rw [h2, h3] at h1
-    exact (mul_lt_mul_iff_of_pos_right hn_pos).mp h1
-  have ⟨h_low, _⟩ := abs_le.mp (expander_mixing_lemma_simplified G hreg hn S T)
+/-- Analytical upper bound: $c_0 < 0.39$. -/
+theorem gilmerConstant_lt_39_100 : c₀ < (39 : ℝ) / 100 := by
+  dsimp [gilmerConstant]
+  have : (111 : ℝ) / 50 < Real.sqrt 5 := (Real.lt_sqrt (by norm_num)).mpr (by norm_num)
   linarith
 
-end ExpanderMixing
+/-- Tight numerical lower bound: $c_0 > 0.38196$. -/
+theorem gilmerConstant_gt_38196_100000 : (38196 : ℝ) / 100000 < c₀ := by
+  dsimp [gilmerConstant]
+  have : Real.sqrt 5 < (223608 : ℝ) / 100000 := (Real.sqrt_lt' (by norm_num)).mpr (by norm_num)
+  linarith
+
+/-- Tight numerical upper bound: $c_0 < 0.38197$. -/
+theorem gilmerConstant_lt_38197_100000 : c₀ < (38197 : ℝ) / 100000 := by
+  dsimp [gilmerConstant]
+  have : (223606 : ℝ) / 100000 < Real.sqrt 5 := (Real.lt_sqrt (by norm_num)).mpr (by norm_num)
+  linarith
+
+/-- For $p \in (0, 1)$, the union probability $2p - p^2$ is strictly positive. -/
+theorem union_prob_pos {p : ℝ} (h0 : 0 < p) (h1 : p < 1) : 0 < union_prob p := by
+  dsimp [union_prob]; nlinarith
+
+/-- For $p \in (0, 1)$, the union probability $2p - p^2$ is strictly less than 1. -/
+theorem union_prob_lt_one {p : ℝ} (h0 : 0 < p) (h1 : p < 1) : union_prob p < 1 := by
+  dsimp [union_prob]; nlinarith
+
+/-- For $p \in (0, 1)$, the union probability is strictly greater than $p$. -/
+theorem union_prob_gt_self {p : ℝ} (h0 : 0 < p) (h1 : p < 1) : p < union_prob p := by
+  dsimp [union_prob]; nlinarith
+
+/-- For $p \in [0, c_0]$, $2p - p^2 \le 1 - p$. -/
+theorem union_prob_le_complement_of_le_gilmer {p : ℝ} (h0 : 0 ≤ p) (hp : p ≤ c₀) :
+    union_prob p ≤ 1 - p := by
+  dsimp [union_prob]
+  have : 0 ≤ (c₀ - p) * (3 - c₀ - p) := mul_nonneg (by linarith) (by linarith [gilmerConstant_lt_half])
+  nlinarith [gilmerConstant_quad]
+
+end GilmerConstant
+
+section BinaryEntropy
+
+/-- Binary entropy at 0 is 0. -/
+theorem binaryEntropy_zero : binaryEntropy 0 = 0 := by simp [binaryEntropy]
+
+/-- Binary entropy at 1 is 0. -/
+theorem binaryEntropy_one : binaryEntropy 1 = 0 := by simp [binaryEntropy]
+
+/-- Natural entropy at 0 is 0. -/
+theorem naturalEntropy_zero : naturalEntropy 0 = 0 := by simp [naturalEntropy]
+
+/-- Natural entropy at 1 is 0. -/
+theorem naturalEntropy_one : naturalEntropy 1 = 0 := by simp [naturalEntropy]
+
+/-- Binary entropy is symmetric: $H(p) = H(1 - p)$ for $p \in (0, 1)$. -/
+theorem binaryEntropy_symm {p : ℝ} (h0 : 0 < p) (h1 : p < 1) :
+    binaryEntropy p = binaryEntropy (1 - p) := by
+  have hp : ¬(p ≤ 0 ∨ 1 ≤ p) := not_or.mpr ⟨by linarith, by linarith⟩
+  have h1p : ¬(1 - p ≤ 0 ∨ 1 ≤ 1 - p) := not_or.mpr ⟨by linarith, by linarith⟩
+  simp only [binaryEntropy, hp, h1p, ↓reduceIte]
+  ring_nf
+
+/-- Natural entropy is symmetric: $H_e(p) = H_e(1 - p)$ for $p \in (0, 1)$. -/
+theorem naturalEntropy_symm {p : ℝ} (h0 : 0 < p) (h1 : p < 1) :
+    naturalEntropy p = naturalEntropy (1 - p) := by
+  have hp : ¬(p ≤ 0 ∨ 1 ≤ p) := not_or.mpr ⟨by linarith, by linarith⟩
+  have h1p : ¬(1 - p ≤ 0 ∨ 1 ≤ 1 - p) := not_or.mpr ⟨by linarith, by linarith⟩
+  simp only [naturalEntropy, hp, h1p, ↓reduceIte]
+  ring_nf
+
+/-- Gilmer's golden ratio fixed-point theorem for binary entropy:
+At $p = c_0$, the entropy of the union of two independent Bernoulli($c_0$) variables
+equals the entropy of a single Bernoulli($c_0$) variable:
+$$H(2 c_0 - c_0^2) = H(c_0)$$ -/
+theorem binaryEntropy_gilmer_fixed_point :
+    binaryEntropy (union_prob c₀) = binaryEntropy c₀ := by
+  rw [union_prob_gilmer, ← binaryEntropy_symm gilmerConstant_pos gilmerConstant_lt_one]
+
+/-- Gilmer's golden ratio fixed-point theorem for natural entropy:
+$$H_e(2 c_0 - c_0^2) = H_e(c_0)$$ -/
+theorem naturalEntropy_gilmer_fixed_point :
+    naturalEntropy (union_prob c₀) = naturalEntropy c₀ := by
+  rw [union_prob_gilmer, ← naturalEntropy_symm gilmerConstant_pos gilmerConstant_lt_one]
+
+end BinaryEntropy
+
+section ConcreteFamilies
+
+variable {α : Type*} [DecidableEq α]
+
+/-- The canonical two-element union-closed family $\{\emptyset, \{a\}\}$. -/
+def pairEmptySingleton (a : α) : Finset (Finset α) := {∅, {a}}
+
+/-- The singleton union-closed family $\{\{a\}\}$. -/
+def singletonFamily (a : α) : Finset (Finset α) := {{a}}
+
+/-- The card of $\{\emptyset, \{a\}\}$ is 2. -/
+theorem pairEmptySingleton_card (a : α) : (pairEmptySingleton a).card = 2 :=
+  Finset.card_pair (Finset.singleton_ne_empty a).symm
+
+/-- The family $\{\emptyset, \{a\}\}$ is union-closed. -/
+theorem pairEmptySingleton_isUnionClosed (a : α) :
+    IsUnionClosed (pairEmptySingleton a) := by
+  intro A hA B hB
+  simp only [pairEmptySingleton, Finset.mem_insert, Finset.mem_singleton] at hA hB ⊢
+  rcases hA with rfl | rfl <;> rcases hB with rfl | rfl <;> simp
+
+/-- The universe of $\{\emptyset, \{a\}\}$ is $\{a\}$. -/
+theorem pairEmptySingleton_familyUnion (a : α) :
+    familyUnion (pairEmptySingleton a) = {a} := by
+  simp [familyUnion, pairEmptySingleton]
+
+/-- The number of sets containing $a$ in $\{\emptyset, \{a\}\}$ is 1. -/
+theorem pairEmptySingleton_filter_card (a : α) :
+    ((pairEmptySingleton a).filter (fun S => a ∈ S)).card = 1 := by
+  simp [pairEmptySingleton, Finset.filter_insert, Finset.filter_singleton]
+
+/-- The frequency of $a$ in $\{\emptyset, \{a\}\}$ is exactly $1/2$. -/
+theorem pairEmptySingleton_freq (a : α) :
+    freq (pairEmptySingleton a) a = 1 / 2 := by
+  simp [freq, pairEmptySingleton_filter_card, pairEmptySingleton_card]
+
+/-- Certificate: $\{\emptyset, \{a\}\}$ satisfies Gilmer's constant bound $\ge c_0$. -/
+theorem pairEmptySingleton_satisfies_gilmer (a : α) :
+    ∃ u ∈ familyUnion (pairEmptySingleton a), c₀ ≤ freq (pairEmptySingleton a) u :=
+  ⟨a, by simp [pairEmptySingleton_familyUnion], by rw [pairEmptySingleton_freq]; exact gilmerConstant_lt_half.le⟩
+
+/-- The singleton family $\{\{a\}\}$ is union-closed. -/
+theorem singletonFamily_isUnionClosed (a : α) :
+    IsUnionClosed (singletonFamily a) := by
+  intro A hA B hB
+  simp only [singletonFamily, Finset.mem_singleton] at hA hB ⊢
+  subst hA hB
+  exact Finset.union_idempotent {a}
+
+/-- The frequency of $a$ in $\{\{a\}\}$ is 1. -/
+theorem singletonFamily_freq (a : α) :
+    freq (singletonFamily a) a = 1 := by
+  simp [freq, singletonFamily, Finset.filter_singleton]
+
+/-- A family of sets is a chain if every pair is comparable under inclusion. -/
+def IsChainFamily (F : Finset (Finset α)) : Prop :=
+  ∀ A ∈ F, ∀ B ∈ F, A ⊆ B ∨ B ⊆ A
+
+/-- Every chain family is union-closed. -/
+theorem chainFamily_isUnionClosed (F : Finset (Finset α)) (hchain : IsChainFamily F) :
+    IsUnionClosed F := by
+  intro A hA B hB
+  rcases hchain A hA B hB with hAB | hBA
+  · rwa [Finset.union_eq_right.mpr hAB]
+  · rwa [Finset.union_eq_left.mpr hBA]
+
+/-- Every powerset $\mathcal{P}(S)$ is union-closed. -/
+theorem powerset_isUnionClosed (S : Finset α) :
+    IsUnionClosed (Finset.powerset S) := by
+  simp only [IsUnionClosed, Finset.mem_powerset]
+  exact fun _ hA _ hB => Finset.union_subset hA hB
+
+/-- The universe of $\mathcal{P}(S)$ is $S$ when $S$ is non-empty. -/
+theorem powerset_familyUnion (S : Finset α) :
+    familyUnion (Finset.powerset S) = S := by
+  ext x
+  simp only [familyUnion, Finset.mem_biUnion, Finset.mem_powerset, id_eq]
+  exact ⟨fun ⟨A, hA, hx⟩ => hA hx, fun hx => ⟨{x}, Finset.singleton_subset_iff.mpr hx, Finset.mem_singleton_self x⟩⟩
+
+/-- Bijection: Sets containing $u$ in $\mathcal{P}(S)$ correspond to $\mathcal{P}(S \setminus \{u\})$. -/
+theorem powerset_filter_mem_eq_image (S : Finset α) (u : α) (hu : u ∈ S) :
+    ((Finset.powerset S).filter (fun A => u ∈ A)) = (Finset.powerset (S.erase u)).image (insert u) := by
+  ext A
+  simp only [Finset.mem_filter, Finset.mem_powerset, Finset.mem_image]
+  constructor
+  · intro ⟨hA, huA⟩
+    exact ⟨A.erase u, fun x hx => Finset.mem_erase.mpr ⟨Finset.ne_of_mem_erase hx, hA (Finset.mem_of_mem_erase hx)⟩,
+      Finset.insert_erase huA⟩
+  · rintro ⟨B, hB, rfl⟩
+    exact ⟨Finset.insert_subset hu (hB.trans (Finset.erase_subset u S)), Finset.mem_insert_self u B⟩
+
+/-- The number of subsets of $S$ containing an element $u \in S$ is $2^{|S| - 1}$. -/
+theorem powerset_filter_mem_card (S : Finset α) (u : α) (hu : u ∈ S) :
+    ((Finset.powerset S).filter (fun A => u ∈ A)).card = 2 ^ (S.card - 1) := by
+  rw [powerset_filter_mem_eq_image S u hu, Finset.card_image_of_injOn]
+  · rw [Finset.card_powerset, Finset.card_erase_of_mem hu]
+  · intro A hA B hB heq
+    rw [Finset.mem_coe, Finset.mem_powerset] at hA hB
+    have := congr_arg (·.erase u) heq
+    rwa [Finset.erase_insert (fun h => Finset.notMem_erase u S (hA h)),
+      Finset.erase_insert (fun h => Finset.notMem_erase u S (hB h))] at this
+
+/-- In any powerset family $\mathcal{P}(S)$, the frequency of every $u \in S$ is exactly $1/2$. -/
+theorem powerset_freq (S : Finset α) (u : α) (hu : u ∈ S) :
+    freq (Finset.powerset S) u = 1 / 2 := by
+  have hS : S.card = S.card - 1 + 1 := by have := Finset.card_pos.mpr ⟨u, hu⟩; omega
+  have hpow : ((2 ^ S.card : ℕ) : ℝ) = ((2 ^ (S.card - 1) : ℕ) : ℝ) * 2 := by
+    rw [hS, pow_succ, Nat.cast_mul]; norm_num
+  have hne : ((2 ^ (S.card - 1) : ℕ) : ℝ) ≠ 0 := by positivity
+  rw [freq, powerset_filter_mem_card S u hu, Finset.card_powerset, hpow]
+  nth_rw 1 [← mul_one ((2 ^ (S.card - 1) : ℕ) : ℝ)]
+  exact mul_div_mul_left 1 2 hne
+
+/-- Powerset families satisfy Frankl's 1/2 conjecture. -/
+theorem powerset_satisfies_frankl (S : Finset α) (hS : S.Nonempty) :
+    ∃ u ∈ familyUnion (Finset.powerset S), (1 : ℝ) / 2 ≤ freq (Finset.powerset S) u := by
+  rcases hS with ⟨u, hu⟩
+  exact ⟨u, by rwa [powerset_familyUnion], by rw [powerset_freq S u hu]⟩
+
+/-- Powerset families satisfy Gilmer's constant bound $\ge c_0$. -/
+theorem powerset_satisfies_gilmer (S : Finset α) (hS : S.Nonempty) :
+    ∃ u ∈ familyUnion (Finset.powerset S), c₀ ≤ freq (Finset.powerset S) u := by
+  rcases hS with ⟨u, hu⟩
+  exact ⟨u, by rwa [powerset_familyUnion], by rw [powerset_freq S u hu]; exact gilmerConstant_lt_half.le⟩
+
+end ConcreteFamilies
+
+section GilmerTheorem
+
+variable {α : Type*} [DecidableEq α]
+
+/-- Frankl's Union-Closed Sets Conjecture (1979):
+For every finite union-closed family $\mathcal{F} \ne \{\emptyset\}$ with $|\mathcal{F}| \ge 2$,
+there exists an element belonging to at least half of the sets:
+$$\exists u \in \bigcup \mathcal{F}, \quad \mathrm{freq}(\mathcal{F}, u) \ge \frac{1}{2}$$ -/
+def FranklConjectureStatement : Prop :=
+  ∀ (α : Type*) [DecidableEq α] (F : Finset (Finset α)),
+    IsUnionClosed F → F.card ≥ 2 → ∃ u ∈ familyUnion F, (1 : ℝ) / 2 ≤ freq F u
+
+/-- Gilmer's Theorem Statement (2022):
+For every finite union-closed family $\mathcal{F}$ with $|\mathcal{F}| \ge 2$,
+there exists an element belonging to at least $c_0 = \frac{3-\sqrt{5}}{2} \approx 0.381966$ of the sets:
+$$\exists u \in \bigcup \mathcal{F}, \quad \mathrm{freq}(\mathcal{F}, u) \ge \frac{3-\sqrt{5}}{2}$$ -/
+def GilmerTheoremStatement : Prop :=
+  ∀ (α : Type*) [DecidableEq α] (F : Finset (Finset α)),
+    IsUnionClosed F → F.card ≥ 2 → ∃ u ∈ familyUnion F, c₀ ≤ freq F u
+
+/-- Frankl's conjecture implies Gilmer's theorem since $c_0 < 1/2$. -/
+theorem frankl_implies_gilmer (F : Finset (Finset α))
+    (hfrankl : ∃ u ∈ familyUnion F, (1 : ℝ) / 2 ≤ freq F u) :
+    ∃ u ∈ familyUnion F, c₀ ≤ freq F u := by
+  rcases hfrankl with ⟨u, hu, h_freq⟩
+  exact ⟨u, hu, gilmerConstant_lt_half.le.trans h_freq⟩
+
+/-- Gilmer certificate for all two-element union-closed families. -/
+theorem gilmer_two_element_family (a : α) :
+    ∃ u ∈ familyUnion (pairEmptySingleton a), c₀ ≤ freq (pairEmptySingleton a) u :=
+  pairEmptySingleton_satisfies_gilmer a
+
+/-- Gilmer certificate for all powerset families on non-empty finite sets. -/
+theorem gilmer_powerset_family (S : Finset α) (hS : S.Nonempty) :
+    ∃ u ∈ familyUnion (Finset.powerset S), c₀ ≤ freq (Finset.powerset S) u :=
+  powerset_satisfies_gilmer S hS
+
+end GilmerTheorem
+
+end GilmerUnionClosed

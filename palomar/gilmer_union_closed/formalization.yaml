@@ -28,7 +28,11 @@ sources:
       - "Justin Gilmer"
     year: 2022
     venue: "arXiv:2211.09055"
-    relationship: formalizes
+    relationship: adapts
+    note: >-
+      Formalizes Gilmer's information-theoretic entropy framework and golden-ratio fixed-point
+      mechanics (H(2 c_0 - c_0^2) = H(c_0)), establishing exact certificates for concrete union-closed
+      families (pairs, singletons, chains, and powersets) and the reduction from Frankl's conjecture.
   - title: "Approximate Frankl's conjecture for union-closed families"
     type: preprint
     authors:
