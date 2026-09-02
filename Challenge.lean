@@ -1,145 +1,125 @@
-import Mathlib.Data.Real.Basic
-import Mathlib.Data.Matrix.Basic
-import Mathlib.Data.Fintype.Card
-import Mathlib.Data.Finset.Basic
 import Mathlib.Combinatorics.SimpleGraph.Basic
-import Mathlib.Combinatorics.SimpleGraph.DegreeSum
-import Mathlib.Combinatorics.SimpleGraph.Metric
-import Mathlib.Combinatorics.SimpleGraph.Diam
-import Mathlib.Analysis.SpecialFunctions.Sqrt
-import Mathlib.Tactic.Linarith
-import Mathlib.Tactic.Ring
-import Mathlib.Tactic.Positivity
+import Mathlib.Combinatorics.SimpleGraph.Coloring.Vertex
 
-open scoped BigOperators Matrix Finset
-open Classical
+namespace HedetniemiCounterexample
 
-set_option linter.unusedSectionVars false
+open SimpleGraph
 
 /-!
-# The Alon–Boppana Spectral Lower Bound for Regular Graphs
-
-This module formalizes the **Alon–Boppana Theorem** (Noga Alon and Ravi Boppana, 1986; Alon Nilli, 1991)
-on the fundamental lower bound on the second largest eigenvalue of $d$-regular graphs and Ramanujan expanders.
-
-## Mathematical Overview
-
-Let $G = (V, E)$ be a finite, connected, $d$-regular simple graph on $n$ vertices with diameter $D = \mathrm{diam}(G)$.
-Let $A \in M_{V \times V}(\mathbb{R})$ be its adjacency matrix.
-The second largest eigenvalue $\lambda_2(G) = \lambda_2(A)$ is given by the Courant–Fischer variational Rayleigh quotient on $\mathbf{1}^\perp$:
-$$\lambda_2(A) = \max_{\substack{v \in \mathbb{R}^V \setminus \{0\} \\ v \perp \mathbf{1}}} \frac{\langle v, A v \rangle}{\langle v, v \rangle}$$
-
-### The Alon–Boppana Lower Bound & Nilli's Geometric Profile
-Alon and Boppana established that graph geometry imposes an unavoidable lower bound on $\lambda_2(G)$:
-$$\liminf_{n \to \infty} \lambda_2(G_n) \ge 2\sqrt{d-1}$$
-
-In 1991, Alon Nilli provided an elegant combinatorial proof using localized spherical shell test functions
-$f(x) = (d-1)^{-k/2}$ on $S_k(x_0)$. A $d$-regular graph is called a **Ramanujan graph** if
-every non-trivial eigenvalue satisfies $|\lambda| \le 2\sqrt{d-1}$.
-
-## References
-
-- Alon, N. (1986). *Eigenvalues and expanders*. Theory of Computing Systems, 19(1), 283–296.
-- Nilli, A. (1991). *On the second eigenvalue of a graph*. Discrete Mathematics, 91(2), 207–210.
-- Lubotzky, A., Phillips, R., & Sarnak, P. (1988). *Ramanujan graphs*. Combinatorica, 8(3), 261–277.
+# Tensor Product of Simple Graphs & Canonical Bounds
 -/
 
-variable {V : Type*} [Fintype V] [DecidableEq V]
+/-- Categorical (tensor) product of simple graphs `G` and `H`.
+Vertices are pairs `(u, v)` and edges connect `(u₁, v₁)` and `(u₂, v₂)`
+iff `G.Adj u₁ u₂` and `H.Adj v₁ v₂`. -/
+def tensorProduct {V₁ V₂ : Type*} (G : SimpleGraph V₁) (H : SimpleGraph V₂) : SimpleGraph (V₁ × V₂) where
+  Adj x y := G.Adj x.1 y.1 ∧ H.Adj x.2 y.2
+  symm := ⟨fun {_ _} h ↦ ⟨G.adj_symm h.1, H.adj_symm h.2⟩⟩
+  loopless := ⟨fun _ h ↦ G.irrefl h.1⟩
 
-namespace AlonBoppana
+@[simp]
+theorem tensorProduct_adj {V₁ V₂ : Type*} (G : SimpleGraph V₁) (H : SimpleGraph V₂)
+    (x y : V₁ × V₂) :
+    (tensorProduct G H).Adj x y ↔ G.Adj x.1 y.1 ∧ H.Adj x.2 y.2 :=
+  Iff.rfl
 
-/-- The $0$-$1$ adjacency matrix of a simple graph $G$ over $\mathbb{R}$. -/
-def adjacencyMatrix (G : SimpleGraph V) [DecidableRel G.Adj] : Matrix V V ℝ :=
-  fun u v => if G.Adj u v then 1 else 0
+/-- Projection homomorphism from `tensorProduct G H` to the first factor `G`. -/
+def tensorProduct_fst {V₁ V₂ : Type*} (G : SimpleGraph V₁) (H : SimpleGraph V₂) :
+    (tensorProduct G H) →g G where
+  toFun := Prod.fst
+  map_rel' h := h.1
 
-/-- Predicate stating that a simple graph is $d$-regular. -/
-def isRegularOfDegree (G : SimpleGraph V) (d : ℕ) [DecidableRel G.Adj] : Prop :=
-  ∀ v : V, G.degree v = d
+/-- Projection homomorphism from `tensorProduct G H` to the second factor `H`. -/
+def tensorProduct_snd {V₁ V₂ : Type*} (G : SimpleGraph V₁) (H : SimpleGraph V₂) :
+    (tensorProduct G H) →g H where
+  toFun := Prod.snd
+  map_rel' h := h.2
 
-/-- Standard Euclidean inner product on $\mathbb{R}^V$. -/
-def innerProduct (u v : V → ℝ) : ℝ :=
-  ∑ x : V, u x * v x
+/-- A graph homomorphism `G →g G'` weakly decreases chromatic number. -/
+theorem chromaticNumber_le_of_hom {V V' : Type*} {G : SimpleGraph V} {G' : SimpleGraph V'}
+    (f : G →g G') : G.chromaticNumber ≤ G'.chromaticNumber := sorry
 
-/-- The squared Euclidean $\ell^2$-norm $\|v\|^2 = \langle v, v \rangle$. -/
-def normSq (v : V → ℝ) : ℝ :=
-  innerProduct v v
+/-- The chromatic number of `tensorProduct G H` is bounded above by `G.chromaticNumber`. -/
+theorem chromaticNumber_tensorProduct_le_left {V₁ V₂ : Type*}
+    (G : SimpleGraph V₁) (H : SimpleGraph V₂) :
+    (tensorProduct G H).chromaticNumber ≤ G.chromaticNumber := sorry
 
-/-- Quadratic form of the adjacency matrix. -/
-def quadraticForm (G : SimpleGraph V) [DecidableRel G.Adj] (v : V → ℝ) : ℝ :=
-  ∑ u : V, ∑ w : V, v u * adjacencyMatrix G u w * v w
+/-- The chromatic number of `tensorProduct G H` is bounded above by `H.chromaticNumber`. -/
+theorem chromaticNumber_tensorProduct_le_right {V₁ V₂ : Type*}
+    (G : SimpleGraph V₁) (H : SimpleGraph V₂) :
+    (tensorProduct G H).chromaticNumber ≤ H.chromaticNumber := sorry
 
-/-- Rayleigh quotient $R(v) = \frac{\langle v, A v \rangle}{\langle v, v \rangle}$ for $v \ne 0$. -/
-noncomputable def rayleighQuotient (G : SimpleGraph V) [DecidableRel G.Adj] (v : V → ℝ) : ℝ :=
-  quadraticForm G v / normSq v
+/-- Canonical upper bound for Hedetniemi's conjecture:
+`χ(G × H) ≤ min(χ(G), χ(H))`. -/
+theorem chromaticNumber_tensorProduct_le_min {V₁ V₂ : Type*}
+    (G : SimpleGraph V₁) (H : SimpleGraph V₂) :
+    (tensorProduct G H).chromaticNumber ≤ min G.chromaticNumber H.chromaticNumber := sorry
 
-/-- A vector $v \in \mathbb{R}^V$ is orthogonal to the all-ones vector $\mathbf{1}$ if $\sum_{x \in V} v(x) = 0$. -/
-def isOrthogonalToOnes (v : V → ℝ) : Prop :=
-  ∑ x : V, v x = 0
+/-- If `G` is $n$-colorable, then `tensorProduct G H` is $n$-colorable. -/
+theorem colorable_tensorProduct_of_left {V₁ V₂ : Type*} (G : SimpleGraph V₁) (H : SimpleGraph V₂)
+    {n : ℕ} (hG : G.Colorable n) : (tensorProduct G H).Colorable n := sorry
 
-/-- The second largest eigenvalue $\lambda_2(G)$ defined variationally via the Rayleigh quotient on $\mathbf{1}^\perp$. -/
-noncomputable def secondEigenvalue (G : SimpleGraph V) [DecidableRel G.Adj] : ℝ :=
-  sSup { rayleighQuotient G v | (v : V → ℝ) (_ : v ≠ 0) (_ : isOrthogonalToOnes v) }
+/-- If `H` is $n$-colorable, then `tensorProduct G H` is $n$-colorable. -/
+theorem colorable_tensorProduct_of_right {V₁ V₂ : Type*} (G : SimpleGraph V₁) (H : SimpleGraph V₂)
+    {n : ℕ} (hH : H.Colorable n) : (tensorProduct G H).Colorable n := sorry
 
-/-- Definition of a Ramanujan graph: A $d$-regular graph whose second eigenvalue satisfies $\lambda_2(G) \le 2\sqrt{d-1}$. -/
-def IsRamanujan (G : SimpleGraph V) [DecidableRel G.Adj] (d : ℕ) : Prop :=
-  isRegularOfDegree G d ∧ secondEigenvalue G ≤ 2 * Real.sqrt (d - 1 : ℝ)
+/-!
+# Exponential Graph & Canonical Evaluation Coloring
+-/
 
-/-- Spherical shell $S_k(x_0)$ of vertices at graph distance exactly $k$ from $x_0$. -/
-noncomputable def sphericalShell (G : SimpleGraph V) (x_0 : V) (k : ℕ) : Finset V :=
-  Finset.filter (fun v => G.dist x_0 v = k) Finset.univ
+/-- The exponential graph $\mathcal{E}_c(\Gamma)$ (El-Zahar & Sauer 1985; Shitov 2019):
+vertices are colorings $f : V \to \text{Fin } c$, and two distinct colorings $f \ne g$
+are adjacent iff for all edges $u \sim v$ in $\Gamma$, $f(u) \ne g(v)$. -/
+def exponentialGraph {V : Type*} (Γ : SimpleGraph V) (c : ℕ) : SimpleGraph (V → Fin c) where
+  Adj f g := f ≠ g ∧ ∀ ⦃u v : V⦄, Γ.Adj u v → f u ≠ g v
+  symm := ⟨fun {_ _} h ↦ ⟨h.1.symm, fun {_u _v} huv h_eq ↦ h.2 (Γ.adj_symm huv) h_eq.symm⟩⟩
+  loopless := ⟨fun _ h ↦ h.1 rfl⟩
 
-/-- Forward neighbors of $v \in S_k(x_0)$ in $S_{k+1}(x_0)$. -/
-noncomputable def forwardNeighbors (G : SimpleGraph V) [DecidableRel G.Adj] (x_0 : V) (k : ℕ) (v : V) : Finset V :=
-  G.neighborFinset v ∩ sphericalShell G x_0 (k + 1)
+@[simp]
+theorem exponentialGraph_adj {V : Type*} (Γ : SimpleGraph V) (c : ℕ) (f g : V → Fin c) :
+    (exponentialGraph Γ c).Adj f g ↔ f ≠ g ∧ ∀ ⦃u v : V⦄, Γ.Adj u v → f u ≠ g v :=
+  Iff.rfl
 
-/-- Nilli's geometric radial weight profile $g(k) = (d - 1)^{-k / 2} = (1 / \sqrt{d - 1})^k$. -/
-noncomputable def nilliProfile (d : ℕ) (k : ℕ) : ℝ :=
-  (1 / Real.sqrt (d - 1 : ℝ)) ^ k
+/-- The canonical evaluation map $E(v, f) = f(v)$ defines a proper $c$-coloring
+of $\Gamma \times \mathcal{E}_c(\Gamma)$. -/
+def evaluationColoring {V : Type*} (Γ : SimpleGraph V) (c : ℕ) :
+    (tensorProduct Γ (exponentialGraph Γ c)).Coloring (Fin c) where
+  toFun x := x.2 x.1
+  map_rel' {x y} h := by
+    have hadj_Γ := h.1
+    have hadj_exp := h.2
+    exact hadj_exp.2 hadj_Γ
 
-/-- Radial test vector supported on the ball of radius $r$ around $x_0$ with profile $g$. -/
-noncomputable def radialTestVector (G : SimpleGraph V) (x_0 : V) (g : ℕ → ℝ) (r : ℕ) : V → ℝ :=
-  fun v => if G.dist x_0 v ≤ r then g (G.dist x_0 v) else 0
+/-- The tensor product $\Gamma \times \mathcal{E}_c(\Gamma)$ is always $c$-colorable. -/
+theorem colorable_exponentialProduct {V : Type*} (Γ : SimpleGraph V) (c : ℕ) :
+    (tensorProduct Γ (exponentialGraph Γ c)).Colorable c := sorry
 
-/-- Nilli's localized spherical shell test vector. -/
-noncomputable def nilliTestVector (G : SimpleGraph V) (d : ℕ) (x_0 : V) (r : ℕ) : V → ℝ :=
-  radialTestVector G x_0 (nilliProfile d) r
+/-!
+# Shitov's Structural Disproof of Hedetniemi's Conjecture
+-/
 
-/-- Orthogonal balanced linear combination of two test functions. -/
-def orthogonalLinearCombination (f₁ f₂ : V → ℝ) : V → ℝ :=
-  fun v => (∑ x : V, f₂ x) * f₁ v - (∑ x : V, f₁ x) * f₂ v
+/-- A Shitov counterexample configuration for Hedetniemi's conjecture:
+two graphs $G, H$ whose product is $c$-colorable, but neither factor is $c$-colorable. -/
+structure ShitovPair where
+  {V₁ V₂ : Type}
+  [fintype₁ : Fintype V₁]
+  [fintype₂ : Fintype V₂]
+  G : SimpleGraph V₁
+  H : SimpleGraph V₂
+  c : ℕ
+  colorable_product : (tensorProduct G H).Colorable c
+  not_colorable_left : ¬ G.Colorable c
+  not_colorable_right : ¬ H.Colorable c
 
-/-- Nilli's signed test vector formed by the balanced orthogonal combination of two localized
-radial test vectors centered at distant vertices $x_0$ and $y_0$. -/
-noncomputable def nilliSignedTestVector (G : SimpleGraph V) (d : ℕ) (x_0 y_0 : V) (r : ℕ) : V → ℝ :=
-  orthogonalLinearCombination (nilliTestVector G d x_0 r) (nilliTestVector G d y_0 r)
+/-- Any Shitov pair yields a strict inequality in Hedetniemi's product formula:
+$\chi(G \times H) < \min(\chi(G), \chi(H))$. -/
+theorem shitov_pair_strict_inequality (p : ShitovPair) :
+    (tensorProduct p.G p.H).chromaticNumber < min p.G.chromaticNumber p.H.chromaticNumber := sorry
 
-/-- Ramanujan graphs achieve the optimal spectral gap $d - 2\sqrt{d-1}$. -/
-theorem ramanujan_spectral_gap (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
-    (hR : IsRamanujan G d) :
-    (d : ℝ) - 2 * Real.sqrt (d - 1 : ℝ) ≤ (d : ℝ) - secondEigenvalue G := by
-  sorry
+/-- Main Theorem: Hedetniemi's conjecture is false.
+Given a Shitov counterexample pair, the conjecture fails. -/
+theorem not_hedetniemi_conjecture (p : ShitovPair) :
+    ¬ (∀ (V₁ V₂ : Type) [Fintype V₁] [Fintype V₂] (G : SimpleGraph V₁) (H : SimpleGraph V₂),
+        (tensorProduct G H).chromaticNumber = min G.chromaticNumber H.chromaticNumber) := sorry
 
-/-- In a $d$-regular connected graph, any vertex at distance $k \ge 1$ has at most $d - 1$ forward neighbors. -/
-theorem forwardNeighbors_card_le_d_sub_one (G : SimpleGraph V) [DecidableRel G.Adj] (x_0 : V)
-    {d : ℕ} (hreg : isRegularOfDegree G d) (hconn : G.Connected)
-    {k : ℕ} (hk : 1 ≤ k) {v : V} (hv : v ∈ sphericalShell G x_0 k) :
-    (forwardNeighbors G x_0 k v).card ≤ d - 1 := by
-  sorry
-
-/-- Product identity across adjacent shells: $g(k) g(k+1) = \sqrt{d-1} g(k+1)^2$. -/
-theorem nilliProfile_mul_succ (d : ℕ) (hd : 2 ≤ d) (k : ℕ) :
-    nilliProfile d k * nilliProfile d (k + 1) = Real.sqrt (d - 1 : ℝ) * (nilliProfile d (k + 1)) ^ 2 := by
-  sorry
-
-/-- The linear combination $f = (\sum f_2) f_1 - (\sum f_1) f_2$ is orthogonal to the all-ones vector. -/
-theorem orthogonalLinearCombination_orthogonal (f₁ f₂ : V → ℝ) :
-    isOrthogonalToOnes (orthogonalLinearCombination f₁ f₂) := by
-  sorry
-
-/-- Nilli's signed test vector is non-zero when base points are separated by at least $2r + 1$. -/
-theorem nilliSignedTestVector_ne_zero (G : SimpleGraph V) (d : ℕ) (hd : 2 ≤ d)
-    {x_0 y_0 : V} {r : ℕ} (h_sep : 2 * r + 1 ≤ G.dist x_0 y_0) :
-    nilliSignedTestVector G d x_0 y_0 r ≠ 0 := by
-  sorry
-
-end AlonBoppana
+end HedetniemiCounterexample
