@@ -2,11 +2,18 @@
   "challenge_module": "Challenge",
   "solution_module": "Solution",
   "theorem_names": [
-    "AlonBoppana.ramanujan_spectral_gap",
-    "AlonBoppana.forwardNeighbors_card_le_d_sub_one",
-    "AlonBoppana.nilliProfile_mul_succ",
-    "AlonBoppana.orthogonalLinearCombination_orthogonal",
-    "AlonBoppana.nilliSignedTestVector_ne_zero"
+    "JenrichBorsuk64.dist_eq_d1_of_diam_lt",
+    "JenrichBorsuk64.isClique_of_diam_lt",
+    "JenrichBorsuk64.card_le_mul_card_cover",
+    "JenrichBorsuk64.dist_sq_of_adj",
+    "JenrichBorsuk64.dist_sq_of_not_adj",
+    "JenrichBorsuk64.carrier_card_eq",
+    "JenrichBorsuk64.reduction_vector_ortho_carrier",
+    "JenrichBorsuk64.reduction_vector_nonortho_B2",
+    "JenrichBorsuk64.jenrich_partition_lower_bound",
+    "JenrichBorsuk64.not_borsuk_conjecture_64",
+    "JenrichBorsuk64.reduction_vector_q_ortho_C",
+    "JenrichBorsuk64.almost_counterexample_63"
   ],
   "permitted_axioms": [
     "propext",

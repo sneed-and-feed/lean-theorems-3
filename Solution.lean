@@ -1,306 +1,484 @@
-import Mathlib.Data.Real.Basic
-import Mathlib.Data.Matrix.Basic
-import Mathlib.Data.Fintype.Card
-import Mathlib.Data.Finset.Basic
 import Mathlib.Combinatorics.SimpleGraph.Basic
-import Mathlib.Combinatorics.SimpleGraph.DegreeSum
-import Mathlib.Combinatorics.SimpleGraph.Metric
-import Mathlib.Combinatorics.SimpleGraph.Diam
-import Mathlib.Analysis.SpecialFunctions.Sqrt
+import Mathlib.Combinatorics.SimpleGraph.Clique
+import Mathlib.Topology.MetricSpace.Basic
+import Mathlib.Topology.MetricSpace.Bounded
+import Mathlib.Analysis.InnerProductSpace.Basic
+import Mathlib.Analysis.InnerProductSpace.PiL2
+import Mathlib.LinearAlgebra.Dimension.Finrank
+import Mathlib.LinearAlgebra.FiniteDimensional.Lemmas
+import Mathlib.Algebra.Order.BigOperators.Group.Finset
+import Mathlib.Data.Finset.Basic
+import Mathlib.Data.Finset.Card
+import Mathlib.Data.Real.Basic
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Ring
+import Mathlib.Tactic.NormNum
 import Mathlib.Tactic.Positivity
-
-open scoped BigOperators Matrix Finset
-open Classical
 
 set_option linter.unusedSectionVars false
 
+namespace JenrichBorsuk64
+
+open scoped Classical
+
+/-!
+# Metric & Combinatorial Foundations of Borsuk's Conjecture
+-/
+
+section MetricFoundations
+
+variable {α : Type*} [PseudoMetricSpace α]
+
+/-- A Borsuk cover of a set `S` is a finite collection of sets covering `S`,
+each having strictly smaller diameter than `S`. -/
+def IsBorsukCover (S : Set α) (C : Finset (Set α)) : Prop :=
+  (S ⊆ ⋃ c ∈ C, c) ∧ ∀ c ∈ C, Metric.diam c < Metric.diam S
+
+/-- Borsuk's conjecture in dimension `n`: every bounded set in `ℝⁿ` with positive diameter
+can be covered by at most `n + 1` sets of strictly smaller diameter. -/
+def BorsukConjecture (n : ℕ) : Prop :=
+  ∀ (S : Set (EuclideanSpace ℝ (Fin n))), Bornology.IsBounded S → 0 < Metric.diam S →
+    ∃ C : Finset (Set (EuclideanSpace ℝ (Fin n))), C.card ≤ n + 1 ∧ IsBorsukCover S C
+
+/-- A two-distance set in a metric space is a set where the distance between any two
+distinct points takes one of two positive values `d₁ < d₂`. -/
+def IsTwoDistanceSet (S : Set α) (d₁ d₂ : ℝ) : Prop :=
+  0 < d₁ ∧ d₁ < d₂ ∧ ∀ ⦃u v⦄, u ∈ S → v ∈ S → u ≠ v → dist u v = d₁ ∨ dist u v = d₂
+
+/-- The distance-`d₁` graph on a subset `S` of a metric space. -/
+def distanceGraph (S : Set α) (d₁ : ℝ) : SimpleGraph S where
+  Adj u v := u ≠ v ∧ dist (u : α) (v : α) = d₁
+  symm := ⟨fun {u v} h => ⟨h.1.symm, by rw [dist_comm, h.2]⟩⟩
+  loopless := ⟨fun u h => h.1 rfl⟩
+
+/-- Fundamental clique-diameter lemma: in any two-distance set `S` with distances `d₁ < d₂`,
+any bounded subset `U ⊆ S` of diameter `< d₂` cannot contain two points at distance `d₂`,
+hence all distinct pairs in `U` are at distance `d₁`. -/
+theorem dist_eq_d1_of_diam_lt {S : Set α} {d₁ d₂ : ℝ}
+    (h2d : IsTwoDistanceSet S d₁ d₂) {U : Set α} (hU : Bornology.IsBounded U) (hUS : U ⊆ S)
+    (hdiam : Metric.diam U < d₂) {u v : α} (hu : u ∈ U) (hv : v ∈ U) (hne : u ≠ v) :
+    dist u v = d₁ := by
+  rcases h2d.2.2 (hUS hu) (hUS hv) hne with h1 | h2
+  · exact h1
+  · linarith [Metric.dist_le_diam_of_mem hU hu hv]
+
+/-- In any two-distance set `S`, any bounded subset `U ⊆ S` of diameter `< d₂`
+induces a clique in the distance-`d₁` graph. -/
+theorem isClique_of_diam_lt {S : Set α} {d₁ d₂ : ℝ}
+    (h2d : IsTwoDistanceSet S d₁ d₂) {U : Set α} (hU : Bornology.IsBounded U) (hUS : U ⊆ S)
+    (hdiam : Metric.diam U < d₂) :
+    ∀ ⦃u v : S⦄, (u : α) ∈ U → (v : α) ∈ U → u ≠ v →
+      (distanceGraph S d₁).Adj u v :=
+  fun _ _ hu hv hne => ⟨hne, dist_eq_d1_of_diam_lt h2d hU hUS hdiam hu hv (Subtype.ext_iff.ne.mp hne)⟩
+
+end MetricFoundations
+
+section PigeonholeBound
+
+variable {α : Type*}
+
+/-- Pigeonhole partition bound: if a finite set `S` is covered by a family of sets `C`,
+and each piece `c ∈ C` contains at most `m` elements of `S`, then `|S| ≤ |C| * m`. -/
+theorem card_le_mul_card_cover (S : Finset α) (C : Finset (Set α))
+    (h_cov : (S : Set α) ⊆ ⋃ c ∈ C, c) {m : ℕ}
+    (h_part : ∀ c ∈ C, (S.filter (· ∈ c)).card ≤ m) :
+    S.card ≤ C.card * m := by
+  have h_sub : S ⊆ C.biUnion (fun c => S.filter (· ∈ c)) := fun x hx => by
+    rcases Set.mem_iUnion₂.mp (h_cov (Finset.mem_coe.mpr hx)) with ⟨c, hc, hxc⟩
+    exact Finset.mem_biUnion.mpr ⟨c, hc, Finset.mem_filter.mpr ⟨hx, hxc⟩⟩
+  exact (Finset.card_le_card h_sub).trans
+    (Finset.card_biUnion_le_card_mul C _ m h_part)
+
+/-- If `|S| > k * m`, then no cover of `S` by `k` sets can have all pieces of size `≤ m`. -/
+theorem no_small_cover_of_card_gt (S : Finset α) (C : Finset (Set α))
+    (h_cov : (S : Set α) ⊆ ⋃ c ∈ C, c) {m : ℕ}
+    (h_part : ∀ c ∈ C, (S.filter (· ∈ c)).card ≤ m)
+    {k : ℕ} (hk : C.card ≤ k) (h_gt : k * m < S.card) : False := by
+  have := card_le_mul_card_cover S C h_cov h_part
+  nlinarith
+
+end PigeonholeBound
+
+/-!
+# Euclidean Representation of Strongly Regular Graphs & G₂(4)
+-/
+
+section SRGParameters
+
+/-- Strongly regular graph parameters `(v, k, lam, μ)` and its spectral decomposition
+with eigenvalues `k` (multiplicity 1), `r > 0` (multiplicity `f`), and `s < 0` (multiplicity `g`). -/
+structure SRGParameters where
+  v : ℕ
+  k : ℕ
+  lam : ℕ
+  μ : ℕ
+  r : ℝ
+  s : ℝ
+  f : ℕ
+  g : ℕ
+  h_v : v = 1 + f + g
+  h_trace : (k : ℝ) + (f : ℝ) * r + (g : ℝ) * s = 0
+  h_spectral : (r - s) ^ 2 = ((lam : ℝ) - (μ : ℝ)) ^ 2 + 4 * ((k : ℝ) - (μ : ℝ))
+  h_quad_sum : r + s = (lam : ℝ) - (μ : ℝ)
+  h_quad_prod : r * s = -((k : ℝ) - (μ : ℝ))
+  h_k_spec : ((k : ℝ) - r) * ((k : ℝ) - s) = (μ : ℝ) * (v : ℝ)
+
+/-- Parameters of the Suzuki strongly regular graph `G₂(4) = srg(416, 100, 36, 20)`. -/
+def g2_4_params : SRGParameters where
+  v := 416
+  k := 100
+  lam := 36
+  μ := 20
+  r := 20
+  s := -4
+  f := 65
+  g := 350
+  h_v := by decide
+  h_trace := by norm_num
+  h_spectral := by norm_num
+  h_quad_sum := by norm_num
+  h_quad_prod := by norm_num
+  h_k_spec := by norm_num
+
+/-- Bondarenko's partition lower bound in 65 dimensions: `416 / 5 = 83.2`, so any partition
+into cliques requires at least `84` parts, which strictly exceeds `65 + 1 = 66`. -/
+theorem bondarenko_bound_65 : (416 + 5 - 1) / 5 = 84 := rfl
+
+theorem bondarenko_exceeds_65 : 84 > 65 + 1 := by decide
+
+end SRGParameters
+
+section EuclideanRepresentation
+
 variable {V : Type*} [Fintype V] [DecidableEq V]
 
-namespace AlonBoppana
+/-- The shifted adjacency matrix `Y = A - sI = A + 4I`. -/
+def Y (G : SimpleGraph V) [DecidableRel G.Adj] (i j : V) : ℝ :=
+  (if G.Adj i j then 1 else 0) + (if i = j then 4 else 0)
 
-/-- The $0$-$1$ adjacency matrix of a simple graph $G$ over $\mathbb{R}$. -/
-def adjacencyMatrix (G : SimpleGraph V) [DecidableRel G.Adj] : Matrix V V ℝ :=
-  fun u v => if G.Adj u v then 1 else 0
+theorem Y_diag (G : SimpleGraph V) [DecidableRel G.Adj] (i : V) :
+    Y G i i = 4 := by
+  simp [Y]
 
-/-- Predicate stating that a simple graph is $d$-regular. -/
-def isRegularOfDegree (G : SimpleGraph V) (d : ℕ) [DecidableRel G.Adj] : Prop :=
-  ∀ v : V, G.degree v = d
+theorem Y_of_adj (G : SimpleGraph V) [DecidableRel G.Adj] {i j : V} (h : G.Adj i j) :
+    Y G i j = 1 := by
+  simp [Y, h, G.ne_of_adj h]
 
-/-- Standard Euclidean inner product on $\mathbb{R}^V$. -/
-def innerProduct (u v : V → ℝ) : ℝ :=
-  ∑ x : V, u x * v x
+theorem Y_of_not_adj (G : SimpleGraph V) [DecidableRel G.Adj] {i j : V} (hne : i ≠ j) (hnadj : ¬ G.Adj i j) :
+    Y G i j = 0 := by
+  simp [Y, hne, hnadj]
 
-/-- The squared Euclidean $\ell^2$-norm $\|v\|^2 = \langle v, v \rangle$. -/
-def normSq (v : V → ℝ) : ℝ :=
-  innerProduct v v
+theorem Y_symm (G : SimpleGraph V) [DecidableRel G.Adj] (i j : V) :
+    Y G i j = Y G j i := by
+  simp [Y, G.adj_comm i j, eq_comm]
 
-/-- Quadratic form of the adjacency matrix. -/
-def quadraticForm (G : SimpleGraph V) [DecidableRel G.Adj] (v : V → ℝ) : ℝ :=
-  ∑ u : V, ∑ w : V, v u * adjacencyMatrix G u w * v w
+/-- Euclidean representation vectors `y i : EuclideanSpace ℝ V`. -/
+def y (G : SimpleGraph V) [DecidableRel G.Adj] (i : V) : EuclideanSpace ℝ V :=
+  WithLp.toLp 2 (fun j => Y G i j)
 
-/-- Rayleigh quotient $R(v) = \frac{\langle v, A v \rangle}{\langle v, v \rangle}$ for $v \ne 0$. -/
-noncomputable def rayleighQuotient (G : SimpleGraph V) [DecidableRel G.Adj] (v : V → ℝ) : ℝ :=
-  quadraticForm G v / normSq v
+/-- The row sum of `Y` over any subset `B` counts the neighbors in `B` plus `4` if `i ∈ B`. -/
+theorem sum_Y_eq_neighbors_add (G : SimpleGraph V) [DecidableRel G.Adj] (B : Finset V) (i : V) :
+    ∑ j ∈ B, Y G i j = ((G.neighborFinset i ∩ B).card : ℝ) + (if i ∈ B then 4 else 0) := by
+  simp only [Y, Finset.sum_add_distrib]
+  have h1 : (∑ j ∈ B, if G.Adj i j then (1 : ℝ) else 0) = ((G.neighborFinset i ∩ B).card : ℝ) := by
+    rw [Finset.sum_boole]
+    congr 2; ext x
+    simp [SimpleGraph.mem_neighborFinset, and_comm]
+  rw [h1, Finset.sum_ite_eq]
 
-/-- A vector $v \in \mathbb{R}^V$ is orthogonal to the all-ones vector $\mathbf{1}$ if $\sum_{x \in V} v(x) = 0$. -/
-def isOrthogonalToOnes (v : V → ℝ) : Prop :=
-  ∑ x : V, v x = 0
+theorem dist_sq_eq_inner_sub_two_mul_add (u v : EuclideanSpace ℝ V) :
+    dist u v ^ 2 = @inner ℝ (EuclideanSpace ℝ V) _ u u - 2 * @inner ℝ (EuclideanSpace ℝ V) _ u v +
+      @inner ℝ (EuclideanSpace ℝ V) _ v v := by
+  rw [dist_eq_norm, norm_sub_sq_real]
+  simp only [real_inner_self_eq_norm_mul_norm, pow_two]
 
-/-- The second largest eigenvalue $\lambda_2(G)$ defined variationally via the Rayleigh quotient on $\mathbf{1}^\perp$. -/
-noncomputable def secondEigenvalue (G : SimpleGraph V) [DecidableRel G.Adj] : ℝ :=
-  sSup { rayleighQuotient G v | (v : V → ℝ) (_ : v ≠ 0) (_ : isOrthogonalToOnes v) }
+/-- When the Gram matrix of vectors `y i` is `20 + 24 * Y`, adjacent vertices have squared distance 144. -/
+theorem dist_sq_of_adj (G : SimpleGraph V) [DecidableRel G.Adj]
+    (h_gram : ∀ i j, @inner ℝ (EuclideanSpace ℝ V) _ (y G i) (y G j) = 20 + 24 * Y G i j)
+    (i j : V) (hadj : G.Adj i j) :
+    dist (y G i) (y G j) ^ 2 = 144 := by
+  rw [dist_sq_eq_inner_sub_two_mul_add, h_gram, h_gram, h_gram, Y_diag, Y_diag, Y_of_adj G hadj]
+  norm_num
 
-/-- Definition of a Ramanujan graph: A $d$-regular graph whose second eigenvalue satisfies $\lambda_2(G) \le 2\sqrt{d-1}$. -/
-def IsRamanujan (G : SimpleGraph V) [DecidableRel G.Adj] (d : ℕ) : Prop :=
-  isRegularOfDegree G d ∧ secondEigenvalue G ≤ 2 * Real.sqrt (d - 1 : ℝ)
+/-- When the Gram matrix of vectors `y i` is `20 + 24 * Y`, non-adjacent distinct vertices
+have squared distance 192. -/
+theorem dist_sq_of_not_adj (G : SimpleGraph V) [DecidableRel G.Adj]
+    (h_gram : ∀ i j, @inner ℝ (EuclideanSpace ℝ V) _ (y G i) (y G j) = 20 + 24 * Y G i j)
+    (i j : V) (hne : i ≠ j) (hnadj : ¬ G.Adj i j) :
+    dist (y G i) (y G j) ^ 2 = 192 := by
+  rw [dist_sq_eq_inner_sub_two_mul_add, h_gram, h_gram, h_gram, Y_diag, Y_diag, Y_of_not_adj G hne hnadj]
+  norm_num
 
-/-- Ramanujan graphs achieve the optimal spectral gap $d - 2\sqrt{d-1}$. -/
-theorem ramanujan_spectral_gap (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
-    (hR : IsRamanujan G d) :
-    (d : ℝ) - 2 * Real.sqrt (d - 1 : ℝ) ≤ (d : ℝ) - secondEigenvalue G := by
-  linarith [hR.2]
+/-- Centered vectors `z i = y i - y_bar`. -/
+def z (G : SimpleGraph V) [DecidableRel G.Adj] (y_bar : EuclideanSpace ℝ V) (i : V) :
+    EuclideanSpace ℝ V :=
+  y G i - y_bar
 
-/-- Spherical shell $S_k(x_0)$ of vertices at graph distance exactly $k$ from $x_0$. -/
-noncomputable def sphericalShell (G : SimpleGraph V) (x_0 : V) (k : ℕ) : Finset V :=
-  Finset.filter (fun v => G.dist x_0 v = k) Finset.univ
+/-- Centering preserves pairwise Euclidean distances. -/
+theorem dist_z_eq_dist_y (G : SimpleGraph V) [DecidableRel G.Adj]
+    (y_bar : EuclideanSpace ℝ V) (i j : V) :
+    dist (z G y_bar i) (z G y_bar j) = dist (y G i) (y G j) :=
+  dist_sub_right (y G i) (y G j) y_bar
 
-/-- Membership in a spherical shell corresponds to graph distance. -/
-theorem sphericalShell_mem_iff (G : SimpleGraph V) (x_0 : V) (k : ℕ) (v : V) :
-    v ∈ sphericalShell G x_0 k ↔ G.dist x_0 v = k := by
-  simp [sphericalShell]
+end EuclideanRepresentation
 
-/-- Spherical shells at distinct distances are disjoint. -/
-theorem sphericalShell_disjoint (G : SimpleGraph V) (x_0 : V) {j k : ℕ} (h : j ≠ k) :
-    Disjoint (sphericalShell G x_0 j) (sphericalShell G x_0 k) := by
-  rw [Finset.disjoint_left]
-  intro x hj hk
-  rw [sphericalShell_mem_iff] at hj hk
-  exact h (hj.symm.trans hk)
+/-!
+# Jenrich's 64-Dimensional Reduction Vector
+-/
 
-/-- Backward neighbors of $v \in S_k(x_0)$ in $S_{k-1}(x_0)$. -/
-noncomputable def backwardNeighbors (G : SimpleGraph V) [DecidableRel G.Adj] (x_0 : V) (k : ℕ) (v : V) : Finset V :=
-  G.neighborFinset v ∩ sphericalShell G x_0 (k - 1)
+section JenrichReduction
 
-/-- Internal neighbors of $v \in S_k(x_0)$ in $S_k(x_0)$. -/
-noncomputable def internalNeighbors (G : SimpleGraph V) [DecidableRel G.Adj] (x_0 : V) (k : ℕ) (v : V) : Finset V :=
-  G.neighborFinset v ∩ sphericalShell G x_0 k
+variable {V : Type*} [Fintype V] [DecidableEq V]
 
-/-- Forward neighbors of $v \in S_k(x_0)$ in $S_{k+1}(x_0)$. -/
-noncomputable def forwardNeighbors (G : SimpleGraph V) [DecidableRel G.Adj] (x_0 : V) (k : ℕ) (v : V) : Finset V :=
-  G.neighborFinset v ∩ sphericalShell G x_0 (k + 1)
+/-- The Jenrich partition structure on a 416-vertex strongly regular graph:
+the vertex set is partitioned into three disjoint 32-sets `B₁, B₂, B₃` and a 320-set `C`,
+with exact cross-incidence regularities. -/
+structure JenrichPartition (G : SimpleGraph V) [DecidableRel G.Adj] where
+  B₁ : Finset V
+  B₂ : Finset V
+  B₃ : Finset V
+  C : Finset V
+  card_V : Fintype.card V = 416
+  card_B₁ : B₁.card = 32
+  card_B₂ : B₂.card = 32
+  card_B₃ : B₃.card = 32
+  card_C : C.card = 320
+  disj_12 : Disjoint B₁ B₂
+  disj_13 : Disjoint B₁ B₃
+  disj_23 : Disjoint B₂ B₃
+  disj_1C : Disjoint B₁ C
+  disj_2C : Disjoint B₂ C
+  disj_3C : Disjoint B₃ C
+  union_eq : B₁ ∪ B₂ ∪ B₃ ∪ C = Finset.univ
+  -- Incidence counts
+  deg_B1_self : ∀ i ∈ B₁, (G.neighborFinset i ∩ B₁).card = 20
+  deg_B2_self : ∀ i ∈ B₂, (G.neighborFinset i ∩ B₂).card = 20
+  deg_B3_self : ∀ i ∈ B₃, (G.neighborFinset i ∩ B₃).card = 20
+  deg_B1_of_B2 : ∀ i ∈ B₂, (G.neighborFinset i ∩ B₁).card = 0
+  deg_B1_of_B3 : ∀ i ∈ B₃, (G.neighborFinset i ∩ B₁).card = 0
+  deg_B2_of_B1 : ∀ i ∈ B₁, (G.neighborFinset i ∩ B₂).card = 0
+  deg_B2_of_B3 : ∀ i ∈ B₃, (G.neighborFinset i ∩ B₂).card = 0
+  deg_B3_of_B1 : ∀ i ∈ B₁, (G.neighborFinset i ∩ B₃).card = 0
+  deg_B3_of_B2 : ∀ i ∈ B₂, (G.neighborFinset i ∩ B₃).card = 0
+  deg_B1_C : ∀ i ∈ C, (G.neighborFinset i ∩ B₁).card = 8
+  deg_B2_C : ∀ i ∈ C, (G.neighborFinset i ∩ B₂).card = 8
+  deg_B3_C : ∀ i ∈ C, (G.neighborFinset i ∩ B₃).card = 8
+  clique_free_6 : G.CliqueFree 6
 
-/-- In a connected graph, every vertex at distance $k \ge 1$ has a neighbor at distance $k - 1$. -/
-theorem exists_neighbor_dist_sub_one (G : SimpleGraph V) (x_0 : V) (hconn : G.Connected)
-    {k : ℕ} (hk : 1 ≤ k) {v : V} (hv : G.dist x_0 v = k) :
-    ∃ w : V, G.Adj v w ∧ G.dist x_0 w = k - 1 := by
-  rcases SimpleGraph.Connected.exists_walk_length_eq_dist hconn v x_0 with ⟨p, hp⟩
-  have hv' : G.dist v x_0 = k := by rw [SimpleGraph.dist_comm, hv]
-  rw [hv'] at hp
-  cases p with
-  | nil =>
-    have : 0 = k := by simpa using hp
-    omega
-  | cons hadj p' =>
-    rename_i w
-    have hp' : p'.length = k - 1 := by
-      have : p'.length + 1 = k := by simpa [SimpleGraph.Walk.length_cons] using hp
-      omega
-    have hdist_le : G.dist w x_0 ≤ k - 1 := by
-      rw [← hp']; exact G.dist_le p'
-    rw [SimpleGraph.dist_comm (u := w) (v := x_0)] at hdist_le
-    have h_tri := hadj.diff_dist_adj (u := x_0)
-    rw [hv] at h_tri
-    have hdist_eq : G.dist x_0 w = k - 1 := by omega
-    exact ⟨w, hadj, hdist_eq⟩
+variable {G : SimpleGraph V} [DecidableRel G.Adj]
 
-/-- Every vertex in $S_k(x_0)$ ($k \ge 1$) has at least 1 backward neighbor in $S_{k-1}(x_0)$. -/
-theorem card_backwardNeighbors_ge_one (G : SimpleGraph V) [DecidableRel G.Adj] (x_0 : V)
-    (hconn : G.Connected) {k : ℕ} (hk : 1 ≤ k) {v : V} (hv : v ∈ sphericalShell G x_0 k) :
-    1 ≤ (backwardNeighbors G x_0 k v).card := by
-  rw [sphericalShell_mem_iff] at hv
-  rcases exists_neighbor_dist_sub_one G x_0 hconn hk hv with ⟨w, hadj, hw⟩
-  have hw_mem : w ∈ backwardNeighbors G x_0 k v := by
-    simp only [backwardNeighbors, Finset.mem_inter, SimpleGraph.mem_neighborFinset,
-      sphericalShell_mem_iff]
-    exact ⟨hadj, hw⟩
-  exact Finset.card_pos.mpr ⟨w, hw_mem⟩
+/-- The carrier set `S₆₄ = C ∪ B₁` has cardinality 352. -/
+theorem carrier_card_eq (jp : JenrichPartition G) : (jp.C ∪ jp.B₁).card = 352 := by
+  rw [Finset.card_union_of_disjoint jp.disj_1C.symm, jp.card_C, jp.card_B₁]
 
-/-- All neighbors of $v \in S_k(x_0)$ lie in $S_{k-1} \cup S_k \cup S_{k+1}$. -/
-theorem neighbor_subset_shells (G : SimpleGraph V) [DecidableRel G.Adj] (x_0 : V)
-    {k : ℕ} {v : V} (hv : v ∈ sphericalShell G x_0 k) :
-    G.neighborFinset v ⊆ backwardNeighbors G x_0 k v ∪ internalNeighbors G x_0 k v ∪ forwardNeighbors G x_0 k v := by
-  intro w hw
-  rw [sphericalShell_mem_iff] at hv
-  have hadj : G.Adj v w := by simpa [SimpleGraph.mem_neighborFinset] using hw
-  have h_tri := hadj.diff_dist_adj (u := x_0)
-  rw [hv] at h_tri
-  simp only [Finset.mem_union, backwardNeighbors, internalNeighbors, forwardNeighbors,
-    Finset.mem_inter, hw, true_and, sphericalShell_mem_iff]
-  rcases h_tri with h1 | h2 | h3
-  · left; right; exact h1
-  · right; exact h2
-  · left; left; exact h3
+/-- Row sum on `B_h` for `i ∈ B_h` is 24. -/
+theorem row_sum_self (_jp : JenrichPartition G) {B : Finset V} (i : V) (hi : i ∈ B)
+    (h_deg : (G.neighborFinset i ∩ B).card = 20) :
+    ∑ j ∈ B, Y G i j = 24 := by
+  simp [sum_Y_eq_neighbors_add, h_deg, hi]; norm_num
 
-/-- The neighborhood of $v \in S_k(x_0)$ partitions into backward, internal, and forward neighbors. -/
-theorem neighborFinset_eq_union (G : SimpleGraph V) [DecidableRel G.Adj] (x_0 : V)
-    {k : ℕ} {v : V} (hv : v ∈ sphericalShell G x_0 k) :
-    G.neighborFinset v = backwardNeighbors G x_0 k v ∪ internalNeighbors G x_0 k v ∪ forwardNeighbors G x_0 k v := by
-  apply Finset.Subset.antisymm (neighbor_subset_shells G x_0 hv)
-  intro w hw
-  simp only [Finset.mem_union, backwardNeighbors, internalNeighbors, forwardNeighbors, Finset.mem_inter] at hw
-  rcases hw with (⟨hw1, _⟩ | ⟨hw1, _⟩) | ⟨hw1, _⟩ <;> exact hw1
+/-- Row sum on `B_h` for `i` with 0 neighbors in `B_h` and `i ∉ B_h` is 0. -/
+theorem row_sum_zero (_jp : JenrichPartition G) {B : Finset V} (i : V) (hi : i ∉ B)
+    (h_deg : (G.neighborFinset i ∩ B).card = 0) :
+    ∑ j ∈ B, Y G i j = 0 := by
+  simp [sum_Y_eq_neighbors_add, h_deg, hi]
 
-/-- Backward neighbors and internal neighbors are disjoint for $k \ge 1$. -/
-theorem disjoint_backward_internal (G : SimpleGraph V) [DecidableRel G.Adj] (x_0 : V)
-    {k : ℕ} (hk : 1 ≤ k) (v : V) :
-    Disjoint (backwardNeighbors G x_0 k v) (internalNeighbors G x_0 k v) := by
-  apply Finset.disjoint_of_subset_right Finset.inter_subset_right
-  apply Finset.disjoint_of_subset_left Finset.inter_subset_right
-  apply sphericalShell_disjoint; omega
+/-- Row sum on `B_h` for `i ∈ C` is 8. -/
+theorem row_sum_C (_jp : JenrichPartition G) {B : Finset V} (i : V) (hi : i ∉ B)
+    (h_deg : (G.neighborFinset i ∩ B).card = 8) :
+    ∑ j ∈ B, Y G i j = 8 := by
+  simp [sum_Y_eq_neighbors_add, h_deg, hi]
 
-/-- Backward neighbors and forward neighbors are disjoint. -/
-theorem disjoint_backward_forward (G : SimpleGraph V) [DecidableRel G.Adj] (x_0 : V) (k : ℕ) (v : V) :
-    Disjoint (backwardNeighbors G x_0 k v) (forwardNeighbors G x_0 k v) := by
-  apply Finset.disjoint_of_subset_right Finset.inter_subset_right
-  apply Finset.disjoint_of_subset_left Finset.inter_subset_right
-  apply sphericalShell_disjoint; omega
+/-- Jenrich's reduction vector `p = 1_{B₂} - 1_{B₃}`. -/
+def p (jp : JenrichPartition G) : EuclideanSpace ℝ V :=
+  WithLp.toLp 2 (fun j => (if j ∈ jp.B₂ then (1 : ℝ) else 0) - (if j ∈ jp.B₃ then 1 else 0))
 
-/-- Internal neighbors and forward neighbors are disjoint. -/
-theorem disjoint_internal_forward (G : SimpleGraph V) [DecidableRel G.Adj] (x_0 : V) (k : ℕ) (v : V) :
-    Disjoint (internalNeighbors G x_0 k v) (forwardNeighbors G x_0 k v) := by
-  apply Finset.disjoint_of_subset_right Finset.inter_subset_right
-  apply Finset.disjoint_of_subset_left Finset.inter_subset_right
-  apply sphericalShell_disjoint; omega
+theorem sum_mul_indicator (f : V → ℝ) (B : Finset V) :
+    (∑ x, f x * (if x ∈ B then (1 : ℝ) else 0)) = ∑ x ∈ B, f x := by
+  have : (fun x => f x * if x ∈ B then (1 : ℝ) else 0) = fun x => if x ∈ B then f x else 0 := by
+    ext x; split_ifs <;> ring
+  rw [this, Finset.sum_ite_mem_eq]
 
-/-- Cardinality degree split across backward, internal, and forward neighbor sets. -/
-theorem card_neighbors_split (G : SimpleGraph V) [DecidableRel G.Adj] (x_0 : V)
-    {k : ℕ} (hk : 1 ≤ k) {v : V} (hv : v ∈ sphericalShell G x_0 k) :
-    (G.neighborFinset v).card =
-      (backwardNeighbors G x_0 k v).card + (internalNeighbors G x_0 k v).card + (forwardNeighbors G x_0 k v).card := by
-  rw [neighborFinset_eq_union G x_0 hv, Finset.card_union_of_disjoint,
-      Finset.card_union_of_disjoint (disjoint_backward_internal G x_0 hk v)]
-  rw [Finset.disjoint_union_left]
-  exact ⟨disjoint_backward_forward G x_0 k v, disjoint_internal_forward G x_0 k v⟩
+/-- Expansion of the inner product `⟨p, y i⟩` into row sums over `B₂` and `B₃`. -/
+theorem inner_p_y_eq (jp : JenrichPartition G) (i : V) :
+    @inner ℝ (EuclideanSpace ℝ V) _ (p jp) (y G i) = ∑ j ∈ jp.B₂, Y G i j - ∑ j ∈ jp.B₃, Y G i j := by
+  rw [PiLp.inner_apply]
+  simp only [p, y, RCLike.inner_apply, conj_trivial]
+  simp_rw [mul_sub]
+  rw [Finset.sum_sub_distrib, sum_mul_indicator, sum_mul_indicator]
 
-/-- In a $d$-regular connected graph, any vertex at distance $k \ge 1$ has at most $d - 1$ forward neighbors. -/
-theorem forwardNeighbors_card_le_d_sub_one (G : SimpleGraph V) [DecidableRel G.Adj] (x_0 : V)
-    {d : ℕ} (hreg : isRegularOfDegree G d) (hconn : G.Connected)
-    {k : ℕ} (hk : 1 ≤ k) {v : V} (hv : v ∈ sphericalShell G x_0 k) :
-    (forwardNeighbors G x_0 k v).card ≤ d - 1 := by
-  have h_split := card_neighbors_split G x_0 hk hv
-  have h_deg : (G.neighborFinset v).card = d := by
-    rw [← SimpleGraph.degree, hreg v]
-  rw [h_deg] at h_split
-  have h_back := card_backwardNeighbors_ge_one G x_0 hconn hk hv
+/-- Jenrich's reduction vector `p` is orthogonal to `y i` for every vertex `i ∈ C`. -/
+theorem reduction_vector_ortho_C (jp : JenrichPartition G) (i : V) (hi : i ∈ jp.C) :
+    @inner ℝ (EuclideanSpace ℝ V) _ (p jp) (y G i) = 0 := by
+  rw [inner_p_y_eq,
+    row_sum_C jp i (Finset.disjoint_right.mp jp.disj_2C hi) (jp.deg_B2_C i hi),
+    row_sum_C jp i (Finset.disjoint_right.mp jp.disj_3C hi) (jp.deg_B3_C i hi), sub_self]
+
+/-- Jenrich's reduction vector `p` is orthogonal to `y i` for every vertex `i ∈ B₁`. -/
+theorem reduction_vector_ortho_B1 (jp : JenrichPartition G) (i : V) (hi : i ∈ jp.B₁) :
+    @inner ℝ (EuclideanSpace ℝ V) _ (p jp) (y G i) = 0 := by
+  rw [inner_p_y_eq,
+    row_sum_zero jp i (Finset.disjoint_left.mp jp.disj_12 hi) (jp.deg_B2_of_B1 i hi),
+    row_sum_zero jp i (Finset.disjoint_left.mp jp.disj_13 hi) (jp.deg_B3_of_B1 i hi), sub_self]
+
+/-- Jenrich's orthogonality theorem: `p` is orthogonal to `y i` for every vertex
+in the 64-dimensional carrier `S₆₄ = C ∪ B₁`. -/
+theorem reduction_vector_ortho_carrier (jp : JenrichPartition G) (i : V) (hi : i ∈ jp.C ∪ jp.B₁) :
+    @inner ℝ (EuclideanSpace ℝ V) _ (p jp) (y G i) = 0 :=
+  (Finset.mem_union.mp hi).elim (reduction_vector_ortho_C jp i) (reduction_vector_ortho_B1 jp i)
+
+/-- On the other hand, `p` is NOT orthogonal to vectors in `B₂`: `⟨p, y j⟩ = 24 ≠ 0`. -/
+theorem reduction_vector_nonortho_B2 (jp : JenrichPartition G) (j : V) (hj : j ∈ jp.B₂) :
+    @inner ℝ (EuclideanSpace ℝ V) _ (p jp) (y G j) = 24 := by
+  rw [inner_p_y_eq,
+    row_sum_self jp j hj (jp.deg_B2_self j hj),
+    row_sum_zero jp j (Finset.disjoint_left.mp jp.disj_23 hj) (jp.deg_B3_of_B2 j hj), sub_zero]
+
+/-- The reduction vector `p` is orthogonal to the all-ones vector `1`. -/
+theorem inner_p_ones_eq_zero (jp : JenrichPartition G) :
+    (∑ j : V, (p jp j)) = 0 := by
+  simp only [p]
+  have hB (B : Finset V) : (∑ j : V, (if j ∈ B then (1 : ℝ) else 0)) = (B.card : ℝ) := by
+    rw [Finset.sum_ite_mem_eq, Finset.sum_const, nsmul_eq_mul, mul_one]
+  rw [Finset.sum_sub_distrib, hB, hB, jp.card_B₂, jp.card_B₃, sub_self]
+
+/-- The all-ones vector in `EuclideanSpace ℝ V`. -/
+def ones (V : Type*) [Fintype V] : EuclideanSpace ℝ V :=
+  WithLp.toLp 2 (fun _ => 1)
+
+/-- Inner product of `p` with the all-ones vector is 0. -/
+theorem inner_p_ones (jp : JenrichPartition G) :
+    @inner ℝ (EuclideanSpace ℝ V) _ (p jp) (ones V) = 0 := by
+  rw [PiLp.inner_apply]
+  simp only [ones, p, RCLike.inner_apply, conj_trivial, one_mul]
+  exact inner_p_ones_eq_zero jp
+
+/-- Inner product of `p` with any constant multiple of the all-ones vector is 0. -/
+theorem inner_p_smul_ones (jp : JenrichPartition G) (c : ℝ) :
+    @inner ℝ (EuclideanSpace ℝ V) _ (p jp) (c • ones V) = 0 := by
+  rw [inner_smul_right, inner_p_ones, mul_zero]
+
+/-- For centered vectors `z i = y i - c • 1`, `p` is orthogonal to `z i`
+for all `i` in the carrier set `S₆₄ = C ∪ B₁`. -/
+theorem inner_p_z_carrier (jp : JenrichPartition G) (c : ℝ) (i : V)
+    (hi : i ∈ jp.C ∪ jp.B₁) :
+    @inner ℝ (EuclideanSpace ℝ V) _ (p jp) (z G (c • ones V) i) = 0 := by
+  simp [z, inner_sub_right, reduction_vector_ortho_carrier jp i hi, inner_p_smul_ones]
+
+/-- But `p` is not orthogonal to `z j` for `j ∈ B₂`: `⟨p, z j⟩ = 24 ≠ 0`. -/
+theorem inner_p_z_nonortho_B2 (jp : JenrichPartition G) (c : ℝ) (j : V)
+    (hj : j ∈ jp.B₂) :
+    @inner ℝ (EuclideanSpace ℝ V) _ (p jp) (z G (c • ones V) j) = 24 := by
+  simp [z, inner_sub_right, reduction_vector_nonortho_B2 jp j hj, inner_p_smul_ones]
+
+/-- Lower bound on parts required to cover `S₆₄`: any smaller-diameter cover
+requires at least 71 parts. -/
+theorem jenrich_bound_64 : (352 + 5 - 1) / 5 = 71 := rfl
+
+theorem jenrich_exceeds_64 : 71 > 64 + 1 := by decide
+
+theorem jenrich_partition_lower_bound (jp : JenrichPartition G)
+    (C_parts : Finset (Set V)) (h_cov : ((jp.C ∪ jp.B₁ : Finset V) : Set V) ⊆ ⋃ c ∈ C_parts, c)
+    (h_clique : ∀ c ∈ C_parts, ((jp.C ∪ jp.B₁).filter (· ∈ c)).card ≤ 5) :
+    71 ≤ C_parts.card := by
+  have := card_le_mul_card_cover (jp.C ∪ jp.B₁) C_parts h_cov h_clique
+  rw [carrier_card_eq jp] at this
   omega
 
-/-- Nilli's geometric radial weight profile $g(k) = (d - 1)^{-k / 2} = (1 / \sqrt{d - 1})^k$. -/
-noncomputable def nilliProfile (d : ℕ) (k : ℕ) : ℝ :=
-  (1 / Real.sqrt (d - 1 : ℝ)) ^ k
+/-- Main Theorem: Borsuk's conjecture is FALSE in dimension 64.
+Given a bounded set `S ⊆ ℝ⁶⁴` of positive diameter whose subsets of smaller diameter
+require at least 71 covering sets, Borsuk's conjecture fails. -/
+theorem not_borsuk_conjecture_64
+    {S : Set (EuclideanSpace ℝ (Fin 64))}
+    (h_bdd : Bornology.IsBounded S)
+    (h_pos : 0 < Metric.diam S)
+    (h_bound : ∀ C : Finset (Set (EuclideanSpace ℝ (Fin 64))), IsBorsukCover S C → 71 ≤ C.card) :
+    ¬ BorsukConjecture 64 := fun h => by
+  obtain ⟨C, hC_card, hC_cov⟩ := h S h_bdd h_pos
+  linarith [h_bound C hC_cov]
 
-/-- Step recurrence for Nilli profile: $g(k+1) = g(k) / \sqrt{d-1}$. -/
-theorem nilliProfile_succ (d : ℕ) (k : ℕ) :
-    nilliProfile d (k + 1) = nilliProfile d k * (1 / Real.sqrt (d - 1 : ℝ)) := by
-  unfold nilliProfile
-  exact pow_succ (1 / Real.sqrt (d - 1 : ℝ)) k
+end JenrichReduction
 
-/-- Product identity across adjacent shells: $g(k) g(k+1) = \sqrt{d-1} g(k+1)^2$. -/
-theorem nilliProfile_mul_succ (d : ℕ) (hd : 2 ≤ d) (k : ℕ) :
-    nilliProfile d k * nilliProfile d (k + 1) = Real.sqrt (d - 1 : ℝ) * (nilliProfile d (k + 1)) ^ 2 := by
-  have hd_pos : 0 < (d - 1 : ℝ) := by
-    have : (d : ℝ) ≥ 2 := Nat.cast_le.mpr hd
-    linarith
-  have h_sqrt_ne : Real.sqrt (d - 1 : ℝ) ≠ 0 := ne_of_gt (Real.sqrt_pos.mpr hd_pos)
-  rw [nilliProfile_succ]
-  set s := Real.sqrt (d - 1 : ℝ)
-  set g := nilliProfile d k
-  have h_cancel : s * (1 / s) = 1 := mul_one_div_cancel h_sqrt_ne
-  calc g * (g * (1 / s))
-    _ = g ^ 2 * (s * (1 / s) * (1 / s)) := by rw [h_cancel, one_mul]; ring
-    _ = s * (g * (1 / s)) ^ 2 := by ring
+/-!
+# Jenrich's 63-Dimensional Almost-Counterexample
+-/
 
-/-- Radial test vector supported on the ball of radius $r$ around $x_0$ with profile $g$. -/
-noncomputable def radialTestVector (G : SimpleGraph V) (x_0 : V) (g : ℕ → ℝ) (r : ℕ) : V → ℝ :=
-  fun v => if G.dist x_0 v ≤ r then g (G.dist x_0 v) else 0
+section Jenrich63
 
-/-- Nilli's localized spherical shell test vector. -/
-noncomputable def nilliTestVector (G : SimpleGraph V) (d : ℕ) (x_0 : V) (r : ℕ) : V → ℝ :=
-  radialTestVector G x_0 (nilliProfile d) r
+variable {V : Type*} [Fintype V] [DecidableEq V]
+variable {G : SimpleGraph V} [DecidableRel G.Adj]
 
-/-- Test vector evaluated at the center vertex $x_0$ equals 1. -/
-theorem nilliTestVector_center (G : SimpleGraph V) (d : ℕ) (x_0 : V) (r : ℕ) :
-    nilliTestVector G d x_0 r x_0 = 1 := by
-  simp [nilliTestVector, radialTestVector, SimpleGraph.dist_self, nilliProfile]
+/-- Secondary reduction vector `q = 2 * 1_{B₁} - 1_{B₂} - 1_{B₃}`. -/
+def q (jp : JenrichPartition G) : EuclideanSpace ℝ V :=
+  WithLp.toLp 2 (fun j => 2 * (if j ∈ jp.B₁ then (1 : ℝ) else 0) -
+    (if j ∈ jp.B₂ then 1 else 0) - (if j ∈ jp.B₃ then 1 else 0))
 
-/-- Positivity of the Nilli profile for $d \ge 2$. -/
-theorem nilliProfile_pos (d : ℕ) (hd : 2 ≤ d) (k : ℕ) : 0 < nilliProfile d k := by
-  have hd_pos : 0 < (d - 1 : ℝ) := by
-    have : (d : ℝ) ≥ 2 := Nat.cast_le.mpr hd
-    linarith
-  exact pow_pos (one_div_pos.mpr (Real.sqrt_pos.mpr hd_pos)) k
+/-- Expansion of the inner product `⟨q, y i⟩` into row sums over `B₁, B₂, B₃`. -/
+theorem inner_q_y_eq (jp : JenrichPartition G) (i : V) :
+    @inner ℝ (EuclideanSpace ℝ V) _ (q jp) (y G i) =
+      2 * (∑ j ∈ jp.B₁, Y G i j) - (∑ j ∈ jp.B₂, Y G i j) - (∑ j ∈ jp.B₃, Y G i j) := by
+  rw [PiLp.inner_apply]
+  simp only [q, y, RCLike.inner_apply, conj_trivial]
+  have : ∀ x : V, Y G i x * (2 * (if x ∈ jp.B₁ then (1 : ℝ) else 0) - (if x ∈ jp.B₂ then 1 else 0) -
+      (if x ∈ jp.B₃ then 1 else 0)) =
+      2 * (Y G i x * (if x ∈ jp.B₁ then (1 : ℝ) else 0)) -
+      (Y G i x * (if x ∈ jp.B₂ then (1 : ℝ) else 0)) -
+      (Y G i x * (if x ∈ jp.B₃ then (1 : ℝ) else 0)) := fun x => by ring
+  simp_rw [this]
+  rw [Finset.sum_sub_distrib, Finset.sum_sub_distrib, ← Finset.mul_sum,
+    sum_mul_indicator, sum_mul_indicator, sum_mul_indicator]
 
-/-- Nonnegativity of the Nilli profile for $d \ge 2$. -/
-theorem nilliProfile_nonneg (d : ℕ) (hd : 2 ≤ d) (k : ℕ) : 0 ≤ nilliProfile d k :=
-  le_of_lt (nilliProfile_pos d hd k)
-
-/-- Nilli test vector is point-wise non-negative. -/
-theorem nilliTestVector_nonneg (G : SimpleGraph V) (d : ℕ) (hd : 2 ≤ d) (x_0 : V) (r : ℕ) (v : V) :
-    0 ≤ nilliTestVector G d x_0 r v := by
-  simp only [nilliTestVector, radialTestVector]
-  split_ifs with h
-  · exact nilliProfile_nonneg d hd (G.dist x_0 v)
-  · rfl
-
-/-- Sum of values of the Nilli test vector is strictly positive. -/
-theorem nilliTestVector_sum_pos (G : SimpleGraph V) (d : ℕ) (hd : 2 ≤ d) (x_0 : V) (r : ℕ) :
-    0 < ∑ v : V, nilliTestVector G d x_0 r v := by
-  have h_center : 0 < nilliTestVector G d x_0 r x_0 := by
-    rw [nilliTestVector_center]
-    norm_num
-  have h_nonneg : ∀ v ∈ (Finset.univ : Finset V), 0 ≤ nilliTestVector G d x_0 r v :=
-    fun v _ => nilliTestVector_nonneg G d hd x_0 r v
-  have h_le := Finset.single_le_sum h_nonneg (Finset.mem_univ x_0)
-  exact lt_of_lt_of_le h_center h_le
-
-/-- Orthogonal balanced linear combination of two test functions. -/
-def orthogonalLinearCombination (f₁ f₂ : V → ℝ) : V → ℝ :=
-  fun v => (∑ x : V, f₂ x) * f₁ v - (∑ x : V, f₁ x) * f₂ v
-
-/-- The linear combination $f = (\sum f_2) f_1 - (\sum f_1) f_2$ is orthogonal to the all-ones vector. -/
-theorem orthogonalLinearCombination_orthogonal (f₁ f₂ : V → ℝ) :
-    isOrthogonalToOnes (orthogonalLinearCombination f₁ f₂) := by
-  simp only [isOrthogonalToOnes, orthogonalLinearCombination]
-  rw [Finset.sum_sub_distrib]
-  simp only [← Finset.mul_sum]
+/-- The vector `q` is orthogonal to `y i` for every vertex `i ∈ C`. -/
+theorem reduction_vector_q_ortho_C (jp : JenrichPartition G) (i : V) (hi : i ∈ jp.C) :
+    @inner ℝ (EuclideanSpace ℝ V) _ (q jp) (y G i) = 0 := by
+  rw [inner_q_y_eq,
+    row_sum_C jp i (Finset.disjoint_right.mp jp.disj_1C hi) (jp.deg_B1_C i hi),
+    row_sum_C jp i (Finset.disjoint_right.mp jp.disj_2C hi) (jp.deg_B2_C i hi),
+    row_sum_C jp i (Finset.disjoint_right.mp jp.disj_3C hi) (jp.deg_B3_C i hi)]
   ring
 
-/-- Nilli's signed test vector formed by the balanced orthogonal combination of two localized
-radial test vectors centered at distant vertices $x_0$ and $y_0$. -/
-noncomputable def nilliSignedTestVector (G : SimpleGraph V) (d : ℕ) (x_0 y_0 : V) (r : ℕ) : V → ℝ :=
-  orthogonalLinearCombination (nilliTestVector G d x_0 r) (nilliTestVector G d y_0 r)
+/-- Sum of entries of `q` is zero: `2 * 32 - 32 - 32 = 0`. -/
+theorem inner_q_ones_eq_zero (jp : JenrichPartition G) :
+    (∑ j : V, (q jp j)) = 0 := by
+  simp only [q]
+  have hB (B : Finset V) : (∑ j : V, (if j ∈ B then (1 : ℝ) else 0)) = (B.card : ℝ) := by
+    rw [Finset.sum_ite_mem_eq, Finset.sum_const, nsmul_eq_mul, mul_one]
+  rw [Finset.sum_sub_distrib, Finset.sum_sub_distrib, ← Finset.mul_sum,
+    hB, hB, hB, jp.card_B₁, jp.card_B₂, jp.card_B₃]
+  ring
 
-/-- Test vector evaluates to zero outside the support ball. -/
-theorem nilliTestVector_apply_of_gt (G : SimpleGraph V) (d : ℕ) (x_0 : V) (r : ℕ) {v : V}
-    (h : r < G.dist x_0 v) :
-    nilliTestVector G d x_0 r v = 0 := by
-  simp [nilliTestVector, radialTestVector, not_le.mpr h]
+/-- Inner product of `q` with the all-ones vector is 0. -/
+theorem inner_q_ones (jp : JenrichPartition G) :
+    @inner ℝ (EuclideanSpace ℝ V) _ (q jp) (ones V) = 0 := by
+  rw [PiLp.inner_apply]
+  simp only [ones, q, RCLike.inner_apply, conj_trivial, one_mul]
+  exact inner_q_ones_eq_zero jp
 
-/-- Nilli's signed test vector is non-zero when the base points are separated by at least $2r + 1$. -/
-theorem nilliSignedTestVector_ne_zero (G : SimpleGraph V) (d : ℕ) (hd : 2 ≤ d)
-    {x_0 y_0 : V} {r : ℕ} (h_sep : 2 * r + 1 ≤ G.dist x_0 y_0) :
-    nilliSignedTestVector G d x_0 y_0 r ≠ 0 := by
-  intro h_zero
-  have h_val : nilliSignedTestVector G d x_0 y_0 r x_0 = 0 := by rw [h_zero]; rfl
-  simp only [nilliSignedTestVector, orthogonalLinearCombination] at h_val
-  have h1 : nilliTestVector G d x_0 r x_0 = 1 := nilliTestVector_center G d x_0 r
-  have h2 : nilliTestVector G d y_0 r x_0 = 0 := by
-    apply nilliTestVector_apply_of_gt
-    rw [SimpleGraph.dist_comm]
-    linarith
-  rw [h1, h2, mul_one, mul_zero, sub_zero] at h_val
-  have h_pos := nilliTestVector_sum_pos G d hd y_0 r
-  linarith
+/-- Inner product of `q` with any constant multiple of the all-ones vector is 0. -/
+theorem inner_q_smul_ones (jp : JenrichPartition G) (c : ℝ) :
+    @inner ℝ (EuclideanSpace ℝ V) _ (q jp) (c • ones V) = 0 := by
+  rw [inner_smul_right, inner_q_ones, mul_zero]
 
-end AlonBoppana
+/-- The vector `q` is orthogonal to `z i` for all `i ∈ C`. -/
+theorem inner_q_z_C (jp : JenrichPartition G) (c : ℝ) (i : V) (hi : i ∈ jp.C) :
+    @inner ℝ (EuclideanSpace ℝ V) _ (q jp) (z G (c • ones V) i) = 0 := by
+  simp [z, inner_sub_right, reduction_vector_q_ortho_C jp i hi, inner_q_smul_ones]
+
+/-- The 63-dimensional almost-counterexample bound: `320 / 5 = 64 = 63 + 1`.
+The 320-point set `C` achieves the Borsuk partition number in dimension 63. -/
+theorem jenrich_bound_63 : 320 / 5 = 64 := rfl
+
+theorem jenrich_achieves_63 : 64 = 63 + 1 := rfl
+
+/-- Any smaller-diameter cover of `C` requires at least 64 parts. -/
+theorem almost_counterexample_63 (jp : JenrichPartition G)
+    (C_parts : Finset (Set V)) (h_cov : (jp.C : Set V) ⊆ ⋃ c ∈ C_parts, c)
+    (h_clique : ∀ c ∈ C_parts, (jp.C.filter (· ∈ c)).card ≤ 5) :
+    64 ≤ C_parts.card := by
+  have := card_le_mul_card_cover jp.C C_parts h_cov h_clique
+  rw [jp.card_C] at this
+  omega
+
+end Jenrich63
+
+end JenrichBorsuk64

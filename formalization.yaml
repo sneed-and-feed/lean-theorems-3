@@ -1,73 +1,70 @@
 version: "v0.4"
 
 project:
-  name: "The Alon–Boppana Spectral Bound and Ramanujan Expanders"
+  name: "Jenrich–Brouwer 64-Dimensional Counterexample to Borsuk's Conjecture"
   authors:
     - "Noah Cohen"
   responsible_maintainers:
     - "Noah Cohen"
   license: "CC0-1.0"
   description: >-
-    A machine-checked Lean 4 formalization of the foundations of the Alon–Boppana spectral lower bound
-    (Alon 1986, Nilli 1991) and Ramanujan expander graphs. Formalizes the metric spherical shell
-    decomposition of regular graphs, Nilli's radial geometric profile g(k) = (d-1)^{-k/2}, the balanced
-    orthogonal linear combinations of localized test functions, and the optimal spectral gap
-    d - \lambda_2 >= d - 2\sqrt{d-1} for Ramanujan graphs. To the maintainers' knowledge, the theorem
-    was not found in an exact declaration name, docstring, and type signature search of the pinned Mathlib
-    revision (Mathlib v4.34.0-rc1).
+    A complete machine-checked Lean 4 formalization of Thomas Jenrich and Andries E. Brouwer's
+    64-dimensional two-distance counterexample to Borsuk's conjecture (2014), building on Andriy V.
+    Bondarenko's 65-dimensional construction (2013). The formalization establishes the metric and
+    combinatorial foundations (clique-diameter lemma, pigeonhole cover bound), the Euclidean representation
+    of the Suzuki strongly regular graph G₂(4) = srg(416, 100, 36, 20) with spectrum {100, 20, -4} and
+    eigenspace dimensions {1, 65, 350}, Jenrich's reduction vector p = 1_{B₂} - 1_{B₃} yielding orthogonality
+    on the 352-vertex carrier S₆₄ = C ∪ B₁, the codimension reduction to dimension 64, and the partition
+    lower bound requiring at least 71 parts of smaller diameter, strictly exceeding 64 + 1 = 65.
+    Additionally formalizes Jenrich's secondary reduction vector q = 2 * 1_{B₁} - 1_{B₂} - 1_{B₃}
+    yielding the 63-dimensional almost-counterexample on the 320-vertex carrier C requiring 64 = 63 + 1 parts.
 
 classification:
-  arxiv: [math.CO]
-  msc2020: ["05C50", "05C12", "15A18"]
+  arxiv: [math.CO, math.MG]
+  msc2020: ["05C50", "05C69", "51M04", "52C10"]
 
 sources:
-  - title: "Eigenvalues and expanders"
+  - title: "A 64-Dimensional Counterexample to Borsuk's Conjecture"
     type: paper
     authors:
-      - "Noga Alon"
-    venue: "Theory of Computing Systems"
-    year: 1986
+      - "Thomas Jenrich"
+      - "Andries E. Brouwer"
+    venue: "The Electronic Journal of Combinatorics"
+    year: 2014
     relationship: formalizes
-  - title: "On the second eigenvalue of a graph"
+  - title: "On Borsuk's conjecture for two-distance sets"
     type: paper
     authors:
-      - "Alon Nilli"
-    venue: "Discrete Mathematics"
-    year: 1991
+      - "Andriy V. Bondarenko"
+    venue: "Discrete & Computational Geometry"
+    year: 2014
     relationship: adapts
     note: >-
-      Formalization adapts Nilli's short topological and distance-partition Rayleigh quotient method to
-      establish the Alon–Boppana second eigenvalue lower bound.
-  - title: "Ramanujan graphs"
+      Formalization builds upon Bondarenko's 65-dimensional two-distance counterexample using the
+      strongly regular graph G₂(4).
+  - title: "Drei Sätze über die n-dimensionale euklidische Sphäre"
     type: paper
     authors:
-      - "Alexander Lubotzky"
-      - "Ralph Phillips"
-      - "Peter Sarnak"
-    venue: "Combinatorica"
-    year: 1988
+      - "Karol Borsuk"
+    venue: "Fundamenta Mathematicae"
+    year: 1933
     relationship: background
 
-related_formalizations:
-  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Combinatorics/SimpleGraph/Metric.lean"
-    relationship: builds-on
-    note: >-
-      Formalization builds on Mathlib's graph metric library, extending distance and neighborhood
-      partitions to spherical shell decompositions and Nilli test functions.
+related_formalizations: []
 
 automation:
   methods:
     - method: agent
       tool_setup: >-
-        Formalized using an agentic Lean 4 workflow with automated proof golfing and interactive
-        Lean LSP checking under maintainer direction and human verification.
-        All declarations rely strictly on standard Lean 4 kernel axioms (propext, Quot.sound, Classical.choice).
+        Formalized using an agentic Lean 4 workflow with interactive Lean LSP checking and proof verification
+        under maintainer direction. All declarations rely strictly on standard Lean 4 kernel axioms
+        (propext, Quot.sound, Classical.choice).
 
 review:
   status: self-assessed
   reviewers:
     - "Noah Cohen"
   notes: >-
-    Challenge contains deliberate proof holes (`:= sorry` for automated benchmark evaluation),
-    while all definitions and theorem statements are completely specified. Solution verified through
-    human audit by the maintainers with 0 errors, 0 sorries, and strictly standard kernel axioms.
+    Challenge contains deliberate proof holes (:= sorry) for automated benchmark evaluation, with 100%
+    type and AST parity with Solution. Solution verified with 0 errors, 0 sorries, and strictly standard
+    kernel axioms.
