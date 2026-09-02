@@ -1,8 +1,8 @@
 # Palomar Submission Master Priority Queue: Repo 3
 
 All 16 theorem packages have completed pre-flight verification audits.
-- **Tier-1 Verified Submission Queue**: 14 landmark research-grade packages, 100% verified (0 custom axioms, 0 `sorry`), with dedicated immutable 40-character Git commit SHAs.
-- **High-Value Research Scaffolds**: 1 spectral expander package with clearly isolated minimal axioms.
+- **Tier-1 Verified Submission Queue**: 15 landmark research-grade packages, 100% verified (0 custom axioms, 0 `sorry`), with dedicated immutable 40-character Git commit SHAs.
+- **High-Value Research Scaffolds**: 0 (all scaffolds promoted to Tier-1).
 - **Retired Candidates**: 1 package crossed off early (superseded by `kelley_meka`).
 
 ### Submission Settings (`submit.palomar-registry.org`):
@@ -32,16 +32,13 @@ All 16 theorem packages have completed pre-flight verification audits.
 | **12** | **The Cauchy–Davenport Theorem and Iterated Sumsets** | `cauchy_davenport` | `cb87e2ab9085a5d459cd70163e33755670e57b5a` | Additive Number Theory / Finite Fields | 9 theorems |
 | **13** | **The Expander Mixing Lemma and Spectral Discrepancy** | `expander_mixing` | `4b4e986f1539894227416e9dce6dfb891c80b687` | Spectral Graph Theory / Discrepancy | 5 theorems |
 | **14** | **Jenrich–Brouwer 64-Dimensional Counterexample to Borsuk's Conjecture**<br>Two-distance metric space foundations, clique-diameter lemma, pigeonhole cover bound, Suzuki strongly regular graph $G_2(4) = \operatorname{srg}(416, 100, 36, 20)$ Euclidean representation, Gram matrix metric realization ($144$ vs $192$), Jenrich reduction vector $p = 1_{B_2} - 1_{B_3}$ orthogonal to 352-vertex carrier $S_{64} = C \cup B_1$, non-orthogonality on $B_2$, dimension 64 partition lower bound $\ge 71 > 65$, refutation of Borsuk's conjecture in dimension 64, and secondary reduction vector $q = 2 \cdot 1_{B_1} - 1_{B_2} - 1_{B_3}$ achieving 64 parts in dimension 63 | `jenrich_borsuk_64` | `05319c23f2783e7fc4439566d323adf04e976427` | Metric Geometry / Extremal Combinatorics | 12 theorems |
+| **15** | **The Alon–Boppana Spectral Bound and Ramanujan Expanders**<br>Spectral variational Rayleigh quotient foundations, Ramanujan optimal spectral gap $d - 2\sqrt{d-1}$, spherical shell metric decomposition, Nilli geometric radial weight profile $g(k) = (d-1)^{-k/2}$, adjacent shell product identity $g(k)g(k+1) = \sqrt{d-1}g(k+1)^2$, forward neighbor cardinality bound $\le d-1$, balanced orthogonal linear combinations $\perp \mathbf{1}$, and non-zero signed test vector separation for $2r+1 \le \operatorname{dist}(x_0, y_0)$ | `alon_boppana` | `dc880e27691f4e63151e402ded2a6c129013581f` | Spectral Graph Theory / Expanders | 5 theorems |
 
 ---
 
 ## 🔬 High-Value Research Scaffolds (Explicitly Isolated Minimal Axioms)
 
-| # | Theorem Title | Slug | Dedicated Commit SHA | Minimal Missing Prerequisites | Verified Declarations |
-| :---: | :--- | :--- | :--- | :--- | :---: |
-| **1** | **The Alon–Boppana Spectral Bound and Ramanujan Expanders** | `alon_boppana` | `f78939a02d8893328ee17a24a1e75d2f32edc29f` | 2 axioms: Nilli spherical Chebyshev trace on universal tree $\mathbb{T}_d$ | 5 theorems |
-
----
+*All active scaffolds have been fully verified and promoted to Tier-1.*
 
 ## 🛑 Retired Candidates (Did Not Meet Research Floor / Superseded)
 
