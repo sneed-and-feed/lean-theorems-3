@@ -1,0 +1,70 @@
+version: "v0.4"
+
+project:
+  name: "Jenrich–Brouwer 64-Dimensional Counterexample to Borsuk's Conjecture"
+  authors:
+    - "Noah Cohen"
+  responsible_maintainers:
+    - "Noah Cohen"
+  license: "CC0-1.0"
+  description: >-
+    A complete machine-checked Lean 4 formalization of Thomas Jenrich and Andries E. Brouwer's
+    64-dimensional two-distance counterexample to Borsuk's conjecture (2014), building on Andriy V.
+    Bondarenko's 65-dimensional construction (2013). The formalization establishes the metric and
+    combinatorial foundations (clique-diameter lemma, pigeonhole cover bound), the Euclidean representation
+    of the Suzuki strongly regular graph G₂(4) = srg(416, 100, 36, 20) with spectrum {100, 20, -4} and
+    eigenspace dimensions {1, 65, 350}, Jenrich's reduction vector p = 1_{B₂} - 1_{B₃} yielding orthogonality
+    on the 352-vertex carrier S₆₄ = C ∪ B₁, the codimension reduction to dimension 64, and the partition
+    lower bound requiring at least 71 parts of smaller diameter, strictly exceeding 64 + 1 = 65.
+    Additionally formalizes Jenrich's secondary reduction vector q = 2 * 1_{B₁} - 1_{B₂} - 1_{B₃}
+    yielding the 63-dimensional almost-counterexample on the 320-vertex carrier C requiring 64 = 63 + 1 parts.
+
+classification:
+  arxiv: [math.CO, math.MG]
+  msc2020: ["05C50", "05C69", "51M04", "52C10"]
+
+sources:
+  - title: "A 64-Dimensional Counterexample to Borsuk's Conjecture"
+    type: paper
+    authors:
+      - "Thomas Jenrich"
+      - "Andries E. Brouwer"
+    venue: "The Electronic Journal of Combinatorics"
+    year: 2014
+    relationship: formalizes
+  - title: "On Borsuk's conjecture for two-distance sets"
+    type: paper
+    authors:
+      - "Andriy V. Bondarenko"
+    venue: "Discrete & Computational Geometry"
+    year: 2014
+    relationship: adapts
+    note: >-
+      Formalization builds upon Bondarenko's 65-dimensional two-distance counterexample using the
+      strongly regular graph G₂(4).
+  - title: "Drei Sätze über die n-dimensionale euklidische Sphäre"
+    type: paper
+    authors:
+      - "Karol Borsuk"
+    venue: "Fundamenta Mathematicae"
+    year: 1933
+    relationship: background
+
+related_formalizations: []
+
+automation:
+  methods:
+    - method: agent
+      tool_setup: >-
+        Formalized using an agentic Lean 4 workflow with interactive Lean LSP checking and proof verification
+        under maintainer direction. All declarations rely strictly on standard Lean 4 kernel axioms
+        (propext, Quot.sound, Classical.choice).
+
+review:
+  status: self-assessed
+  reviewers:
+    - "Noah Cohen"
+  notes: >-
+    Challenge contains deliberate proof holes (:= sorry) for automated benchmark evaluation, with 100%
+    type and AST parity with Solution. Solution verified with 0 errors, 0 sorries, and strictly standard
+    kernel axioms.
