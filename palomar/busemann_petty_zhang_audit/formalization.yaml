@@ -1,0 +1,76 @@
+version: "v0.4"
+
+project:
+  name: "Gaoyong Zhang's 1994/1999 Busemann–Petty R^4 Resolution & Audit"
+  authors:
+    - "Noah Cohen"
+  responsible_maintainers:
+    - "Noah Cohen"
+  license: "CC0-1.0"
+  description: >-
+    Complete machine-checked Lean 4 formalization of Gaoyong Zhang's 1999 Annals affirmative resolution
+    of the Busemann–Petty problem in dimension 4, Erwin Lutwak's 1988 intersection body comparison theorem,
+    Richard J. Gardner's 1994 Annals affirmative resolution in dimension 3, refutation of Zhang's 1994 candidate
+    counterexample in R^4, geometric contrapositive theorems detecting hyperplane section volume inequality reversals,
+    and the existence of counterexamples for all n >= 5 via the Lutwak non-intersection body criterion.
+
+classification:
+  arxiv: [math.MG, math.FA]
+  msc2020: ["52A20", "52A38", "52A40", "44A12"]
+
+sources:
+  - title: "A positive answer to the Busemann-Petty problem in R^4"
+    type: paper
+    authors:
+      - "Gaoyong Zhang"
+    year: 1999
+    venue: "Annals of Mathematics, 149(2), 535-543"
+    relationship: formalizes
+    note: >-
+      Formalizes Zhang's 1999 theorem establishing that all origin-symmetric convex bodies in R^4
+      are intersection bodies, leading to the affirmative resolution of Busemann–Petty in dimension 4.
+  - title: "Intersection bodies and dual mixed volumes"
+    type: paper
+    authors:
+      - "Erwin Lutwak"
+    year: 1988
+    venue: "Advances in Mathematics, 71(2), 149-161"
+    relationship: adapts
+    note: >-
+      Formalizes Lutwak's duality theorem relating intersection body representation to the comparison
+      of hyperplane section volumes and total body volumes.
+  - title: "A positive answer to the Busemann-Petty problem in R^3"
+    type: paper
+    authors:
+      - "Richard J. Gardner"
+    year: 1994
+    venue: "Annals of Mathematics, 140(2), 435-445"
+    relationship: background
+  - title: "Intersection bodies and the Busemann-Petty problem"
+    type: paper
+    authors:
+      - "Gaoyong Zhang"
+    year: 1994
+    venue: "Annals of Mathematics, 140(2), 331-346"
+    relationship: background
+    note: >-
+      Historical reference to Zhang's 1994 claimed counterexample in R^4, which is formally refuted.
+
+related_formalizations: []
+
+automation:
+  methods:
+    - method: agent
+      tool_setup: >-
+        Formalized using an agentic Lean 4 workflow with automated proof golfing and interactive
+        Lean LSP checking under maintainer direction and human verification.
+        All declarations rely strictly on standard Lean 4 kernel axioms (propext, Quot.sound, Classical.choice).
+
+review:
+  status: self-assessed
+  reviewers:
+    - "Noah Cohen"
+  notes: >-
+    Challenge contains deliberate proof holes (:= sorry for automated benchmark evaluation),
+    while all definitions and theorem statements are completely specified. Solution verified through
+    maintainer audit with 0 errors, 0 sorries, and strictly standard kernel axioms.

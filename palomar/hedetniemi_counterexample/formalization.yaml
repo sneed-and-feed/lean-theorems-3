@@ -1,0 +1,58 @@
+version: "v0.4"
+
+project:
+  name: "Shitov's Counterexample to Hedetniemi's Conjecture"
+  authors:
+    - "Noah Cohen"
+  responsible_maintainers:
+    - "Noah Cohen"
+  license: "CC0-1.0"
+  description: >-
+    Machine-checked Lean 4 formalization of Yaroslav Shitov's structural disproof of
+    Hedetniemi's conjecture (Annals of Mathematics 190, 2019, 663–667). Formalizes
+    categorical tensor products of graphs, canonical homomorphisms, exponential graphs
+    (El-Zahar & Sauer 1985), canonical evaluation colorings, and Shitov's reduction
+    establishing that counterexample pairs strictly violate Hedetniemi's chromatic formula.
+
+classification:
+  arxiv: [math.CO]
+  msc2020: ["05C15", "05C76"]
+
+sources:
+  - title: "Counterexamples to Hedetniemi's conjecture"
+    type: paper
+    authors:
+      - "Yaroslav Shitov"
+    venue: "Annals of Mathematics 190 (2019), 663–667"
+    year: 2019
+    relationship: formalizes
+  - title: "The chromatic number of the product of two 4-chromatic graphs is 4"
+    type: paper
+    authors:
+      - "Mohamed El-Zahar"
+      - "Norbert Sauer"
+    venue: "Combinatorica 5 (1985), 121–126"
+    year: 1985
+    relationship: adapts
+    note: >-
+      Foundational construction of exponential graphs and evaluation colorings for categorical products.
+
+related_formalizations:
+  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Combinatorics/SimpleGraph/Coloring/Vertex.lean"
+    relationship: builds-on
+    note: "Extends Mathlib's simple graph chromatic number and vertex coloring theory to tensor products."
+
+automation:
+  methods:
+    - method: agent
+      tool_setup: >-
+        Formalized using an agentic Lean 4 workflow with Lean LSP verification.
+        Axioms strictly verified: propext, Quot.sound, Classical.choice.
+
+review:
+  status: self-assessed
+  reviewers:
+    - "Noah Cohen"
+  notes: >-
+    Challenge contains deliberate proof holes (:= sorry) with synchronized AST signatures.
+    Solution verified with 0 sorries, 0 custom axioms, and 0 warnings.

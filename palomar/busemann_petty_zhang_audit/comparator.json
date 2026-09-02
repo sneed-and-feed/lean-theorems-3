@@ -1,0 +1,19 @@
+{
+  "challenge_module": "Challenge",
+  "solution_module": "Solution",
+  "theorem_names": [
+    "BusemannPettyZhang.lutwak_intersection_body_comparison",
+    "BusemannPettyZhang.intersection_body_4d_universal",
+    "BusemannPettyZhang.busemann_petty_dim_4",
+    "BusemannPettyZhang.zhang_1994_counterexample_refuted",
+    "BusemannPettyZhang.busemann_petty_dim_4_contrapositive",
+    "BusemannPettyZhang.busemann_petty_dim_3",
+    "BusemannPettyZhang.busemann_petty_dim_3_contrapositive",
+    "BusemannPettyZhang.busemann_petty_counterexample_dim_ge_5"
+  ],
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound",
+    "Classical.choice"
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "challenge_module": "Challenge",
+  "solution_module": "Solution",
+  "theorem_names": [
+    "EngelJacobianRefutation.jacobian_canonical",
+    "EngelJacobianRefutation.jacobian_antisymm",
+    "EngelJacobianRefutation.jacobian_self",
+    "EngelJacobianRefutation.jacobian_add_right",
+    "EngelJacobianRefutation.jacobian_add_left",
+    "EngelJacobianRefutation.jacobian_shear_general_X",
+    "EngelJacobianRefutation.jacobian_shear_general_Y",
+    "EngelJacobianRefutation.jacobian_shear_Y",
+    "EngelJacobianRefutation.jacobian_shear_X",
+    "EngelJacobianRefutation.jacobian_pow_self",
+    "EngelJacobianRefutation.jacobian_shear_Q",
+    "EngelJacobianRefutation.jacobian_shear_P",
+    "EngelJacobianRefutation.vitushkin_cross_term_jacobian",
+    "EngelJacobianRefutation.vitushkin_jacobian_ne_one"
+  ],
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound",
+    "Classical.choice"
+  ]
+}

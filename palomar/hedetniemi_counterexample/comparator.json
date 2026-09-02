@@ -1,0 +1,20 @@
+{
+  "challenge_module": "Challenge",
+  "solution_module": "Solution",
+  "theorem_names": [
+    "HedetniemiCounterexample.chromaticNumber_le_of_hom",
+    "HedetniemiCounterexample.chromaticNumber_tensorProduct_le_left",
+    "HedetniemiCounterexample.chromaticNumber_tensorProduct_le_right",
+    "HedetniemiCounterexample.chromaticNumber_tensorProduct_le_min",
+    "HedetniemiCounterexample.colorable_tensorProduct_of_left",
+    "HedetniemiCounterexample.colorable_tensorProduct_of_right",
+    "HedetniemiCounterexample.colorable_exponentialProduct",
+    "HedetniemiCounterexample.shitov_pair_strict_inequality",
+    "HedetniemiCounterexample.not_hedetniemi_conjecture"
+  ],
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound",
+    "Classical.choice"
+  ]
+}
