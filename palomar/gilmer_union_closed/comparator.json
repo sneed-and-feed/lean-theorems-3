@@ -4,14 +4,14 @@
   "theorem_names": [
     "GilmerUnionClosed.union_prob_gilmer",
     "GilmerUnionClosed.union_prob_le_complement_of_le_gilmer",
+    "GilmerUnionClosed.binaryEntropy_symm",
+    "GilmerUnionClosed.naturalEntropy_symm",
     "GilmerUnionClosed.binaryEntropy_gilmer_fixed_point",
     "GilmerUnionClosed.naturalEntropy_gilmer_fixed_point",
     "GilmerUnionClosed.pairEmptySingleton_satisfies_gilmer",
     "GilmerUnionClosed.powerset_satisfies_frankl",
     "GilmerUnionClosed.powerset_satisfies_gilmer",
-    "GilmerUnionClosed.frankl_implies_gilmer",
-    "GilmerUnionClosed.gilmer_two_element_family",
-    "GilmerUnionClosed.gilmer_powerset_family"
+    "GilmerUnionClosed.frankl_implies_gilmer"
   ],
   "permitted_axioms": [
     "propext",

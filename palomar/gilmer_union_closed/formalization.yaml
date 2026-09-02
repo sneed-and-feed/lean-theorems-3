@@ -1,21 +1,20 @@
 version: "v0.4"
 
 project:
-  name: "Gilmer's Entropy Bound on Frankl's Union-Closed Sets Conjecture"
+  name: "Gilmer's Information-Theoretic Entropy Mechanics for Union-Closed Sets"
   authors:
     - "Noah Cohen"
   responsible_maintainers:
     - "Noah Cohen"
   license: "CC0-1.0"
   description: >-
-    A complete, machine-checked Lean 4 formalization of Justin Gilmer's 2022 landmark theorem
-    establishing a constant lower bound on Frankl's Union-Closed Sets Conjecture (1979) via
-    information theory and binary entropy. Proves algebraic properties of Gilmer's golden ratio
-    constant c_0 = (3 - sqrt(5))/2, binary and natural entropy symmetry, the golden ratio fixed-point
-    relation H(2 c_0 - c_0^2) = H(c_0), and certified verification for concrete union-closed families
-    (pairs, singletons, chains, and arbitrary finite powersets). To the maintainers' knowledge,
-    the theorem and entropy fixed-point mechanics were verified absent from the core Mathlib library
-    (checked against Mathlib v4.34.0-rc1).
+    Machine-checked Lean 4 formalization of Justin Gilmer's (2022) information-theoretic entropy framework
+    for Frankl's Union-Closed Sets Conjecture (1979). Formalizes the algebraic properties of Gilmer's
+    golden ratio threshold c_0 = (3 - sqrt(5))/2, binary and natural entropy symmetry, the golden-ratio
+    fixed-point relation H(2 c_0 - c_0^2) = H(c_0), entropy domination on [0, c_0], and certified
+    frequency lower bounds for concrete union-closed families (two-element pairs and finite powersets).
+    Truthfully discloses that the universal conjecture GilmerTheoremStatement remains an unproven Prop definition,
+    while all information-theoretic, algebraic, and concrete family bounds are fully verified.
 
 classification:
   arxiv: [math.CO, cs.IT]
@@ -30,9 +29,9 @@ sources:
     venue: "arXiv:2211.09055"
     relationship: adapts
     note: >-
-      Formalizes Gilmer's information-theoretic entropy framework and golden-ratio fixed-point
-      mechanics (H(2 c_0 - c_0^2) = H(c_0)), establishing exact certificates for concrete union-closed
-      families (pairs, singletons, chains, and powersets) and the reduction from Frankl's conjecture.
+      Formalizes Gilmer's information-theoretic entropy framework, golden-ratio fixed-point mechanics
+      (H(2 c_0 - c_0^2) = H(c_0)), entropy domination on [0, c_0], and certified frequency bounds on concrete
+      families, while isolating the universal conjecture statement.
   - title: "Approximate Frankl's conjecture for union-closed families"
     type: preprint
     authors:
@@ -49,12 +48,7 @@ sources:
     venue: "Finite and Infinite Sets, Colloq. Math. Soc. János Bolyai, Vol. 37, 305-318"
     relationship: background
 
-related_formalizations:
-  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Data/Finset/Powerset.lean"
-    relationship: builds-on
-    note: >-
-      Formalization builds on Mathlib's finite set powerset API and real analysis, extending it to
-      union-closed families, coordinate Bernoulli marginals, and binary entropy fixed points.
+related_formalizations: []
 
 automation:
   methods:

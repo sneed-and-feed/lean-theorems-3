@@ -49,8 +49,8 @@ sources:
       Formalization adapts the Erdős–Ginzburg–Ziv zero-sum reduction via iterative Cauchy–Davenport sumset
       expansion.
 
-related_formalizations:
-  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Combinatorics/Additive/CauchyDavenport.lean"
+related_formalizations: []
+
     relationship: builds-on
     note: >-
       Formalization builds on Mathlib's binary Cauchy-Davenport theorem, extending it with

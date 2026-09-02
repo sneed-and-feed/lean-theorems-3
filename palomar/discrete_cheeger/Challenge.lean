@@ -16,17 +16,17 @@ open Classical
 
 set_option linter.unusedSectionVars false
 
-variable {V : Type*} [Fintype V] [DecidableEq V]
-
 namespace DiscreteCheeger
 
-/-!
-# The Discrete Cheeger Inequality for Regular Graphs
+variable {V : Type*} [Fintype V] [DecidableEq V]
 
-This module formalizes the **Discrete Cheeger Inequality** (Noga Alon and Vitali Milman 1985;
-Jozef Dodziuk 1984; Alistair Sinclair and Mark Jerrum 1989) relating the combinatorial edge
-expansion (Cheeger isoperimetric constant $h(G)$) of a $d$-regular graph to its algebraic
-spectral gap $\Delta = d - \lambda_2(G)$.
+/-!
+# The Discrete Cheeger Lower Bound and Optimal Isoperimetric Inequalities for Regular Graphs
+
+This module formalizes the **Discrete Cheeger Lower Bound** and optimal isoperimetric inequalities
+for regular graphs (Noga Alon and Vitali Milman 1985; Jozef Dodziuk 1984; Alistair Sinclair and Mark Jerrum 1989)
+relating the combinatorial edge expansion (Cheeger isoperimetric constant $h(G)$) of a $d$-regular graph
+to its algebraic spectral gap $\Delta = d - \lambda_2(G)$.
 
 ## Mathematical Overview
 
@@ -34,8 +34,13 @@ Let $G = (V, E)$ be a finite, connected, $d$-regular simple graph on $n = |V|$ v
 The Cheeger isoperimetric constant $h(G)$ is the minimum cut ratio:
 $$h(G) = \min_{\substack{S \subset V \\ 0 < |S| \le n/2}} \frac{e(S, S^c)}{|S|}$$
 
-### The Discrete Cheeger Inequality
-$$\frac{d - \lambda_2(G)}{2} \le h(G) \le \sqrt{2d(d - \lambda_2(G))}$$
+### The Discrete Cheeger Lower Bound and Conditional Upper Bound
+The unconditional Cheeger lower bound:
+$$\frac{d - \lambda_2(G)}{2} \le h(G)$$
+In normalized form:
+$$\frac{\gamma}{2} \le \frac{h(G)}{d}$$
+Together with the conditional reduction of the Cheeger upper bound to sweep-cut existence:
+$$h(G) \le \sqrt{2d(d - \lambda_2(G))}$$
 
 ## References
 
@@ -100,6 +105,17 @@ noncomputable def cutRatio (G : SimpleGraph V) [DecidableRel G.Adj] (S : Finset 
 noncomputable def cheegerConstant (G : SimpleGraph V) [DecidableRel G.Adj] : ℝ :=
   sInf { cutRatio G S | (S : Finset V) (_ : isValidCut V S) }
 
+/-- The Cheeger isoperimetric constant is non-negative. -/
+theorem cheegerConstant_nonneg (G : SimpleGraph V) [DecidableRel G.Adj] :
+    0 ≤ cheegerConstant G := by
+  sorry
+
+/-- The Cheeger constant is at most the cut ratio of any valid cut. -/
+theorem cheegerConstant_le_cutRatio (G : SimpleGraph V) [DecidableRel G.Adj] (S : Finset V)
+    (hvalid : isValidCut V S) :
+    cheegerConstant G ≤ cutRatio G S := by
+  sorry
+
 /-- Definition of a Ramanujan graph: A $d$-regular graph satisfying $\lambda_2(G) \le 2\sqrt{d-1}$. -/
 def IsRamanujan (G : SimpleGraph V) [DecidableRel G.Adj] (d : ℕ) : Prop :=
   isRegularOfDegree G d ∧ secondEigenvalue G ≤ 2 * Real.sqrt (d - 1 : ℝ)
@@ -128,8 +144,10 @@ theorem cheeger_lower_bound_normalized (G : SimpleGraph V) [DecidableRel G.Adj] 
   sorry
 
 /--
-**The Discrete Cheeger Inequality (Alon–Milman 1985 / Dodziuk 1984 / Sinclair–Jerrum 1989)**:
+**Conditional Discrete Cheeger Inequality (Reduction to Sweep-Cut Existence)**:
+Given a certified sweep-cut $S$ satisfying the Cheeger upper bound, the full Cheeger inequality holds:
 $$\frac{d - \lambda_2(G)}{2} \le h(G) \le \sqrt{2d(d - \lambda_2(G))}$$
+This establishes the conditional reduction of the Discrete Cheeger upper bound to sweep-cut existence.
 -/
 theorem discrete_cheeger_inequality_of_cut (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
     (hreg : isRegularOfDegree G d) (hn : 2 ≤ Fintype.card V)

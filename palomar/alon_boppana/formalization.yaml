@@ -48,8 +48,8 @@ sources:
     year: 1988
     relationship: background
 
-related_formalizations:
-  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Combinatorics/SimpleGraph/Metric.lean"
+related_formalizations: []
+
     relationship: builds-on
     note: >-
       Formalization builds on Mathlib's graph metric library, extending distance and neighborhood

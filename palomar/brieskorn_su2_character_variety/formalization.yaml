@@ -48,12 +48,7 @@ sources:
     venue: "MSRI Lecture Notes, Berkeley"
     relationship: background
 
-related_formalizations:
-  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Data/Rat/Defs.lean"
-    relationship: builds-on
-    note: >-
-      Formalization builds on Mathlib's rational arithmetic and finite set filter API to compute
-      SU(2) character variety counts, Diophantine spherical triangle systems, and Fricke-Vogt trace varieties.
+related_formalizations: []
 
 automation:
   methods:

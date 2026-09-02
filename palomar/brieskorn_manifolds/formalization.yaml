@@ -47,13 +47,7 @@ sources:
     venue: "Annals of Mathematics, 77(3), 504-537"
     relationship: background
 
-related_formalizations:
-  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Data/ZMod/Basic.lean"
-    relationship: builds-on
-    note: >-
-      Formalization builds on Mathlib's modular arithmetic and finite set combinatorial libraries
-      to construct Brieskorn graph criteria, exotic sphere classification in ZMod 28, and Milnor
-      fiber signature formulas.
+related_formalizations: []
 
 automation:
   methods:

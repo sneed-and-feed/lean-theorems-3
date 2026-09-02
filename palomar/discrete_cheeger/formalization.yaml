@@ -1,20 +1,22 @@
 version: "v0.4"
 
 project:
-  name: "The Discrete Cheeger Inequality for Regular Graphs"
+  name: "The Discrete Cheeger Lower Bound and Optimal Isoperimetric Inequalities for Regular Graphs"
   authors:
     - "Noah Cohen"
   responsible_maintainers:
     - "Noah Cohen"
   license: "CC0-1.0"
   description: >-
-    A complete machine-checked Lean 4 formalization of the Discrete Cheeger Inequality (Alon–Milman 1985,
-    Dodziuk 1984, Sinclair–Jerrum 1989) relating the combinatorial edge expansion (Cheeger isoperimetric
-    constant h(G)) of a d-regular graph to its algebraic spectral gap \Delta = d - \lambda_2(G).
+    A complete machine-checked Lean 4 formalization of the Discrete Cheeger Lower Bound and optimal
+    isoperimetric inequalities for regular graphs (Alon–Milman 1985, Dodziuk 1984, Sinclair–Jerrum 1989)
+    relating the combinatorial edge expansion (Cheeger isoperimetric constant h(G)) of a d-regular graph
+    to its algebraic spectral gap \Delta = d - \lambda_2(G).
     Includes the fundamental Dirichlet energy identity, the variational Rayleigh quotient analysis
     on the orthogonal complement of the all-ones vector, the sharp Cheeger lower bound (d - \lambda_2)/2 <= h(G),
-    the normalized Cheeger bound \gamma / 2 <= h(G)/d, optimal isoperimetry for Ramanujan graphs,
-    and the vertex boundary expansion bounds. To the maintainers' knowledge, the theorem was not found
+    the normalized Cheeger lower bound \gamma / 2 <= h(G)/d, optimal isoperimetry for Ramanujan graphs,
+    the vertex boundary expansion bounds, and the conditional reduction of the Cheeger upper bound
+    to sweep-cut existence. To the maintainers' knowledge, the theorem was not found
     in an exact declaration name, docstring, and type signature search of the pinned Mathlib revision
     (Mathlib v4.34.0-rc1).
 
@@ -50,12 +52,7 @@ sources:
     year: 1989
     relationship: background
 
-related_formalizations:
-  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Combinatorics/SimpleGraph/Basic.lean"
-    relationship: builds-on
-    note: >-
-      Formalization builds on Mathlib's simple graph theory representation and adjacency definitions,
-      extending them with graph Laplacian quadratic forms, Dirichlet energy, and Cheeger cuts.
+related_formalizations: []
 
 automation:
   methods:

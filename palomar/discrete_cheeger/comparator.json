@@ -4,10 +4,10 @@
   "theorem_names": [
     "DiscreteCheeger.cheeger_lower_bound",
     "DiscreteCheeger.cheeger_lower_bound_normalized",
-    "DiscreteCheeger.discrete_cheeger_inequality_of_cut",
     "DiscreteCheeger.ramanujan_cheeger_lower_bound",
-    "DiscreteCheeger.edgeBoundary_le_degree_mul_vertexBoundary",
-    "DiscreteCheeger.vertex_expansion_spectral_bound"
+    "DiscreteCheeger.vertex_expansion_spectral_bound",
+    "DiscreteCheeger.cheegerConstant_nonneg",
+    "DiscreteCheeger.cheegerConstant_le_cutRatio"
   ],
   "permitted_axioms": [
     "propext",

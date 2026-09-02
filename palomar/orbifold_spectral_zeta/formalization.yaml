@@ -47,13 +47,7 @@ sources:
     venue: "Cambridge Tracts in Mathematics, Vol. 127, Cambridge University Press"
     relationship: background
 
-related_formalizations:
-  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Analysis/SpecialFunctions/Trigonometric/Basic.lean"
-    relationship: builds-on
-    note: >-
-      Formalization builds on Mathlib's real and complex analysis libraries and extends them with
-      hyperbolic orbifold spectral geometry, Gauss–Bonnet area formulas, Eisenstein scattering
-      determinants, and Selberg trace formulas.
+related_formalizations: []
 
 automation:
   methods:

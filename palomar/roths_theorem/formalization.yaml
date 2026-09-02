@@ -45,8 +45,8 @@ sources:
     year: 2023
     relationship: background
 
-related_formalizations:
-  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Data/ZMod/Basic.lean"
+related_formalizations: []
+
     relationship: builds-on
     note: >-
       Formalization builds on Mathlib's modular arithmetic and finite group representation,

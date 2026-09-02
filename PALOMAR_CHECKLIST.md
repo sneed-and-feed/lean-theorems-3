@@ -16,29 +16,29 @@ All 15 theorem packages have completed pre-flight verification audits.
 
 ## 🚀 Tier-1 Verified Submission Queue (100% Verified, 0 Axioms, Research-Grade)
 
-| # | Theorem Title | Slug | Dedicated Commit SHA to Enter | Mathematical Domain |
-| :---: | :--- | :--- | :--- | :--- |
-| **1** | **Brieskorn Manifolds, Topological Spheres, and the 28 Exotic 7-Spheres** | `brieskorn_manifolds` | `42d3890e28ce7ec6451bb926768c125cc56f8c46` | Differential Topology / Exotic Spheres |
-| **2** | **Irreducible $SU(2)$ Character Varieties of Brieskorn Homology Spheres** | `brieskorn_su2_character_variety` | `21e922a8b92c4503b8d15ce45ab23b9392abb5f0` | Gauge Theory / Casson Invariants |
-| **3** | **The Kelley–Meka Theorem: Strong Bounds for 3-Progressions** | `kelley_meka` | `511b44146d7f4dfb497b225884ba0c4ea94590d1` | Additive Combinatorics / Harmonic Analysis |
-| **4** | **The Discrete Cheeger Inequality for Regular Graphs** | `discrete_cheeger` | `d6eda483c45efa793e475d2f1321a525d8944794` | Spectral Graph Theory / Isoperimetry |
-| **5** | **Tanner's Vertex Expansion Bound for Regular Graphs** | `tanner_expansion` | `81a4f78f6097090c4df89c6b326ac9f1c54d2c7e` | Spectral Graph Theory / Expanders |
-| **6** | **Hyperbolic Orbifold Spectral Zeta & the Selberg Trace Formula** | `orbifold_spectral_zeta` | `f8c32bf5a68a2c928f2a2f2780b85a8fe244e523` | Automorphic Forms / Spectral Geometry |
-| **7** | **Order-4 Picard–Fuchs Equations, Monodromy & Mirror Yukawa Couplings** | `picard_fuchs_mirror_monodromy` | `4f842837c773e6a558fe2064198b6aa23521a168` | Mirror Symmetry / Calabi–Yau |
-| **8** | **Deligne–Schmid Mixed Hodge Weight Filtration $W_\bullet(N)$ & Monodromy** | `universal_monodromy_weight_filtration` | `162fa633f51d4ac29e0762cd013a7944cd653209` | Hodge Theory / Monodromy |
-| **9** | **Gilmer's Entropy Bound on Frankl's Union-Closed Sets Conjecture** | `gilmer_union_closed` | `a21ba2ed4fb4de4a8220bf3f13a3eac857ca5802` | Extremal Combinatorics / Information Theory |
-| **10** | **Ruzsa Distance, Plünnecke–Ruzsa Bounds & Petridis Magnification** | `ruzsa_freiman` | `e9f647dbe83af9b300ece231a240142ec21af11d` | Additive Combinatorics / Sumsets |
-| **11** | **Szemerédi's Regularity Lemma and Partition Energy Dynamics** | `szemeredi_regularity` | `ca91141a2d5c5c5733723a43abf3b3e88472884b` | Extremal Graph Theory / Regularity |
-| **12** | **The Cauchy–Davenport Theorem and Iterated Sumsets** | `cauchy_davenport` | `cb87e2ab9085a5d459cd70163e33755670e57b5a` | Additive Number Theory / Finite Fields |
-| **13** | **The Expander Mixing Lemma and Spectral Discrepancy** | `expander_mixing` | `4b4e986f1539894227416e9dce6dfb891c80b687` | Spectral Graph Theory / Discrepancy |
+| # | Theorem Title & Core Scope | Slug | Dedicated Commit SHA to Enter | Mathematical Domain | Verified Declarations |
+| :---: | :--- | :--- | :--- | :--- | :---: |
+| **1** | **Brieskorn Manifolds, Topological Spheres, and the 28 Exotic 7-Spheres**<br>Brieskorn singularity link dimension, Brieskorn–Hirzebruch sphere criterion for two isolated graph vertices, pairwise coprime homology 3-spheres, and full Milnor–Kervaire classification: surjectivity onto $\Theta_7 \cong \mathbb{Z}/28\mathbb{Z}$, generation of all 28 smooth structures, pairwise distinctness, standard 7-sphere for $k=28$, and 27 strictly exotic 7-spheres | `brieskorn_manifolds` | `42d3890e28ce7ec6451bb926768c125cc56f8c46` | Differential Topology / Exotic Spheres | 9 theorems |
+| **2** | **Irreducible $SU(2)$ Character Varieties of Brieskorn Homology Spheres**<br>Seifert presentation reduction to Diophantine spherical angle inequalities, odd sum condition, candidate representation search space cardinality $(p-1)(q-1)(r-1)$, Fricke–Vogt trace variety discriminant identity and boundary vanishing, order-2 generator circle specialization, central fiber relation $(-1)^b = -1$, and certified Casson invariant agreements $\lambda_{SU(2)} = \lambda$ on $\Sigma(2,3,5)$, $\Sigma(2,3,7)$, $\Sigma(2,3,11)$, and $\Sigma(2,5,7)$ | `brieskorn_su2_character_variety` | `21e922a8b92c4503b8d15ce45ab23b9392abb5f0` | Gauge Theory / Casson Invariants | 11 theorems |
+| **3** | **Kelley–Meka Density Increment Dynamics, Bohr Regularity & Constant Calibration**<br>Bohr set geometry and relative density bounds, additive/multiplicative density boost accumulation $\alpha_k \ge \alpha_0 + k c_0 \alpha_0^2$, iteration termination bounds, cumulative rank growth control, quasi-polynomial rate domination over Roth/Bourgain bounds, and certified numeric constant evaluations ($N = 10^6, 2^{64}, 10^{100}$) | `kelley_meka` | `511b44146d7f4dfb497b225884ba0c4ea94590d1` | Additive Combinatorics / Harmonic Analysis | 21 theorems |
+| **4** | **The Discrete Cheeger Inequality for Regular Graphs** | `discrete_cheeger` | `d6eda483c45efa793e475d2f1321a525d8944794` | Spectral Graph Theory / Isoperimetry | 6 theorems |
+| **5** | **Tanner's Vertex Expansion Bound for Regular Graphs** | `tanner_expansion` | `81a4f78f6097090c4df89c6b326ac9f1c54d2c7e` | Spectral Graph Theory / Expanders | 6 theorems |
+| **6** | **Hyperbolic Orbifold Spectral Zeta, Gauss–Bonnet Area & the Selberg Trace Formula**<br>Gauss–Bonnet area $\operatorname{Area}(\mathcal{O}) = 2\pi(1-1/p-1/q)$, scattering residue product $\operatorname{Res}_{s=1}\phi(s)\cdot\operatorname{Area}=2\pi$, heat kernel asymptotic prefactor $\mu_{\text{orb}}/2$, critical-line eigenvalue reality $s(1-s)=1/4+r^2$, and exact canonical spectra | `orbifold_spectral_zeta` | `f8c32bf5a68a2c928f2a2f2780b85a8fe244e523` | Automorphic Forms / Spectral Geometry | 14 theorems |
+| **7** | **Order-4 Picard–Fuchs Differential Equations, Monodromy & Mirror Yukawa Couplings**<br>Picard–Fuchs symbol $\mathcal{L}_4$ expansion, Calabi–Yau self-duality exponent sum $\sum \alpha_i = 2$, indicial polynomial $I_0(\theta) = \theta^4$, Frobenius unipotence index 2 ($N^2=0$), CY3 MUM Type III ($N^4=0, N^2\ne 0$), Griffiths transversality $N^T J + JN = 0$, and Candelas Quintic instanton numbers ($n_1=2875, n_2=609250$) | `picard_fuchs_mirror_monodromy` | `4f842837c773e6a558fe2064198b6aa23521a168` | Mirror Symmetry / Calabi–Yau | 21 theorems |
+| **8** | **Deligne–Schmid Mixed Hodge Weight Filtration $W_\bullet(N)$ & Monodromy**<br>Deligne universal subspace formula $W_l(N, k) = \bigcup_j (\ker N^{j+1} \cap \operatorname{im} N^{j-l+k})$, fundamental shift inclusion $N(W_l) \subseteq W_{l-2}$, saturation $W_{2k}=V$, Type II/III complete filtration chains, Hard Lefschetz shifts, and Hodge–Riemann polarization strict positivity | `universal_monodromy_weight_filtration` | `162fa633f51d4ac29e0762cd013a7944cd653209` | Hodge Theory / Monodromy | 14 theorems |
+| **9** | **Gilmer's Information-Theoretic Entropy Mechanics & Union-Closed Family Certificates**<br>Union coordinate probability relation $2c_0 - c_0^2 = 1 - c_0$, entropy domination $2p - p^2 \le 1 - p$ on $[0, c_0]$, golden-ratio binary and natural entropy fixed point $H(2c_0 - c_0^2) = H(c_0)$, binary/natural entropy symmetry, certified Gilmer and Frankl frequency bounds on concrete families ($\{\emptyset, \{a\}\}$, finite powersets $\mathcal{P}(S)$), and Frankl-to-Gilmer constant reduction | `gilmer_union_closed` | `a21ba2ed4fb4de4a8220bf3f13a3eac857ca5802` | Extremal Combinatorics / Information Theory | 10 theorems |
+| **10** | **Ruzsa Distance, Plünnecke–Ruzsa Bounds & Petridis Magnification** | `ruzsa_freiman` | `e9f647dbe83af9b300ece231a240142ec21af11d` | Additive Combinatorics / Sumsets | 10 theorems |
+| **11** | **Szemerédi's Regularity Lemma and Partition Energy Dynamics** | `szemeredi_regularity` | `ca91141a2d5c5c5733723a43abf3b3e88472884b` | Extremal Graph Theory / Regularity | 8 theorems |
+| **12** | **The Cauchy–Davenport Theorem and Iterated Sumsets** | `cauchy_davenport` | `cb87e2ab9085a5d459cd70163e33755670e57b5a` | Additive Number Theory / Finite Fields | 9 theorems |
+| **13** | **The Expander Mixing Lemma and Spectral Discrepancy** | `expander_mixing` | `4b4e986f1539894227416e9dce6dfb891c80b687` | Spectral Graph Theory / Discrepancy | 5 theorems |
 
 ---
 
 ## 🔬 High-Value Research Scaffolds (Explicitly Isolated Minimal Axioms)
 
-| # | Theorem Title | Slug | Dedicated Commit SHA | Minimal Missing Prerequisites |
-| :---: | :--- | :--- | :--- | :--- |
-| **1** | **The Alon–Boppana Spectral Bound and Ramanujan Expanders** | `alon_boppana` | `f78939a02d8893328ee17a24a1e75d2f32edc29f` | 2 axioms: Nilli spherical Chebyshev trace on universal tree $\mathbb{T}_d$ |
+| # | Theorem Title | Slug | Dedicated Commit SHA | Minimal Missing Prerequisites | Verified Declarations |
+| :---: | :--- | :--- | :--- | :--- | :---: |
+| **1** | **The Alon–Boppana Spectral Bound and Ramanujan Expanders** | `alon_boppana` | `f78939a02d8893328ee17a24a1e75d2f32edc29f` | 2 axioms: Nilli spherical Chebyshev trace on universal tree $\mathbb{T}_d$ | 5 theorems |
 
 ---
 

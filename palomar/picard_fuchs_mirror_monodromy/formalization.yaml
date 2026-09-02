@@ -51,13 +51,7 @@ sources:
     venue: "Publications Mathématiques de l'IHÉS, 38, 125-180"
     relationship: background
 
-related_formalizations:
-  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Data/Matrix/Basic.lean"
-    relationship: builds-on
-    note: >-
-      Formalization builds on Mathlib's matrix algebra and rational polynomial infrastructure,
-      formalizing hypergeometric differential equations, symplectic Lie algebra actions,
-      Frobenius local monodromy, and multi-instanton BPS Yukawa expansions.
+related_formalizations: []
 
 automation:
   methods:

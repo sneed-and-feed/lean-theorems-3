@@ -50,8 +50,8 @@ sources:
     year: 2006
     relationship: background
 
-related_formalizations:
-  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Combinatorics/SimpleGraph/Basic.lean"
+related_formalizations: []
+
     relationship: builds-on
     note: >-
       Formalization builds on Mathlib's simple graph theory representation and adjacency definitions,

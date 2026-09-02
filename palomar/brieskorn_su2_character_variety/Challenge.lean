@@ -2,6 +2,7 @@ import Mathlib.Data.Rat.Defs
 import Mathlib.Data.Finset.Basic
 import Mathlib.Data.Finset.Card
 import Mathlib.Data.Finset.Interval
+import Mathlib.Order.Interval.Finset.Nat
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.NormNum

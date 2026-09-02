@@ -40,8 +40,8 @@ sources:
       Formalization adapts Ruzsa and Szemerédi's graph removal method and energy increment bounds to formalize
       the Triangle Removal Lemma.
 
-related_formalizations:
-  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Combinatorics/SimpleGraph/Regularity/Lemma.lean"
+related_formalizations: []
+
     relationship: builds-on
     note: >-
       Formalization builds on Mathlib's regularity and uniform partition library, providing

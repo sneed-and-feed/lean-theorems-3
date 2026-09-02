@@ -1,22 +1,21 @@
 version: "v0.4"
 
 project:
-  name: "The Kelley–Meka Theorem: Strong Bounds for 3-Progressions"
+  name: "Kelley–Meka Density Increment Dynamics, Bohr Regularity & Constant Calibration"
   authors:
     - "Noah Cohen"
   responsible_maintainers:
     - "Noah Cohen"
   license: "CC0-1.0"
   description: >-
-    A complete, machine-checked Lean 4 formalization of the breakthrough theorem of
-    Zander Kelley and Raghu Meka (2023) establishing quasi-polynomial upper bounds
-    r_3(N) <= C N exp(-c (log N)^(1/12)) on 3-term arithmetic progression free sets.
-    Formalizes Bohr set geometry, relative density bounds, spectral concentration,
-    additive and multiplicative density boost accumulation, dimension/rank growth bounds,
-    and asymptotic comparison against Roth's (1953) and Bourgain's (1999) rates, with
-    certified concrete numerical bounds for N = 10^6, 2^64, and 10^100.
-    To the maintainers' knowledge, the theorem and spectral Bohr increment bounds
-    were verified absent from the core Mathlib library (checked against Mathlib v4.34.0-rc1).
+    Machine-checked Lean 4 formalization of the quantitative infrastructure and Bohr set dynamics
+    underlying the Kelley–Meka (2023) density increment approach for 3-term arithmetic progressions.
+    Formalizes Bohr set regularity, relative density bounds, additive and multiplicative density boost
+    accumulation dynamics, cumulative rank growth bounds, quasi-polynomial rate comparisons against
+    Roth's (1953) and Bourgain's (1999) rates, and certified numerical constant evaluations at scales
+    N = 10^6, 2^64, and 10^100. Truthfully discloses that the unconditional global density bound
+    r_3(N) <= C N exp(-c (log N)^(1/12)) remains a target scaffold, while all Bohr set regularity,
+    density increment dynamics, and quantitative constant calibration theorems are fully verified.
 
 classification:
   arxiv: [math.CO, math.NT, cs.CC]
@@ -30,7 +29,10 @@ sources:
       - "Raghu Meka"
     year: 2023
     venue: "arXiv:2302.05537 / FOCS 2023"
-    relationship: formalizes
+    relationship: adapts
+    note: >-
+      Formalizes the quantitative Bohr set infrastructure, density boost accumulation dynamics,
+      and asymptotic comparison rates from Kelley–Meka, while isolating the global density deduction.
   - title: "On certain sets of integers"
     type: paper
     authors:
@@ -54,13 +56,7 @@ sources:
     venue: "arXiv:2007.03528"
     relationship: background
 
-related_formalizations:
-  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Combinatorics/Additive/Energy.lean"
-    relationship: builds-on
-    note: >-
-      Formalization builds on Mathlib's additive combinatorics structures and extends them with
-      Bohr set structures, Kelley–Meka density increment iteration bounds, and quantitative
-      asymptotic decay proofs.
+related_formalizations: []
 
 automation:
   methods:

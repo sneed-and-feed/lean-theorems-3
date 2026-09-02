@@ -48,13 +48,7 @@ sources:
     venue: "American Journal of Mathematics, 90(2), 568-626"
     relationship: background
 
-related_formalizations:
-  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Data/Matrix/Basic.lean"
-    relationship: builds-on
-    note: >-
-      Formalization builds on Mathlib's matrix and module algebra, formalizing Deligne's universal
-      subspace formula for nilpotent monodromy weight filtrations, shift theorems, and Hodge–Riemann
-      symplectic polarizations.
+related_formalizations: []
 
 automation:
   methods:
