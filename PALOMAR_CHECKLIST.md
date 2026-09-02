@@ -1,7 +1,7 @@
 # Palomar Submission Master Priority Queue: Repo 3
 
-All 15 theorem packages have completed pre-flight verification audits.
-- **Tier-1 Verified Submission Queue**: 13 landmark research-grade packages, 100% verified (0 custom axioms, 0 `sorry`), with dedicated immutable 40-character Git commit SHAs.
+All 16 theorem packages have completed pre-flight verification audits.
+- **Tier-1 Verified Submission Queue**: 14 landmark research-grade packages, 100% verified (0 custom axioms, 0 `sorry`), with dedicated immutable 40-character Git commit SHAs.
 - **High-Value Research Scaffolds**: 1 spectral expander package with clearly isolated minimal axioms.
 - **Retired Candidates**: 1 package crossed off early (superseded by `kelley_meka`).
 
@@ -31,6 +31,7 @@ All 15 theorem packages have completed pre-flight verification audits.
 | **11** | **Szemerédi's Regularity Lemma and Partition Energy Dynamics** | `szemeredi_regularity` | `ca91141a2d5c5c5733723a43abf3b3e88472884b` | Extremal Graph Theory / Regularity | 8 theorems |
 | **12** | **The Cauchy–Davenport Theorem and Iterated Sumsets** | `cauchy_davenport` | `cb87e2ab9085a5d459cd70163e33755670e57b5a` | Additive Number Theory / Finite Fields | 9 theorems |
 | **13** | **The Expander Mixing Lemma and Spectral Discrepancy** | `expander_mixing` | `4b4e986f1539894227416e9dce6dfb891c80b687` | Spectral Graph Theory / Discrepancy | 5 theorems |
+| **14** | **Jenrich–Brouwer 64-Dimensional Counterexample to Borsuk's Conjecture**<br>Two-distance metric space foundations, clique-diameter lemma, pigeonhole cover bound, Suzuki strongly regular graph $G_2(4) = \operatorname{srg}(416, 100, 36, 20)$ Euclidean representation, Gram matrix metric realization ($144$ vs $192$), Jenrich reduction vector $p = 1_{B_2} - 1_{B_3}$ orthogonal to 352-vertex carrier $S_{64} = C \cup B_1$, non-orthogonality on $B_2$, dimension 64 partition lower bound $\ge 71 > 65$, refutation of Borsuk's conjecture in dimension 64, and secondary reduction vector $q = 2 \cdot 1_{B_1} - 1_{B_2} - 1_{B_3}$ achieving 64 parts in dimension 63 | `jenrich_borsuk_64` | `05319c23f2783e7fc4439566d323adf04e976427` | Metric Geometry / Extremal Combinatorics | 12 theorems |
 
 ---
 
