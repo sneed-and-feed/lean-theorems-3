@@ -37,10 +37,7 @@ sources:
     note: >-
       Foundational construction of exponential graphs and evaluation colorings for categorical products.
 
-related_formalizations:
-  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Combinatorics/SimpleGraph/Coloring/Vertex.lean"
-    relationship: builds-on
-    note: "Extends Mathlib's simple graph chromatic number and vertex coloring theory to tensor products."
+related_formalizations: []
 
 automation:
   methods:

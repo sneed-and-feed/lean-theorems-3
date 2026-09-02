@@ -50,11 +50,6 @@ sources:
 
 related_formalizations: []
 
-    relationship: builds-on
-    note: >-
-      Formalization builds on Mathlib's graph metric library, extending distance and neighborhood
-      partitions to spherical shell decompositions and Nilli test functions.
-
 automation:
   methods:
     - method: agent
