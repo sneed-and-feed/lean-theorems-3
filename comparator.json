@@ -2,20 +2,14 @@
   "challenge_module": "Challenge",
   "solution_module": "Solution",
   "theorem_names": [
-    "EngelJacobianRefutation.jacobian_canonical",
-    "EngelJacobianRefutation.jacobian_antisymm",
-    "EngelJacobianRefutation.jacobian_self",
-    "EngelJacobianRefutation.jacobian_add_right",
-    "EngelJacobianRefutation.jacobian_add_left",
-    "EngelJacobianRefutation.jacobian_shear_general_X",
-    "EngelJacobianRefutation.jacobian_shear_general_Y",
-    "EngelJacobianRefutation.jacobian_shear_Y",
-    "EngelJacobianRefutation.jacobian_shear_X",
-    "EngelJacobianRefutation.jacobian_pow_self",
-    "EngelJacobianRefutation.jacobian_shear_Q",
-    "EngelJacobianRefutation.jacobian_shear_P",
-    "EngelJacobianRefutation.vitushkin_cross_term_jacobian",
-    "EngelJacobianRefutation.vitushkin_jacobian_ne_one"
+    "BusemannPettyZhang.lutwak_intersection_body_comparison",
+    "BusemannPettyZhang.intersection_body_4d_universal",
+    "BusemannPettyZhang.busemann_petty_dim_4",
+    "BusemannPettyZhang.zhang_1994_counterexample_refuted",
+    "BusemannPettyZhang.busemann_petty_dim_4_contrapositive",
+    "BusemannPettyZhang.busemann_petty_dim_3",
+    "BusemannPettyZhang.busemann_petty_dim_3_contrapositive",
+    "BusemannPettyZhang.busemann_petty_counterexample_dim_ge_5"
   ],
   "permitted_axioms": [
     "propext",

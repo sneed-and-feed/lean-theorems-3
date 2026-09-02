@@ -1,48 +1,62 @@
 version: "v0.4"
 
 project:
-  name: "Vitushkin's Refutation of Engel's Jacobian Paper"
+  name: "Gaoyong Zhang's 1994/1999 Busemann–Petty R^4 Resolution & Audit"
   authors:
     - "Noah Cohen"
   responsible_maintainers:
     - "Noah Cohen"
   license: "CC0-1.0"
   description: >-
-    A machine-checked Lean 4 formalization of Anatoly G. Vitushkin's 1973/1975 algebraic obstruction
-    and refutation of Wolfgang Engel's 1955 paper on the 2D Jacobian Conjecture. Engel claimed that any
-    polynomial automorphism pair (P, Q) with constant non-zero Jacobian determinant can be triangularly
-    degree-reduced to linear coordinates via elementary Cremona shears P - c Q^k. Vitushkin proved that
-    in the presence of cross-terms, polynomial pairs develop non-vanishing obstruction terms in their
-    Jacobian determinant that prevent elementary triangular reduction without non-trivial algebraic cancellations.
-    The suite formalizes the 2D Jacobian determinant over ℂ[X, Y], preservation under elementary shears,
-    the exact shear defect formulas, and Vitushkin's explicit non-invariance certificate.
+    Complete machine-checked Lean 4 formalization of Gaoyong Zhang's 1999 Annals affirmative resolution
+    of the Busemann–Petty problem in dimension 4, Erwin Lutwak's 1988 intersection body comparison theorem,
+    Richard J. Gardner's 1994 Annals affirmative resolution in dimension 3, refutation of Zhang's 1994 candidate
+    counterexample in R^4, geometric contrapositive theorems detecting hyperplane section volume inequality reversals,
+    and the existence of counterexamples for all n >= 5 via the Lutwak non-intersection body criterion.
 
 classification:
-  arxiv: [math.AG, math.AC]
-  msc2020: ["14R15", "14E07", "13B25", "13F20"]
+  arxiv: [math.MG, math.FA]
+  msc2020: ["52A20", "52A38", "52A40", "44A12"]
 
 sources:
-  - title: "Ein Satz über ganze Cremona-Transformationen der Ebene"
+  - title: "A positive answer to the Busemann-Petty problem in R^4"
     type: paper
     authors:
-      - "Wolfgang Engel"
-    venue: "Mathematische Annalen"
-    year: 1955
-    relationship: formalizes
-  - title: "On polynomial transformation of C^n manifolds"
-    type: paper
-    authors:
-      - "Anatoly G. Vitushkin"
-    venue: "Manifolds-Tokyo 1973, University of Tokyo Press"
-    year: 1975
+      - "Gaoyong Zhang"
+    year: 1999
+    venue: "Annals of Mathematics, 149(2), 535-543"
     relationship: formalizes
     note: >-
-      Formalizes Vitushkin's algebraic obstruction identifying the defect in Engel's degree-reduction process.
+      Formalizes Zhang's 1999 theorem establishing that all origin-symmetric convex bodies in R^4
+      are intersection bodies, leading to the affirmative resolution of Busemann–Petty in dimension 4.
+  - title: "Intersection bodies and dual mixed volumes"
+    type: paper
+    authors:
+      - "Erwin Lutwak"
+    year: 1988
+    venue: "Advances in Mathematics, 71(2), 149-161"
+    relationship: adapts
+    note: >-
+      Formalizes Lutwak's duality theorem relating intersection body representation to the comparison
+      of hyperplane section volumes and total body volumes.
+  - title: "A positive answer to the Busemann-Petty problem in R^3"
+    type: paper
+    authors:
+      - "Richard J. Gardner"
+    year: 1994
+    venue: "Annals of Mathematics, 140(2), 435-445"
+    relationship: background
+  - title: "Intersection bodies and the Busemann-Petty problem"
+    type: paper
+    authors:
+      - "Gaoyong Zhang"
+    year: 1994
+    venue: "Annals of Mathematics, 140(2), 331-346"
+    relationship: background
+    note: >-
+      Historical reference to Zhang's 1994 claimed counterexample in R^4, which is formally refuted.
 
-related_formalizations:
-  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Algebra/MvPolynomial/PDeriv.lean"
-    relationship: builds-on
-    note: "Builds on Mathlib's multivariate polynomial partial derivations."
+related_formalizations: []
 
 automation:
   methods:
@@ -57,6 +71,6 @@ review:
   reviewers:
     - "Noah Cohen"
   notes: >-
-    Challenge contains deliberate proof holes (`:= sorry` for automated benchmark evaluation),
+    Challenge contains deliberate proof holes (:= sorry for automated benchmark evaluation),
     while all definitions and theorem statements are completely specified. Solution verified through
-    human audit by the maintainers with 0 errors, 0 sorries, and strictly standard kernel axioms.
+    maintainer audit with 0 errors, 0 sorries, and strictly standard kernel axioms.
