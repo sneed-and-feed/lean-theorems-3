@@ -1,6 +1,6 @@
 # Formalization of Landmark Mathematical Theorems in Lean 4 (Suite III)
 
-This repository provides machine-checked formalizations, certified proofs, and foundational scaffolds of landmark theorems across spectral graph theory, expander graphs, additive combinatorics, arithmetic progressions, extremal combinatorics, differential topology, gauge theory, spectral geometry, mirror symmetry, and mixed Hodge theory in the Lean 4 / [Mathlib](https://github.com/leanprover-community/mathlib4) ecosystem.
+This repository provides machine-checked formalizations, certified proofs, and foundational scaffolds of landmark theorems across spectral graph theory, expander graphs, additive combinatorics, arithmetic progressions, extremal combinatorics, differential topology, gauge theory, spectral geometry, mirror symmetry, mixed Hodge theory, and discrete metric geometry in the Lean 4 / [Mathlib](https://github.com/leanprover-community/mathlib4) ecosystem.
 
 ---
 
@@ -23,6 +23,7 @@ This repository provides machine-checked formalizations, certified proofs, and f
 | 13 | **Hyperbolic Orbifold Spectral Zeta, Gauss–Bonnet Area, and the Selberg Trace Formula** | [`gauss_bonnet_area`](Formalization/OrbifoldSpectralZeta.lean), [`residue_area_product`](Formalization/OrbifoldSpectralZeta.lean), [`hyperbolicArea_sig34`](Formalization/OrbifoldSpectralZeta.lean), [`hyperbolicArea_sig23`](Formalization/OrbifoldSpectralZeta.lean), [`scattering_unitarity_critical_line`](Formalization/OrbifoldSpectralZeta.lean), [`trace_identity_with_normalizedArea`](Formalization/OrbifoldSpectralZeta.lean) | Spectral Geometry & Automorphic Forms | Selberg (1956), Hejhal (1983), Venkov (1990), Buser (1992) | **100% Verified (0 axioms)** (Orbifold Gauss-Bonnet area $\operatorname{Area}=2\pi(1-1/p-1/q)$, Eisenstein scattering determinant $\phi(s)\phi(1-s)=1$, residue product $\operatorname{Res}\cdot\operatorname{Area}=2\pi$, and Selberg trace formula verified) |
 | 14 | **Order-4 Picard–Fuchs Differential Equations, Monodromy, and Mirror Yukawa Couplings** | [`pfSymbol_expansion`](Formalization/PicardFuchsMirrorMonodromy.lean), [`sum_alpha_3_4_infty`](Formalization/PicardFuchsMirrorMonodromy.lean), [`isInfinitesimalSymplectic_N`](Formalization/PicardFuchsMirrorMonodromy.lean), [`isInfinitesimalSymplectic_N_Omega6`](Formalization/PicardFuchsMirrorMonodromy.lean), [`symplecticPairing_N_invariant`](Formalization/PicardFuchsMirrorMonodromy.lean), [`quintic_instanton_k2`](Formalization/PicardFuchsMirrorMonodromy.lean), [`N_sq_eq_zero`](Formalization/PicardFuchsMirrorMonodromy.lean) | Mirror Symmetry, Differential Equations & Symplectic Monodromies | Candelas et al. (1991), Morrison (1993), Griffiths (1970), Deligne (1970) | **100% Verified (0 axioms)** (Order-4 Picard-Fuchs operator symbol $\mathcal{L}_4$, Calabi-Yau self-duality sum $\sum \alpha_i = 2$, unipotent cusp monodromy $N = T_0 - I_4 \in \mathrm{Sp}_4(\mathbb{Z})$, Griffiths transversality $N^T J + J N = 0$, and multi-instanton BPS expansions verified) |
 | 15 | **Deligne–Schmid Mixed Hodge Weight Filtration and Symplectic Monodromy** | [`DeligneWeightSpace_shift`](Formalization/UniversalMonodromyWeightFiltration.lean), [`DeligneWeightSpace_mono`](Formalization/UniversalMonodromyWeightFiltration.lean), [`DeligneWeightSpace_top`](Formalization/UniversalMonodromyWeightFiltration.lean), [`DeligneWeightSpace_zero`](Formalization/UniversalMonodromyWeightFiltration.lean), [`W_MUM_complete_chain`](Formalization/UniversalMonodromyWeightFiltration.lean), [`Q_N_u_add_w_strictly_positive`](Formalization/UniversalMonodromyWeightFiltration.lean), [`Q_N_symmetric`](Formalization/UniversalMonodromyWeightFiltration.lean) | Hodge Theory & Degenerations of Mixed Hodge Structures | Deligne (1971), Schmid (1973), Steenbrink (1976), Morrison (1993) | **100% Verified (0 axioms)** (Universal canonical subspace formula $W_l(N, k) = \bigcup_j (\ker(N^{j+1}) \cap \operatorname{im}(N^{j - l + k}))$, shift property $N(W_l) \subseteq W_{l-2}$, 2-step Type II and 4-step Type III MUM filtrations on $\mathbb{Z}^4$, and Hodge-Riemann polarization positivity verified) |
+| 16 | **Jenrich's 64-Dimensional Counterexample to Borsuk's Conjecture** | [`not_borsuk_conjecture_64`](Formalization/JenrichBorsuk64.lean), [`dist_eq_d1_of_diam_lt`](Formalization/JenrichBorsuk64.lean), [`isClique_of_diam_lt`](Formalization/JenrichBorsuk64.lean), [`card_le_mul_card_cover`](Formalization/JenrichBorsuk64.lean), [`carrier_card_eq`](Formalization/JenrichBorsuk64.lean), [`reduction_vector_ortho_carrier`](Formalization/JenrichBorsuk64.lean), [`reduction_vector_nonortho_B2`](Formalization/JenrichBorsuk64.lean), [`jenrich_partition_lower_bound`](Formalization/JenrichBorsuk64.lean), [`almost_counterexample_63`](Formalization/JenrichBorsuk64.lean) | Discrete Geometry & Metric Embeddings | Jenrich & Brouwer (2014), Bondarenko (2013, 2014), Borsuk (1933) | **100% Verified (0 axioms)** (Fundamental two-distance clique-diameter lemma, $G_2(4)$ Euclidean representation, Jenrich reduction vector $p \in \mathbb{R}^{416}$ orthogonal to 352 points of $S_{64} = C \cup B_1$, codimension drop to $\le 64$, and Borsuk refutation $\lceil 352 / 5 \rceil = 71 > 65$ verified; 63D almost-counterexample verified) |
 
 ---
 
@@ -225,6 +226,21 @@ This repository provides machine-checked formalizations, certified proofs, and f
 
 ---
 
+### 16. Jenrich & Brouwer's 64-Dimensional Counterexample to Borsuk's Conjecture
+* **Module:** [`Formalization/JenrichBorsuk64.lean`](Formalization/JenrichBorsuk64.lean)
+* **Primary Declarations:** `not_borsuk_conjecture_64`, `dist_eq_d1_of_diam_lt`, `isClique_of_diam_lt`, `card_le_mul_card_cover`, `dist_sq_of_adj`, `dist_sq_of_not_adj`, `carrier_card_eq`, `reduction_vector_ortho_carrier`, `reduction_vector_nonortho_B2`, `jenrich_partition_lower_bound`, `reduction_vector_q_ortho_C`, `almost_counterexample_63`
+* **Mathematical Overview:**
+  In 1933, Karol Borsuk asked whether every bounded set $S \subset \mathbb{R}^n$ can be partitioned into at most $n+1$ subsets of strictly smaller diameter. Jeff Kahn & Gil Kalai (1993) disproved the conjecture in high dimensions ($n \ge 2014$). Andriy V. Bondarenko (2013) dramatically lowered this bound to $n = 65$ via a 416-point two-distance set from the strongly regular graph $G_2(4) = \operatorname{srg}(416, 100, 36, 20)$. Shortly thereafter, Thomas Jenrich and Andries E. Brouwer (2014) constructed a 64-dimensional subset of 352 points, refuting Borsuk's conjecture in dimension 64.
+* **Formalization Highlights:**
+  - **Metric Foundations & Clique Reduction:** In any two-distance metric set with distances $d_1 < d_2$, any subset of diameter strictly less than $d_2$ contains no pairs at distance $d_2$, hence induces a clique in the distance-$d_1$ graph (`isClique_of_diam_lt`).
+  - **Pigeonhole Partition Bound:** Any cover of a finite set $S$ by parts of maximum clique size $\omega(G) \le m$ requires at least $\lceil |S| / m \rceil$ parts (`card_le_mul_card_cover`).
+  - **$G_2(4)$ Euclidean Representation:** The shifted Gram matrix $Y = A + 4I$ yields squared distances $\|y_i - y_j\|^2 \in \{144, 192\}$ ($d_1 = 12, d_2 = \sqrt{192}$), with centered vectors spanning the $f=65$ dimensional eigenspace $F$ with $\omega(G_2(4)) \le 5$. Bondarenko's full set requires $\lceil 416 / 5 \rceil = 84 > 66$ parts.
+  - **Jenrich's Codimension Reduction:** The vertex partition $V = B_1 \cup B_2 \cup B_3 \cup C$ ($|B_h| = 32, |C| = 320$) and the reduction vector $p = \mathbf{1}_{B_2} - \mathbf{1}_{B_3}$ satisfy $\langle p, y_i \rangle = 0$ for all 352 points of $S_{64} = C \cup B_1$, while $\langle p, y_j \rangle = 24 \ne 0$ on $B_2$, proving the span of $S_{64}$ has dimension at most $65 - 1 = 64$.
+  - **Main Impossibility Theorem:** Covering $S_{64}$ requires at least $\lceil 352 / 5 \rceil = 71$ parts of smaller diameter. Since $71 > 64 + 1 = 65$, Borsuk's conjecture is false in $\mathbb{R}^{64}$ (`not_borsuk_conjecture_64`).
+  - **63D Almost-Counterexample:** Secondary reduction vector $q = 2\mathbf{1}_{B_1} - \mathbf{1}_{B_2} - \mathbf{1}_{B_3}$ reduces $C$ ($|C| = 320$) to $\le 63$ dimensions, where $\lceil 320 / 5 \rceil = 64 = 63 + 1$.
+
+---
+
 ## Architectural & Blueprint Dependency Graph
 
 ```mermaid
@@ -263,18 +279,22 @@ graph TD
         PFM --> UMW
     end
 
+    subgraph Cluster5 ["5. Discrete Metric Geometry & Counterexamples"]
+        JB["JenrichBorsuk64.lean<br/>(Jenrich 64D Borsuk Counterexample)"]
+    end
+
     subgraph RootMaster ["Master Formalization Suite"]
         Master["Formalization.lean"]
     end
 
-    EM & AB & DC & TE & RF & RT & SR & CD & GUC & KM & BM & BSU2 & OSZ & PFM & UMW --> Master
+    EM & AB & DC & TE & RF & RT & SR & CD & GUC & KM & BM & BSU2 & OSZ & PFM & UMW & JB --> Master
 ```
 
 ---
 
 ## Palomar Registry Integration
 
-All 15 formalized theorems in this repository are structured for submission to the [Palomar Registry](https://submit.palomar-registry.org).
+All 16 formalized theorems in this repository are structured for submission to the [Palomar Registry](https://submit.palomar-registry.org).
 
 > [!NOTE]
 > Every theorem in the suite has an active `formalization.yaml` and `comparator.json` metadata specification, and is pegged to an immutable 40-character Git commit SHA on `main`.
@@ -350,3 +370,7 @@ Interactive inspection, tactic probing, and diagnostic checking are supported vi
 33. **Deligne, P.** (1971). *Théorie de Hodge: II*. Publications Mathématiques de l'IHÉS, 40, 5–57.
 34. **Schmid, W.** (1973). *Variation of Hodge structure: the singularities of the period mapping*. Inventiones Math., 22(3-4), 211–319.
 35. **Tao, T., & Vu, V.** (2006). *Additive Combinatorics*. Cambridge Studies in Advanced Mathematics, Cambridge University Press.
+36. **Borsuk, K.** (1933). *Drei Sätze über die $n$-dimensionale euklidische Sphäre*. Fundamenta Mathematicae, 20(1), 177–190.
+37. **Bondarenko, A. V.** (2013). *On Borsuk’s conjecture for two-distance sets*. arXiv:1305.2584; Discrete & Computational Geometry, 51(3), 509–515 (2014).
+38. **Jenrich, T.** (2013). *A 64-dimensional two-distance counterexample to Borsuk's conjecture*. arXiv:1308.0206.
+39. **Jenrich, T., & Brouwer, A. E.** (2014). *A 64-dimensional counterexample to Borsuk's conjecture*. Electronic Journal of Combinatorics, 21(4), #P4.29.
