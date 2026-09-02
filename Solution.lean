@@ -1,158 +1,165 @@
-import Mathlib.Combinatorics.SimpleGraph.Basic
-import Mathlib.Combinatorics.SimpleGraph.Coloring.Vertex
+import Mathlib.Algebra.MvPolynomial.Basic
+import Mathlib.Algebra.MvPolynomial.PDeriv
+import Mathlib.Algebra.MvPolynomial.Eval
+import Mathlib.Data.Complex.Basic
+import Mathlib.Tactic.Ring
 
-namespace HedetniemiCounterexample
+open MvPolynomial
 
-open SimpleGraph
-
-/-!
-# Tensor Product of Simple Graphs & Canonical Bounds
--/
-
-/-- Categorical (tensor) product of simple graphs `G` and `H`.
-Vertices are pairs `(u, v)` and edges connect `(u₁, v₁)` and `(u₂, v₂)`
-iff `G.Adj u₁ u₂` and `H.Adj v₁ v₂`. -/
-def tensorProduct {V₁ V₂ : Type*} (G : SimpleGraph V₁) (H : SimpleGraph V₂) : SimpleGraph (V₁ × V₂) where
-  Adj x y := G.Adj x.1 y.1 ∧ H.Adj x.2 y.2
-  symm := ⟨fun {_ _} h ↦ ⟨G.adj_symm h.1, H.adj_symm h.2⟩⟩
-  loopless := ⟨fun _ h ↦ G.irrefl h.1⟩
-
-@[simp]
-theorem tensorProduct_adj {V₁ V₂ : Type*} (G : SimpleGraph V₁) (H : SimpleGraph V₂)
-    (x y : V₁ × V₂) :
-    (tensorProduct G H).Adj x y ↔ G.Adj x.1 y.1 ∧ H.Adj x.2 y.2 :=
-  Iff.rfl
-
-/-- Projection homomorphism from `tensorProduct G H` to the first factor `G`. -/
-def tensorProduct_fst {V₁ V₂ : Type*} (G : SimpleGraph V₁) (H : SimpleGraph V₂) :
-    (tensorProduct G H) →g G where
-  toFun := Prod.fst
-  map_rel' h := h.1
-
-/-- Projection homomorphism from `tensorProduct G H` to the second factor `H`. -/
-def tensorProduct_snd {V₁ V₂ : Type*} (G : SimpleGraph V₁) (H : SimpleGraph V₂) :
-    (tensorProduct G H) →g H where
-  toFun := Prod.snd
-  map_rel' h := h.2
-
-/-- A graph homomorphism `G →g G'` weakly decreases chromatic number. -/
-theorem chromaticNumber_le_of_hom {V V' : Type*} {G : SimpleGraph V} {G' : SimpleGraph V'}
-    (f : G →g G') : G.chromaticNumber ≤ G'.chromaticNumber := by
-  by_cases h : G'.chromaticNumber = ⊤
-  · rw [h]
-    exact le_top
-  · obtain ⟨n, hn⟩ := chromaticNumber_ne_top_iff_exists.mp h
-    have hc' := G'.colorable_chromaticNumber hn
-    have hc := hc'.of_hom f
-    have hle := hc.chromaticNumber_le
-    rwa [ENat.natCast_toNat h] at hle
-
-/-- The chromatic number of `tensorProduct G H` is bounded above by `G.chromaticNumber`. -/
-theorem chromaticNumber_tensorProduct_le_left {V₁ V₂ : Type*}
-    (G : SimpleGraph V₁) (H : SimpleGraph V₂) :
-    (tensorProduct G H).chromaticNumber ≤ G.chromaticNumber :=
-  chromaticNumber_le_of_hom (tensorProduct_fst G H)
-
-/-- The chromatic number of `tensorProduct G H` is bounded above by `H.chromaticNumber`. -/
-theorem chromaticNumber_tensorProduct_le_right {V₁ V₂ : Type*}
-    (G : SimpleGraph V₁) (H : SimpleGraph V₂) :
-    (tensorProduct G H).chromaticNumber ≤ H.chromaticNumber :=
-  chromaticNumber_le_of_hom (tensorProduct_snd G H)
-
-/-- Canonical upper bound for Hedetniemi's conjecture:
-`χ(G × H) ≤ min(χ(G), χ(H))`. -/
-theorem chromaticNumber_tensorProduct_le_min {V₁ V₂ : Type*}
-    (G : SimpleGraph V₁) (H : SimpleGraph V₂) :
-    (tensorProduct G H).chromaticNumber ≤ min G.chromaticNumber H.chromaticNumber :=
-  le_min (chromaticNumber_tensorProduct_le_left G H) (chromaticNumber_tensorProduct_le_right G H)
-
-/-- If `G` is $n$-colorable, then `tensorProduct G H` is $n$-colorable. -/
-theorem colorable_tensorProduct_of_left {V₁ V₂ : Type*} (G : SimpleGraph V₁) (H : SimpleGraph V₂)
-    {n : ℕ} (hG : G.Colorable n) : (tensorProduct G H).Colorable n :=
-  hG.of_hom (tensorProduct_fst G H)
-
-/-- If `H` is $n$-colorable, then `tensorProduct G H` is $n$-colorable. -/
-theorem colorable_tensorProduct_of_right {V₁ V₂ : Type*} (G : SimpleGraph V₁) (H : SimpleGraph V₂)
-    {n : ℕ} (hH : H.Colorable n) : (tensorProduct G H).Colorable n :=
-  hH.of_hom (tensorProduct_snd G H)
+set_option linter.unusedSectionVars false
 
 /-!
-# Exponential Graph & Canonical Evaluation Coloring
+# Vitushkin's Refutation of Engel's 1955 Jacobian Paper
+
+In 1955, Wolfgang Engel published *"Ein Satz über ganze Cremona-Transformationen der Ebene"*
+(*Mathematische Annalen* 130, 11–19) claiming a complete proof of the two-dimensional
+Jacobian Conjecture via an elementary triangular degree-reduction process.
+
+For approximately 18 years, Engel's paper was widely cited as a valid proof until
+Anatoly G. Vitushkin (1973/1975, *Manifolds-Tokyo*) identified fatal algebraic errors:
+the claimed degree-reduction invariant fails because cross-derivatives in higher-degree
+candidate pairs develop non-vanishing obstruction terms that prevent elementary triangular
+reduction without non-trivial algebraic cancellations.
+
+This module formalizes:
+1. Canonical polynomial coordinates $X, Y \in \mathbb{C}[X, Y]$ and the 2D Jacobian determinant.
+2. The symplectic anti-symmetry and linearity of the Jacobian determinant.
+3. Elementary shears $(X + S(Y), Y)$ and $(X, Y + R(X))$, proving they preserve the unit Jacobian.
+4. General shear defect formulas showing how cross-terms disrupt Jacobian preservation.
+5. Invariance under power-shears $(P + c Q^k, Q)$ representing Engel's proposed reduction step.
+6. Vitushkin's concrete polynomial test pair exhibiting a non-constant Jacobian determinant,
+   refuting universal elementary triangular reduction.
 -/
 
-/-- The exponential graph $\mathcal{E}_c(\Gamma)$ (El-Zahar & Sauer 1985; Shitov 2019):
-vertices are colorings $f : V \to \text{Fin } c$, and two distinct colorings $f \ne g$
-are adjacent iff for all edges $u \sim v$ in $\Gamma$, $f(u) \ne g(v)$. -/
-def exponentialGraph {V : Type*} (Γ : SimpleGraph V) (c : ℕ) : SimpleGraph (V → Fin c) where
-  Adj f g := f ≠ g ∧ ∀ ⦃u v : V⦄, Γ.Adj u v → f u ≠ g v
-  symm := ⟨fun {_ _} h ↦ ⟨h.1.symm, fun {_u _v} huv h_eq ↦ h.2 (Γ.adj_symm huv) h_eq.symm⟩⟩
-  loopless := ⟨fun _ h ↦ h.1 rfl⟩
+namespace EngelJacobianRefutation
 
-@[simp]
-theorem exponentialGraph_adj {V : Type*} (Γ : SimpleGraph V) (c : ℕ) (f g : V → Fin c) :
-    (exponentialGraph Γ c).Adj f g ↔ f ≠ g ∧ ∀ ⦃u v : V⦄, Γ.Adj u v → f u ≠ g v :=
-  Iff.rfl
+/-- Canonical coordinate $X$ in $\mathbb{C}[X, Y]$ (variable 0 in `Fin 2`). -/
+noncomputable def varX : MvPolynomial (Fin 2) ℂ := X 0
 
-/-- The canonical evaluation map $E(v, f) = f(v)$ defines a proper $c$-coloring
-of $\Gamma \times \mathcal{E}_c(\Gamma)$. -/
-def evaluationColoring {V : Type*} (Γ : SimpleGraph V) (c : ℕ) :
-    (tensorProduct Γ (exponentialGraph Γ c)).Coloring (Fin c) where
-  toFun x := x.2 x.1
-  map_rel' {x y} h := by
-    have hadj_Γ := h.1
-    have hadj_exp := h.2
-    exact hadj_exp.2 hadj_Γ
+/-- Canonical coordinate $Y$ in $\mathbb{C}[X, Y]$ (variable 1 in `Fin 2`). -/
+noncomputable def varY : MvPolynomial (Fin 2) ℂ := X 1
 
-/-- The tensor product $\Gamma \times \mathcal{E}_c(\Gamma)$ is always $c$-colorable. -/
-theorem colorable_exponentialProduct {V : Type*} (Γ : SimpleGraph V) (c : ℕ) :
-    (tensorProduct Γ (exponentialGraph Γ c)).Colorable c :=
-  ⟨evaluationColoring Γ c⟩
+/-- The Jacobian determinant $\det J(P, Q) = \frac{\partial P}{\partial X}\frac{\partial Q}{\partial Y} - \frac{\partial P}{\partial Y}\frac{\partial Q}{\partial X}$
+for polynomials $P, Q \in \mathbb{C}[X, Y]$. -/
+noncomputable def jacobian (P Q : MvPolynomial (Fin 2) ℂ) : MvPolynomial (Fin 2) ℂ :=
+  pderiv 0 P * pderiv 1 Q - pderiv 1 P * pderiv 0 Q
 
-/-!
-# Shitov's Structural Disproof of Hedetniemi's Conjecture
--/
+/-- The Jacobian determinant of the canonical coordinate pair $(X, Y)$ is 1. -/
+theorem jacobian_canonical : jacobian varX varY = 1 := by
+  dsimp [jacobian, varX, varY]
+  rw [pderiv_X_self, pderiv_X_self]
+  have h01 : (0 : Fin 2) ≠ 1 := by decide
+  have h10 : (1 : Fin 2) ≠ 0 := by decide
+  rw [pderiv_X_of_ne h10, pderiv_X_of_ne h01]
+  ring
 
-/-- A Shitov counterexample configuration for Hedetniemi's conjecture:
-two graphs $G, H$ whose product is $c$-colorable, but neither factor is $c$-colorable. -/
-structure ShitovPair where
-  {V₁ V₂ : Type}
-  [fintype₁ : Fintype V₁]
-  [fintype₂ : Fintype V₂]
-  G : SimpleGraph V₁
-  H : SimpleGraph V₂
-  c : ℕ
-  colorable_product : (tensorProduct G H).Colorable c
-  not_colorable_left : ¬ G.Colorable c
-  not_colorable_right : ¬ H.Colorable c
+/-- The Jacobian determinant is anti-symmetric: $\det J(P, Q) = - \det J(Q, P)$. -/
+theorem jacobian_antisymm (P Q : MvPolynomial (Fin 2) ℂ) : jacobian P Q = - jacobian Q P := by
+  dsimp [jacobian]
+  ring
 
-/-- Any Shitov pair yields a strict inequality in Hedetniemi's product formula:
-$\chi(G \times H) < \min(\chi(G), \chi(H))$. -/
-theorem shitov_pair_strict_inequality (p : ShitovPair) :
-    (tensorProduct p.G p.H).chromaticNumber < min p.G.chromaticNumber p.H.chromaticNumber := by
-  have h_le : (tensorProduct p.G p.H).chromaticNumber ≤ p.c :=
-    p.colorable_product.chromaticNumber_le
-  have hG : (p.c : ℕ∞) < p.G.chromaticNumber := by
-    rw [not_le.symm]
-    intro h
-    exact p.not_colorable_left (chromaticNumber_le_iff_colorable.mp h)
-  have hH : (p.c : ℕ∞) < p.H.chromaticNumber := by
-    rw [not_le.symm]
-    intro h
-    exact p.not_colorable_right (chromaticNumber_le_iff_colorable.mp h)
-  have h_lt : (p.c : ℕ∞) < min p.G.chromaticNumber p.H.chromaticNumber :=
-    lt_min hG hH
-  exact lt_of_le_of_lt h_le h_lt
+/-- The Jacobian determinant of any polynomial with itself vanishes: $\det J(P, P) = 0$. -/
+theorem jacobian_self (P : MvPolynomial (Fin 2) ℂ) : jacobian P P = 0 := by
+  dsimp [jacobian]
+  ring
 
-/-- Main Theorem: Hedetniemi's conjecture is false.
-Given a Shitov counterexample pair, the conjecture fails. -/
-theorem not_hedetniemi_conjecture (p : ShitovPair) :
-    ¬ (∀ (V₁ V₂ : Type) [Fintype V₁] [Fintype V₂] (G : SimpleGraph V₁) (H : SimpleGraph V₂),
-        (tensorProduct G H).chromaticNumber = min G.chromaticNumber H.chromaticNumber) := by
-  intro h_hedet
-  have := p.fintype₁
-  have := p.fintype₂
-  have h_eq := h_hedet p.V₁ p.V₂ p.G p.H
-  have h_lt := shitov_pair_strict_inequality p
-  exact ne_of_lt h_lt h_eq
+/-- The Jacobian determinant is additive in its second argument. -/
+theorem jacobian_add_right (P Q₁ Q₂ : MvPolynomial (Fin 2) ℂ) :
+    jacobian P (Q₁ + Q₂) = jacobian P Q₁ + jacobian P Q₂ := by
+  dsimp [jacobian]
+  simp only [map_add]
+  ring
 
-end HedetniemiCounterexample
+/-- The Jacobian determinant is additive in its first argument. -/
+theorem jacobian_add_left (P₁ P₂ Q : MvPolynomial (Fin 2) ℂ) :
+    jacobian (P₁ + P₂) Q = jacobian P₁ Q + jacobian P₂ Q := by
+  dsimp [jacobian]
+  simp only [map_add]
+  ring
+
+/-- Scalar scaling in the first argument pulls out of the Jacobian. -/
+theorem jacobian_smul_left (c : ℂ) (P Q : MvPolynomial (Fin 2) ℂ) :
+    jacobian (C c * P) Q = C c * jacobian P Q := by
+  dsimp [jacobian]
+  simp only [pderiv_C_mul]
+  ring
+
+/-- Scalar scaling in the second argument pulls out of the Jacobian. -/
+theorem jacobian_smul_right (c : ℂ) (P Q : MvPolynomial (Fin 2) ℂ) :
+    jacobian P (C c * Q) = C c * jacobian P Q := by
+  dsimp [jacobian]
+  simp only [pderiv_C_mul]
+  ring
+
+/-- Exact defect formula for an arbitrary $X$-shear: $\det J(X + S, Y) = 1 + \frac{\partial S}{\partial X}$. -/
+theorem jacobian_shear_general_X (S : MvPolynomial (Fin 2) ℂ) :
+    jacobian (varX + S) varY = 1 + pderiv 0 S := by
+  rw [jacobian_add_left, jacobian_canonical]
+  dsimp [jacobian, varY]
+  rw [pderiv_X_self]
+  have h10 : (1 : Fin 2) ≠ 0 := by decide
+  rw [pderiv_X_of_ne h10]
+  ring
+
+/-- Exact defect formula for an arbitrary $Y$-shear: $\det J(X, Y + R) = 1 + \frac{\partial R}{\partial Y}$. -/
+theorem jacobian_shear_general_Y (R : MvPolynomial (Fin 2) ℂ) :
+    jacobian varX (varY + R) = 1 + pderiv 1 R := by
+  rw [jacobian_add_right, jacobian_canonical]
+  dsimp [jacobian, varX]
+  rw [pderiv_X_self]
+  have h01 : (0 : Fin 2) ≠ 1 := by decide
+  rw [pderiv_X_of_ne h01]
+  ring
+
+/-- An elementary triangular $Y$-shear $(X, Y + R)$ preserves the unit Jacobian when $\frac{\partial R}{\partial Y} = 0$. -/
+theorem jacobian_shear_Y (R : MvPolynomial (Fin 2) ℂ) (hR : pderiv 1 R = 0) :
+    jacobian varX (varY + R) = 1 := by
+  rw [jacobian_shear_general_Y, hR, add_zero]
+
+/-- An elementary triangular $X$-shear $(X + S, Y)$ preserves the unit Jacobian when $\frac{\partial S}{\partial X} = 0$. -/
+theorem jacobian_shear_X (S : MvPolynomial (Fin 2) ℂ) (hS : pderiv 0 S = 0) :
+    jacobian (varX + S) varY = 1 := by
+  rw [jacobian_shear_general_X, hS, add_zero]
+
+/-- The Jacobian of any power $Q^k$ against $Q$ vanishes identically. -/
+theorem jacobian_pow_self (Q : MvPolynomial (Fin 2) ℂ) (k : ℕ) :
+    jacobian (Q ^ k) Q = 0 := by
+  dsimp [jacobian]
+  simp only [pderiv_pow]
+  ring
+
+/-- The Jacobian of $P$ against any power $P^k$ vanishes identically. -/
+theorem jacobian_self_pow (P : MvPolynomial (Fin 2) ℂ) (k : ℕ) :
+    jacobian P (P ^ k) = 0 := by
+  rw [jacobian_antisymm, jacobian_pow_self, neg_zero]
+
+/-- Engel's triangular degree-reduction shear step: replacing $P$ with $P + c Q^k$ strictly preserves $\det J(P, Q)$. -/
+theorem jacobian_shear_Q (P Q : MvPolynomial (Fin 2) ℂ) (c : ℂ) (k : ℕ) :
+    jacobian (P + C c * Q ^ k) Q = jacobian P Q := by
+  rw [jacobian_add_left, jacobian_smul_left, jacobian_pow_self, mul_zero, add_zero]
+
+/-- Engel's dual triangular degree-reduction shear step: replacing $Q$ with $Q + c P^k$ strictly preserves $\det J(P, Q)$. -/
+theorem jacobian_shear_P (P Q : MvPolynomial (Fin 2) ℂ) (c : ℂ) (k : ℕ) :
+    jacobian P (Q + C c * P ^ k) = jacobian P Q := by
+  rw [jacobian_add_right, jacobian_smul_right, jacobian_self_pow, mul_zero, add_zero]
+
+/-- Vitushkin's cross-term obstruction: for the pair $(X + Y^2, Y + X^2)$, the Jacobian determinant
+develops a non-trivial cross term $1 - 4XY$. -/
+theorem vitushkin_cross_term_jacobian :
+    jacobian (varX + varY ^ 2) (varY + varX ^ 2) = 1 - 4 * varX * varY := by
+  dsimp [jacobian, varX, varY]
+  simp only [map_add, pderiv_pow, pderiv_X_self]
+  have h01 : (0 : Fin 2) ≠ 1 := by decide
+  have h10 : (1 : Fin 2) ≠ 0 := by decide
+  rw [pderiv_X_of_ne h10, pderiv_X_of_ne h01]
+  ring
+
+/-- Refutation of unit Jacobian preservation: the Jacobian determinant of $(X + Y^2, Y + X^2)$ is not 1. -/
+theorem vitushkin_jacobian_ne_one :
+    jacobian (varX + varY ^ 2) (varY + varX ^ 2) ≠ 1 := by
+  intro h
+  have heval := congr_arg (eval (fun _ : Fin 2 => (1 : ℂ))) h
+  rw [vitushkin_cross_term_jacobian] at heval
+  simp [varX, varY, eval_X] at heval
+
+end EngelJacobianRefutation

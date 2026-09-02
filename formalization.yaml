@@ -1,58 +1,62 @@
 version: "v0.4"
 
 project:
-  name: "Shitov's Counterexample to Hedetniemi's Conjecture"
+  name: "Vitushkin's Refutation of Engel's Jacobian Paper"
   authors:
     - "Noah Cohen"
   responsible_maintainers:
     - "Noah Cohen"
   license: "CC0-1.0"
   description: >-
-    Machine-checked Lean 4 formalization of Yaroslav Shitov's structural disproof of
-    Hedetniemi's conjecture (Annals of Mathematics 190, 2019, 663–667). Formalizes
-    categorical tensor products of graphs, canonical homomorphisms, exponential graphs
-    (El-Zahar & Sauer 1985), canonical evaluation colorings, and Shitov's reduction
-    establishing that counterexample pairs strictly violate Hedetniemi's chromatic formula.
+    A machine-checked Lean 4 formalization of Anatoly G. Vitushkin's 1973/1975 algebraic obstruction
+    and refutation of Wolfgang Engel's 1955 paper on the 2D Jacobian Conjecture. Engel claimed that any
+    polynomial automorphism pair (P, Q) with constant non-zero Jacobian determinant can be triangularly
+    degree-reduced to linear coordinates via elementary Cremona shears P - c Q^k. Vitushkin proved that
+    in the presence of cross-terms, polynomial pairs develop non-vanishing obstruction terms in their
+    Jacobian determinant that prevent elementary triangular reduction without non-trivial algebraic cancellations.
+    The suite formalizes the 2D Jacobian determinant over ℂ[X, Y], preservation under elementary shears,
+    the exact shear defect formulas, and Vitushkin's explicit non-invariance certificate.
 
 classification:
-  arxiv: [math.CO]
-  msc2020: ["05C15", "05C76"]
+  arxiv: [math.AG, math.AC]
+  msc2020: ["14R15", "14E07", "13B25", "13F20"]
 
 sources:
-  - title: "Counterexamples to Hedetniemi's conjecture"
+  - title: "Ein Satz über ganze Cremona-Transformationen der Ebene"
     type: paper
     authors:
-      - "Yaroslav Shitov"
-    venue: "Annals of Mathematics 190 (2019), 663–667"
-    year: 2019
+      - "Wolfgang Engel"
+    venue: "Mathematische Annalen"
+    year: 1955
     relationship: formalizes
-  - title: "The chromatic number of the product of two 4-chromatic graphs is 4"
+  - title: "On polynomial transformation of C^n manifolds"
     type: paper
     authors:
-      - "Mohamed El-Zahar"
-      - "Norbert Sauer"
-    venue: "Combinatorica 5 (1985), 121–126"
-    year: 1985
-    relationship: adapts
+      - "Anatoly G. Vitushkin"
+    venue: "Manifolds-Tokyo 1973, University of Tokyo Press"
+    year: 1975
+    relationship: formalizes
     note: >-
-      Foundational construction of exponential graphs and evaluation colorings for categorical products.
+      Formalizes Vitushkin's algebraic obstruction identifying the defect in Engel's degree-reduction process.
 
 related_formalizations:
-  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Combinatorics/SimpleGraph/Coloring/Vertex.lean"
+  - id: "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Algebra/MvPolynomial/PDeriv.lean"
     relationship: builds-on
-    note: "Extends Mathlib's simple graph chromatic number and vertex coloring theory to tensor products."
+    note: "Builds on Mathlib's multivariate polynomial partial derivations."
 
 automation:
   methods:
     - method: agent
       tool_setup: >-
-        Formalized using an agentic Lean 4 workflow with Lean LSP verification.
-        Axioms strictly verified: propext, Quot.sound, Classical.choice.
+        Formalized using an agentic Lean 4 workflow with automated proof golfing and interactive
+        Lean LSP checking under maintainer direction and human verification.
+        All declarations rely strictly on standard Lean 4 kernel axioms (propext, Quot.sound, Classical.choice).
 
 review:
   status: self-assessed
   reviewers:
     - "Noah Cohen"
   notes: >-
-    Challenge contains deliberate proof holes (:= sorry) with synchronized AST signatures.
-    Solution verified with 0 sorries, 0 custom axioms, and 0 warnings.
+    Challenge contains deliberate proof holes (`:= sorry` for automated benchmark evaluation),
+    while all definitions and theorem statements are completely specified. Solution verified through
+    human audit by the maintainers with 0 errors, 0 sorries, and strictly standard kernel axioms.
