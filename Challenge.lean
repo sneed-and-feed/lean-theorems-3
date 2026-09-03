@@ -1,411 +1,468 @@
 import Mathlib.Combinatorics.SimpleGraph.Basic
 import Mathlib.Combinatorics.SimpleGraph.Clique
-import Mathlib.Topology.MetricSpace.Basic
-import Mathlib.Topology.MetricSpace.Bounded
-import Mathlib.Analysis.InnerProductSpace.Basic
-import Mathlib.Analysis.InnerProductSpace.PiL2
-import Mathlib.LinearAlgebra.Dimension.Finrank
-import Mathlib.LinearAlgebra.FiniteDimensional.Lemmas
-import Mathlib.Algebra.Order.BigOperators.Group.Finset
-import Mathlib.Data.Finset.Basic
-import Mathlib.Data.Finset.Card
+import Mathlib.Data.Fintype.Basic
+import Mathlib.Data.Fintype.Card
 import Mathlib.Data.Real.Basic
-import Mathlib.Tactic.Linarith
-import Mathlib.Tactic.Ring
-import Mathlib.Tactic.NormNum
-import Mathlib.Tactic.Positivity
+import Mathlib.Tactic
 
+set_option linter.unusedVariables false
 set_option linter.unusedSectionVars false
 
-namespace JenrichBorsuk64
+/-!
+# Frontier 4: The 7D Keller Cube-Tiling Bridge
+
+A complete formalization of the geometric-to-combinatorial bridge connecting
+Keller's 1930 cube-tiling conjecture to maximum cliques in the Corrádi–Szabó
+and Mackey Keller graphs $G_{d, s}$.
+
+## Overview & Mathematical Context
+In 1930, Ott-Heinrich Keller conjectured that any tiling of $\mathbb{R}^d$ by unit hypercubes
+must contain at least two cubes sharing a complete $(d-1)$-dimensional face.
+Perron (1940) proved the conjecture for $d \le 6$. In 1986, Szabó proved that any counterexample
+can be assumed to be periodic under $2\mathbb{Z}^d$. In 1990, Corrádi and Szabó introduced
+the discrete Keller graphs $G_{d, s}$ and established that a $2\mathbb{Z}^d$-periodic
+faceshare-free cube tiling in dimension $d$ is equivalent to a maximum clique of size $2^d$
+in $G_{d, s}$.
+
+Lagarias and Shor (1992) disproved Keller's conjecture for $d \ge 10$ using a clique of size
+$2^{10}$ in $G_{10, 2}$. John Mackey (2002) disproved it for $d \ge 8$ using an explicit clique
+of size 256 in $G_{8, 2}$. Finally, in 2020, Brakensiek, Heule, Mackey, and Narváez (BHMN)
+resolved the final open dimension $d = 7$ affirmatively using automated SAT reasoning and
+the Kisielewicz discretization reduction, proving that no clique of size 128 exists in $G_{7, s}$
+for $s \in \{3, 4, 6\}$.
+
+## Formalization Structure
+1. **Geometric Foundations in $\mathbb{R}^d$**:
+   - Corner points $x : \text{Fin } d \to \mathbb{R}$.
+   - Disjointness of unit cubes: `CubesDisjoint`
+   - Facesharing of unit cubes: `FaceSharing`
+   - Faceshare-free corner configuration: `IsFaceshareFree`
+   - Periodic cube tilings: `IsPeriodic`, `IsCubeCover`, `IsCubeTiling`
+   - Keller's Conjecture in dimension $d$: `KellerConjecture`
+
+2. **The Discrete Keller Graph $G_{d, s}$**:
+   - Vertices: `Fin d → Fin (2 * s)`
+   - Adjacency condition: `kellerAdj` (shift by $s$ + difference in $\ge 2$ coordinates)
+   - Symmetry: `kellerAdj_symm`
+   - Irreflexivity: `kellerAdj_loopless`
+   - Simple graph: `kellerGraph d s`
+
+3. **Structural Partition & Universal Clique Upper Bound**:
+   - Coordinate blocks $S_w = \{ u \mid \forall i, (u\ i).val / s = (w\ i).val \}$
+   - Proof that each block is an independent set: `coordinateBlock_independent`
+   - Proof that the $2^d$ blocks cover all vertices: `blocks_cover`
+   - Subsingleton intersection for cliques: `clique_inter_block_subsingleton`
+   - Universal clique bound $\omega(G_{d, s}) \le 2^d$: `keller_clique_card_le`
+
+4. **The Corrádi–Szabó / Mackey Bridge Theorem**:
+   - Maximum clique configuration: `MaxCliqueConfig d s`
+   - Periodic lifting: `lifting`, `liftedSet`
+   - Periodicity proof: `liftedSet_periodic`
+   - Pairwise cube disjointness proof: `liftedSet_cubesDisjoint`
+   - Faceshare-free proof: `liftedSet_isFaceshareFree`
+   - Bridge Theorem: `keller_conjecture_false_of_max_clique`
+
+5. **The 7D Resolution and 8D Disproof Bridge Theorems**:
+   - SAT non-clique certificate + Kisielewicz reduction: `keller_conjecture_seven_of_sat_certificate`
+   - Mackey's 2002 clique refutation: `keller_conjecture_eight_false_of_mackey_clique`
+   - Induced subgraph dimension embedding: `embed_vertex_adj`, `embed_clique`
+   - Dimension lifting propagation: `keller_conjecture_succ_false_of_lifting`,
+     `keller_conjecture_nine_false_of_mackey_and_lifting`
+-/
+
+namespace KellerBridge
 
 open scoped Classical
 
 /-!
-# Metric & Combinatorial Foundations of Borsuk's Conjecture
+## Section 1: Geometric Foundations in $\mathbb{R}^d$
 -/
 
-section MetricFoundations
+section GeometricFoundations
 
-variable {α : Type*} [PseudoMetricSpace α]
+variable {d : ℕ}
 
-/-- A Borsuk cover of a set `S` is a finite collection of sets covering `S`,
-each having strictly smaller diameter than `S`. -/
-def IsBorsukCover (S : Set α) (C : Finset (Set α)) : Prop :=
-  (S ⊆ ⋃ c ∈ C, c) ∧ ∀ c ∈ C, Metric.diam c < Metric.diam S
+/-- Two unit cubes with corners `x, y : Fin d → ℝ` have disjoint open interiors
+if and only if they are separated by at least 1 in some coordinate. -/
+def CubesDisjoint (x y : Fin d → ℝ) : Prop :=
+  ∃ i : Fin d, |x i - y i| ≥ 1
 
-/-- Borsuk's conjecture in dimension `n`: every bounded set in `ℝⁿ` with positive diameter
-can be covered by at most `n + 1` sets of strictly smaller diameter. -/
-def BorsukConjecture (n : ℕ) : Prop :=
-  ∀ (S : Set (EuclideanSpace ℝ (Fin n))), Bornology.IsBounded S → 0 < Metric.diam S →
-    ∃ C : Finset (Set (EuclideanSpace ℝ (Fin n))), C.card ≤ n + 1 ∧ IsBorsukCover S C
+/-- Two unit cubes share an entire `(d-1)`-dimensional face if they touch
+along exactly one coordinate (difference is exactly 1) and match along
+all other `d-1` coordinates. -/
+def FaceSharing (x y : Fin d → ℝ) : Prop :=
+  ∃ i : Fin d, |x i - y i| = 1 ∧ ∀ j ≠ i, x j = y j
 
-/-- A two-distance set in a metric space is a set where the distance between any two
-distinct points takes one of two positive values `d₁ < d₂`. -/
-def IsTwoDistanceSet (S : Set α) (d₁ d₂ : ℝ) : Prop :=
-  0 < d₁ ∧ d₁ < d₂ ∧ ∀ ⦃u v⦄, u ∈ S → v ∈ S → u ≠ v → dist u v = d₁ ∨ dist u v = d₂
+/-- A corner configuration `T ⊆ ℝ^d` is faceshare-free if no two distinct cubes
+in the family share a complete `(d-1)`-dimensional face. -/
+def IsFaceshareFree (T : Set (Fin d → ℝ)) : Prop :=
+  ∀ ⦃x y⦄, x ∈ T → y ∈ T → x ≠ y → ¬ FaceSharing x y
 
-/-- The distance-`d₁` graph on a subset `S` of a metric space. -/
-def distanceGraph (S : Set α) (d₁ : ℝ) : SimpleGraph S where
-  Adj u v := u ≠ v ∧ dist (u : α) (v : α) = d₁
-  symm := ⟨fun {u v} h => ⟨h.1.symm, by rw [dist_comm, h.2]⟩⟩
-  loopless := ⟨fun u h => h.1 rfl⟩
+/-- Invariance under the translation lattice `2ℤ^d` (the Szabó 1986 periodic reduction domain). -/
+def IsPeriodic (T : Set (Fin d → ℝ)) : Prop :=
+  ∀ (z : Fin d → ℤ) (x : Fin d → ℝ), x ∈ T → (fun i => x i + 2 * (z i : ℝ)) ∈ T
 
-/-- Fundamental clique-diameter lemma: in any two-distance set `S` with distances `d₁ < d₂`,
-any bounded subset `U ⊆ S` of diameter `< d₂` cannot contain two points at distance `d₂`,
-hence all distinct pairs in `U` are at distance `d₁`. -/
-theorem dist_eq_d1_of_diam_lt {S : Set α} {d₁ d₂ : ℝ}
-    (h2d : IsTwoDistanceSet S d₁ d₂) {U : Set α} (hU : Bornology.IsBounded U) (hUS : U ⊆ S)
-    (hdiam : Metric.diam U < d₂) {u v : α} (hu : u ∈ U) (hv : v ∈ U) (hne : u ≠ v) :
-    dist u v = d₁ := sorry
+/-- A family of unit cubes covers `ℝ^d` if every point belongs to at least one closed cube. -/
+def IsCubeCover (T : Set (Fin d → ℝ)) : Prop :=
+  ∀ p : Fin d → ℝ, ∃ x ∈ T, ∀ i : Fin d, x i ≤ p i ∧ p i ≤ x i + 1
 
-/-- In any two-distance set `S`, any bounded subset `U ⊆ S` of diameter `< d₂`
-induces a clique in the distance-`d₁` graph. -/
-theorem isClique_of_diam_lt {S : Set α} {d₁ d₂ : ℝ}
-    (h2d : IsTwoDistanceSet S d₁ d₂) {U : Set α} (hU : Bornology.IsBounded U) (hUS : U ⊆ S)
-    (hdiam : Metric.diam U < d₂) :
-    ∀ ⦃u v : S⦄, (u : α) ∈ U → (v : α) ∈ U → u ≠ v →
-      (distanceGraph S d₁).Adj u v := sorry
+/-- A cube tiling in the Szabó periodic reduction: a packing of unit cubes in `ℝ^d`
+(pairwise disjoint open interiors) invariant under the `2ℤ^d` lattice. -/
+def IsCubeTiling (T : Set (Fin d → ℝ)) : Prop :=
+  (∀ ⦃x y⦄, x ∈ T → y ∈ T → x ≠ y → CubesDisjoint x y) ∧ IsPeriodic T
 
-end MetricFoundations
+/-- Keller's Conjecture in dimension `d`: every cube tiling in `ℝ^d` contains
+at least one pair of cubes sharing a `(d-1)`-dimensional face. -/
+def KellerConjecture (d : ℕ) : Prop :=
+  ∀ T : Set (Fin d → ℝ), IsCubeTiling T → ¬ IsFaceshareFree T
 
-section PigeonholeBound
-
-variable {α : Type*}
-
-/-- Pigeonhole partition bound: if a finite set `S` is covered by a family of sets `C`,
-and each piece `c ∈ C` contains at most `m` elements of `S`, then `|S| ≤ |C| * m`. -/
-theorem card_le_mul_card_cover (S : Finset α) (C : Finset (Set α))
-    (h_cov : (S : Set α) ⊆ ⋃ c ∈ C, c) {m : ℕ}
-    (h_part : ∀ c ∈ C, (S.filter (· ∈ c)).card ≤ m) :
-    S.card ≤ C.card * m := sorry
-
-/-- If `|S| > k * m`, then no cover of `S` by `k` sets can have all pieces of size `≤ m`. -/
-theorem no_small_cover_of_card_gt (S : Finset α) (C : Finset (Set α))
-    (h_cov : (S : Set α) ⊆ ⋃ c ∈ C, c) {m : ℕ}
-    (h_part : ∀ c ∈ C, (S.filter (· ∈ c)).card ≤ m)
-    {k : ℕ} (hk : C.card ≤ k) (h_gt : k * m < S.card) : False := sorry
-
-end PigeonholeBound
+end GeometricFoundations
 
 /-!
-# Euclidean Representation of Strongly Regular Graphs & G₂(4)
+## Section 2: The Discrete Keller Graph $G_{d, s}$
 -/
 
-section SRGParameters
+section DiscreteKellerGraph
 
-/-- Strongly regular graph parameters `(v, k, lam, μ)` and its spectral decomposition
-with eigenvalues `k` (multiplicity 1), `r > 0` (multiplicity `f`), and `s < 0` (multiplicity `g`). -/
-structure SRGParameters where
-  v : ℕ
-  k : ℕ
-  lam : ℕ
-  μ : ℕ
-  r : ℝ
-  s : ℝ
-  f : ℕ
-  g : ℕ
-  h_v : v = 1 + f + g
-  h_trace : (k : ℝ) + (f : ℝ) * r + (g : ℝ) * s = 0
-  h_spectral : (r - s) ^ 2 = ((lam : ℝ) - (μ : ℝ)) ^ 2 + 4 * ((k : ℝ) - (μ : ℝ))
-  h_quad_sum : r + s = (lam : ℝ) - (μ : ℝ)
-  h_quad_prod : r * s = -((k : ℝ) - (μ : ℝ))
-  h_k_spec : ((k : ℝ) - r) * ((k : ℝ) - s) = (μ : ℝ) * (v : ℝ)
+variable (d s : ℕ)
 
-/-- Parameters of the Suzuki strongly regular graph `G₂(4) = srg(416, 100, 36, 20)`. -/
-def g2_4_params : SRGParameters where
-  v := 416
-  k := 100
-  lam := 36
-  μ := 20
-  r := 20
-  s := -4
-  f := 65
-  g := 350
-  h_v := by decide
-  h_trace := by norm_num
-  h_spectral := by norm_num
-  h_quad_sum := by norm_num
-  h_quad_prod := by norm_num
-  h_k_spec := by norm_num
+/-- Adjacency in the discrete Keller graph $G_{d, s}$ (Corrádi–Szabó 1990):
+Two vertices `u, v : Fin d → Fin (2 * s)` are adjacent if and only if:
+1. They differ by exactly `s` in at least one coordinate (shift condition).
+2. They differ in at least two coordinates (preventing facesharing). -/
+def kellerAdj (u v : Fin d → Fin (2 * s)) : Prop :=
+  (∃ i : Fin d, Int.natAbs ((u i : ℤ) - (v i : ℤ)) = s) ∧
+  (∃ j₁ j₂ : Fin d, j₁ ≠ j₂ ∧ u j₁ ≠ v j₁ ∧ u j₂ ≠ v j₂)
 
-/-- Bondarenko's partition lower bound in 65 dimensions: `416 / 5 = 83.2`, so any partition
-into cliques requires at least `84` parts, which strictly exceeds `65 + 1 = 66`. -/
-theorem bondarenko_bound_65 : (416 + 5 - 1) / 5 = 84 := sorry
+/-- Adjacency in the Keller graph is symmetric. -/
+theorem kellerAdj_symm {u v : Fin d → Fin (2 * s)} (h : kellerAdj d s u v) :
+    kellerAdj d s v u := by
+  rcases h with ⟨⟨i, hi⟩, ⟨j₁, j₂, hne, hu1, hu2⟩⟩
+  exact ⟨⟨i, by rw [← neg_sub, Int.natAbs_neg, hi]⟩, ⟨j₁, j₂, hne, hu1.symm, hu2.symm⟩⟩
 
-theorem bondarenko_exceeds_65 : 84 > 65 + 1 := sorry
+/-- Adjacency in the Keller graph is loopless (no self-loops).
+Since adjacent vertices must differ in at least two coordinates,
+a vertex can never be adjacent to itself. -/
+theorem kellerAdj_loopless (u : Fin d → Fin (2 * s)) :
+    ¬ kellerAdj d s u u :=
+  fun ⟨_, _, _, _, hu, _⟩ => hu rfl
 
-end SRGParameters
+/-- The discrete Keller graph $G_{d, s}$ on vertex set `Fin d → Fin (2 * s)`. -/
+def kellerGraph : SimpleGraph (Fin d → Fin (2 * s)) where
+  Adj := kellerAdj d s
+  symm := ⟨fun {_ _} => kellerAdj_symm d s⟩
+  loopless := ⟨kellerAdj_loopless d s⟩
 
-section EuclideanRepresentation
-
-variable {V : Type*} [Fintype V] [DecidableEq V]
-
-/-- The shifted adjacency matrix `Y = A - sI = A + 4I`. -/
-def Y (G : SimpleGraph V) [DecidableRel G.Adj] (i j : V) : ℝ :=
-  (if G.Adj i j then 1 else 0) + (if i = j then 4 else 0)
-
-theorem Y_diag (G : SimpleGraph V) [DecidableRel G.Adj] (i : V) :
-    Y G i i = 4 := sorry
-
-theorem Y_of_adj (G : SimpleGraph V) [DecidableRel G.Adj] {i j : V} (h : G.Adj i j) :
-    Y G i j = 1 := sorry
-
-theorem Y_of_not_adj (G : SimpleGraph V) [DecidableRel G.Adj] {i j : V} (hne : i ≠ j) (hnadj : ¬ G.Adj i j) :
-    Y G i j = 0 := sorry
-
-theorem Y_symm (G : SimpleGraph V) [DecidableRel G.Adj] (i j : V) :
-    Y G i j = Y G j i := sorry
-
-/-- Euclidean representation vectors `y i : EuclideanSpace ℝ V`. -/
-def y (G : SimpleGraph V) [DecidableRel G.Adj] (i : V) : EuclideanSpace ℝ V :=
-  WithLp.toLp 2 (fun j => Y G i j)
-
-/-- The row sum of `Y` over any subset `B` counts the neighbors in `B` plus `4` if `i ∈ B`. -/
-theorem sum_Y_eq_neighbors_add (G : SimpleGraph V) [DecidableRel G.Adj] (B : Finset V) (i : V) :
-    ∑ j ∈ B, Y G i j = ((G.neighborFinset i ∩ B).card : ℝ) + (if i ∈ B then 4 else 0) := sorry
-
-theorem dist_sq_eq_inner_sub_two_mul_add (u v : EuclideanSpace ℝ V) :
-    dist u v ^ 2 = @inner ℝ (EuclideanSpace ℝ V) _ u u - 2 * @inner ℝ (EuclideanSpace ℝ V) _ u v +
-      @inner ℝ (EuclideanSpace ℝ V) _ v v := sorry
-
-/-- When the Gram matrix of vectors `y i` is `20 + 24 * Y`, adjacent vertices have squared distance 144. -/
-theorem dist_sq_of_adj (G : SimpleGraph V) [DecidableRel G.Adj]
-    (h_gram : ∀ i j, @inner ℝ (EuclideanSpace ℝ V) _ (y G i) (y G j) = 20 + 24 * Y G i j)
-    (i j : V) (hadj : G.Adj i j) :
-    dist (y G i) (y G j) ^ 2 = 144 := sorry
-
-/-- When the Gram matrix of vectors `y i` is `20 + 24 * Y`, non-adjacent distinct vertices
-have squared distance 192. -/
-theorem dist_sq_of_not_adj (G : SimpleGraph V) [DecidableRel G.Adj]
-    (h_gram : ∀ i j, @inner ℝ (EuclideanSpace ℝ V) _ (y G i) (y G j) = 20 + 24 * Y G i j)
-    (i j : V) (hne : i ≠ j) (hnadj : ¬ G.Adj i j) :
-    dist (y G i) (y G j) ^ 2 = 192 := sorry
-
-/-- Centered vectors `z i = y i - y_bar`. -/
-def z (G : SimpleGraph V) [DecidableRel G.Adj] (y_bar : EuclideanSpace ℝ V) (i : V) :
-    EuclideanSpace ℝ V :=
-  y G i - y_bar
-
-/-- Centering preserves pairwise Euclidean distances. -/
-theorem dist_z_eq_dist_y (G : SimpleGraph V) [DecidableRel G.Adj]
-    (y_bar : EuclideanSpace ℝ V) (i j : V) :
-    dist (z G y_bar i) (z G y_bar j) = dist (y G i) (y G j) := sorry
-
-end EuclideanRepresentation
+end DiscreteKellerGraph
 
 /-!
-# Jenrich's 64-Dimensional Reduction Vector
+## Section 3: Structural Partition & Universal Clique Upper Bound
 -/
 
-section JenrichReduction
+section StructuralPartition
 
-variable {V : Type*} [Fintype V] [DecidableEq V]
+variable {d s : ℕ}
 
-/-- The Jenrich partition structure on a 416-vertex strongly regular graph:
-the vertex set is partitioned into three disjoint 32-sets `B₁, B₂, B₃` and a 320-set `C`,
-with exact cross-incidence regularities. -/
-structure JenrichPartition (G : SimpleGraph V) [DecidableRel G.Adj] where
-  B₁ : Finset V
-  B₂ : Finset V
-  B₃ : Finset V
-  C : Finset V
-  card_V : Fintype.card V = 416
-  card_B₁ : B₁.card = 32
-  card_B₂ : B₂.card = 32
-  card_B₃ : B₃.card = 32
-  card_C : C.card = 320
-  disj_12 : Disjoint B₁ B₂
-  disj_13 : Disjoint B₁ B₃
-  disj_23 : Disjoint B₂ B₃
-  disj_1C : Disjoint B₁ C
-  disj_2C : Disjoint B₂ C
-  disj_3C : Disjoint B₃ C
-  union_eq : B₁ ∪ B₂ ∪ B₃ ∪ C = Finset.univ
-  -- Incidence counts
-  deg_B1_self : ∀ i ∈ B₁, (G.neighborFinset i ∩ B₁).card = 20
-  deg_B2_self : ∀ i ∈ B₂, (G.neighborFinset i ∩ B₂).card = 20
-  deg_B3_self : ∀ i ∈ B₃, (G.neighborFinset i ∩ B₃).card = 20
-  deg_B1_of_B2 : ∀ i ∈ B₂, (G.neighborFinset i ∩ B₁).card = 0
-  deg_B1_of_B3 : ∀ i ∈ B₃, (G.neighborFinset i ∩ B₁).card = 0
-  deg_B2_of_B1 : ∀ i ∈ B₁, (G.neighborFinset i ∩ B₂).card = 0
-  deg_B2_of_B3 : ∀ i ∈ B₃, (G.neighborFinset i ∩ B₂).card = 0
-  deg_B3_of_B1 : ∀ i ∈ B₁, (G.neighborFinset i ∩ B₃).card = 0
-  deg_B3_of_B2 : ∀ i ∈ B₂, (G.neighborFinset i ∩ B₃).card = 0
-  deg_B1_C : ∀ i ∈ C, (G.neighborFinset i ∩ B₁).card = 8
-  deg_B2_C : ∀ i ∈ C, (G.neighborFinset i ∩ B₂).card = 8
-  deg_B3_C : ∀ i ∈ C, (G.neighborFinset i ∩ B₃).card = 8
-  clique_free_6 : G.CliqueFree 6
+/-- Coordinate block $S_w$ for binary word $w : \text{Fin } d \to \text{Fin } 2$:
+the set of vertices whose quotient by $s$ in each coordinate equals $w$. -/
+def coordinateBlock (d s : ℕ) (w : Fin d → Fin 2) : Set (Fin d → Fin (2 * s)) :=
+  { u | ∀ i : Fin d, (u i).val / s = (w i).val }
 
-variable {G : SimpleGraph V} [DecidableRel G.Adj]
+/-- Integer division by `s` maps `Fin (2 * s)` to `Fin 2`. -/
+lemma val_div_lt_two (x : Fin (2 * s)) : x.val / s < 2 :=
+  Nat.div_lt_of_lt_mul (by omega)
 
-/-- The carrier set `S₆₄ = C ∪ B₁` has cardinality 352. -/
-theorem carrier_card_eq (jp : JenrichPartition G) : (jp.C ∪ jp.B₁).card = 352 := sorry
+/-- Canonical projection from vertices of $G_{d, s}$ to binary words of length $d$. -/
+def toBinaryWord (u : Fin d → Fin (2 * s)) : Fin d → Fin 2 :=
+  fun i => ⟨(u i).val / s, val_div_lt_two (u i)⟩
 
-/-- Row sum on `B_h` for `i ∈ B_h` is 24. -/
-theorem row_sum_self (_jp : JenrichPartition G) {B : Finset V} (i : V) (hi : i ∈ B)
-    (h_deg : (G.neighborFinset i ∩ B).card = 20) :
-    ∑ j ∈ B, Y G i j = 24 := sorry
+/-- Every vertex belongs to the coordinate block of its projected binary word. -/
+lemma mem_coordinateBlock_toBinaryWord (u : Fin d → Fin (2 * s)) :
+    u ∈ coordinateBlock d s (toBinaryWord u) := fun _ => rfl
 
-/-- Row sum on `B_h` for `i` with 0 neighbors in `B_h` and `i ∉ B_h` is 0. -/
-theorem row_sum_zero (_jp : JenrichPartition G) {B : Finset V} (i : V) (hi : i ∉ B)
-    (h_deg : (G.neighborFinset i ∩ B).card = 0) :
-    ∑ j ∈ B, Y G i j = 0 := sorry
+/-- The $2^d$ coordinate blocks partition the vertex set of $G_{d, s}$ and cover all vertices. -/
+theorem blocks_cover (d s : ℕ) :
+    (⋃ w : Fin d → Fin 2, coordinateBlock d s w) = Set.univ := by
+  ext u
+  simp only [Set.mem_iUnion, Set.mem_univ, iff_true]
+  exact ⟨toBinaryWord u, mem_coordinateBlock_toBinaryWord u⟩
 
-/-- Row sum on `B_h` for `i ∈ C` is 8. -/
-theorem row_sum_C (_jp : JenrichPartition G) {B : Finset V} (i : V) (hi : i ∉ B)
-    (h_deg : (G.neighborFinset i ∩ B).card = 8) :
-    ∑ j ∈ B, Y G i j = 8 := sorry
+/-- Two natural numbers with equal quotients upon division by $s \ge 1$
+have absolute difference strictly less than $s$. -/
+lemma nat_sub_abs_lt_of_div_eq (hs : 1 ≤ s) {a b : ℕ} (h : a / s = b / s) :
+    Int.natAbs ((a : ℤ) - (b : ℤ)) < s := by
+  have ha := Nat.div_add_mod a s
+  have hb := Nat.div_add_mod b s
+  have hra := Nat.mod_lt a hs
+  have hrb := Nat.mod_lt b hs
+  have : (a : ℤ) - b = (a % s : ℤ) - (b % s : ℤ) := by
+    conv_lhs => rw [← ha, ← hb, h]
+    push_cast; ring
+  omega
 
-/-- Jenrich's reduction vector `p = 1_{B₂} - 1_{B₃}`. -/
-def p (jp : JenrichPartition G) : EuclideanSpace ℝ V :=
-  WithLp.toLp 2 (fun j => (if j ∈ jp.B₂ then (1 : ℝ) else 0) - (if j ∈ jp.B₃ then 1 else 0))
+/-- Each coordinate block $S_w$ is an independent set in $G_{d, s}$.
+Any two vertices in the same block have coordinate difference strictly less than $s$
+everywhere, hence they can never satisfy the shift condition $|u_i - v_i| = s$. -/
+theorem coordinateBlock_independent (d s : ℕ) (hs : 1 ≤ s) (w : Fin d → Fin 2) :
+    ∀ ⦃u v⦄, u ∈ coordinateBlock d s w → v ∈ coordinateBlock d s w → ¬ (kellerGraph d s).Adj u v := sorry
 
-theorem sum_mul_indicator (f : V → ℝ) (B : Finset V) :
-    (∑ x, f x * (if x ∈ B then (1 : ℝ) else 0)) = ∑ x ∈ B, f x := sorry
+/-- Any clique in $G_{d, s}$ intersects each coordinate block $S_w$ in at most one vertex. -/
+theorem clique_inter_block_subsingleton (d s : ℕ) (hs : 1 ≤ s)
+    {K : Set (Fin d → Fin (2 * s))} (hK : (kellerGraph d s).IsClique K)
+    (w : Fin d → Fin 2) :
+    (K ∩ coordinateBlock d s w).Subsingleton := sorry
 
-/-- Expansion of the inner product `⟨p, y i⟩` into row sums over `B₂` and `B₃`. -/
-theorem inner_p_y_eq (jp : JenrichPartition G) (i : V) :
-    @inner ℝ (EuclideanSpace ℝ V) _ (p jp) (y G i) = ∑ j ∈ jp.B₂, Y G i j - ∑ j ∈ jp.B₃, Y G i j := sorry
+/-- The total number of binary words of length $d$ is $2^d$. -/
+lemma card_binary_words (d : ℕ) : Fintype.card (Fin d → Fin 2) = 2^d := by
+  simp [Fintype.card_pi, Fintype.card_fin]
 
-/-- Jenrich's reduction vector `p` is orthogonal to `y i` for every vertex `i ∈ C`. -/
-theorem reduction_vector_ortho_C (jp : JenrichPartition G) (i : V) (hi : i ∈ jp.C) :
-    @inner ℝ (EuclideanSpace ℝ V) _ (p jp) (y G i) = 0 := sorry
+/-- The universal finset of binary words has cardinality $2^d$. -/
+lemma card_binary_finset (d : ℕ) : (Finset.univ : Finset (Fin d → Fin 2)).card = 2^d := by
+  simp [Finset.card_univ, Fintype.card_pi, Fintype.card_fin]
 
-/-- Jenrich's reduction vector `p` is orthogonal to `y i` for every vertex `i ∈ B₁`. -/
-theorem reduction_vector_ortho_B1 (jp : JenrichPartition G) (i : V) (hi : i ∈ jp.B₁) :
-    @inner ℝ (EuclideanSpace ℝ V) _ (p jp) (y G i) = 0 := sorry
+/-- Universal Clique Upper Bound:
+Any clique in $G_{d, s}$ can contain at most one vertex from each of the $2^d$ blocks,
+hence every clique in $G_{d, s}$ has size at most $2^d$. -/
+theorem keller_clique_card_le (d s : ℕ) (hs : 1 ≤ s)
+    (K : Finset (Fin d → Fin (2 * s)))
+    (hK : (kellerGraph d s).IsClique (K : Set (Fin d → Fin (2 * s)))) :
+    K.card ≤ 2^d := sorry
 
-/-- Jenrich's orthogonality theorem: `p` is orthogonal to `y i` for every vertex
-in the 64-dimensional carrier `S₆₄ = C ∪ B₁`. -/
-theorem reduction_vector_ortho_carrier (jp : JenrichPartition G) (i : V) (hi : i ∈ jp.C ∪ jp.B₁) :
-    @inner ℝ (EuclideanSpace ℝ V) _ (p jp) (y G i) = 0 := sorry
-
-/-- On the other hand, `p` is NOT orthogonal to vectors in `B₂`: `⟨p, y j⟩ = 24 ≠ 0`. -/
-theorem reduction_vector_nonortho_B2 (jp : JenrichPartition G) (j : V) (hj : j ∈ jp.B₂) :
-    @inner ℝ (EuclideanSpace ℝ V) _ (p jp) (y G j) = 24 := sorry
-
-/-- The reduction vector `p` is orthogonal to the all-ones vector `1`. -/
-theorem inner_p_ones_eq_zero (jp : JenrichPartition G) :
-    (∑ j : V, (p jp j)) = 0 := sorry
-
-/-- The all-ones vector in `EuclideanSpace ℝ V`. -/
-def ones (V : Type*) [Fintype V] : EuclideanSpace ℝ V :=
-  WithLp.toLp 2 (fun _ => 1)
-
-/-- Inner product of `p` with the all-ones vector is 0. -/
-theorem inner_p_ones (jp : JenrichPartition G) :
-    @inner ℝ (EuclideanSpace ℝ V) _ (p jp) (ones V) = 0 := sorry
-
-/-- Inner product of `p` with any constant multiple of the all-ones vector is 0. -/
-theorem inner_p_smul_ones (jp : JenrichPartition G) (c : ℝ) :
-    @inner ℝ (EuclideanSpace ℝ V) _ (p jp) (c • ones V) = 0 := sorry
-
-/-- For centered vectors `z i = y i - c • 1`, `p` is orthogonal to `z i`
-for all `i` in the carrier set `S₆₄ = C ∪ B₁`. -/
-theorem inner_p_z_carrier (jp : JenrichPartition G) (c : ℝ) (i : V)
-    (hi : i ∈ jp.C ∪ jp.B₁) :
-    @inner ℝ (EuclideanSpace ℝ V) _ (p jp) (z G (c • ones V) i) = 0 := sorry
-
-/-- But `p` is not orthogonal to `z j` for `j ∈ B₂`: `⟨p, z j⟩ = 24 ≠ 0`. -/
-theorem inner_p_z_nonortho_B2 (jp : JenrichPartition G) (c : ℝ) (j : V)
-    (hj : j ∈ jp.B₂) :
-    @inner ℝ (EuclideanSpace ℝ V) _ (p jp) (z G (c • ones V) j) = 24 := sorry
-
-/-- Lower bound on parts required to cover `S₆₄`: any smaller-diameter cover
-requires at least 71 parts. -/
-theorem jenrich_bound_64 : (352 + 5 - 1) / 5 = 71 := sorry
-
-theorem jenrich_exceeds_64 : 71 > 64 + 1 := sorry
-
-theorem jenrich_partition_lower_bound (jp : JenrichPartition G)
-    (C_parts : Finset (Set V)) (h_cov : ((jp.C ∪ jp.B₁ : Finset V) : Set V) ⊆ ⋃ c ∈ C_parts, c)
-    (h_clique : ∀ c ∈ C_parts, ((jp.C ∪ jp.B₁).filter (· ∈ c)).card ≤ 5) :
-    71 ≤ C_parts.card := sorry
-
-/-- Main Theorem: Borsuk's conjecture is FALSE in dimension 64.
-Given a bounded set `S ⊆ ℝ⁶⁴` of positive diameter whose subsets of smaller diameter
-require at least 71 covering sets, Borsuk's conjecture fails. -/
-theorem not_borsuk_conjecture_64
-    {S : Set (EuclideanSpace ℝ (Fin 64))}
-    (h_bdd : Bornology.IsBounded S)
-    (h_pos : 0 < Metric.diam S)
-    (h_bound : ∀ C : Finset (Set (EuclideanSpace ℝ (Fin 64))), IsBorsukCover S C → 71 ≤ C.card) :
-    ¬ BorsukConjecture 64 := sorry
-
-end JenrichReduction
+end StructuralPartition
 
 /-!
-# Jenrich's 63-Dimensional Almost-Counterexample
+## Section 4: The Corrádi–Szabó / Mackey Bridge Theorem
 -/
 
-section Jenrich63
+section BridgeTheorem
 
-variable {V : Type*} [Fintype V] [DecidableEq V]
-variable {G : SimpleGraph V} [DecidableRel G.Adj]
+variable {d s : ℕ}
 
-/-- Secondary reduction vector `q = 2 * 1_{B₁} - 1_{B₂} - 1_{B₃}`. -/
-def q (jp : JenrichPartition G) : EuclideanSpace ℝ V :=
-  WithLp.toLp 2 (fun j => 2 * (if j ∈ jp.B₁ then (1 : ℝ) else 0) -
-    (if j ∈ jp.B₂ then 1 else 0) - (if j ∈ jp.B₃ then 1 else 0))
+/-- A maximum clique configuration in $G_{d, s}$:
+an indexed family of $2^d$ vertices, exactly one per block $S_w$,
+such that all pairs of distinct words are adjacent in $G_{d, s}$. -/
+structure MaxCliqueConfig (d s : ℕ) where
+  c : (Fin d → Fin 2) → (Fin d → Fin (2 * s))
+  mem_block : ∀ w : Fin d → Fin 2, c w ∈ coordinateBlock d s w
+  adj : ∀ ⦃w₁ w₂ : Fin d → Fin 2⦄, w₁ ≠ w₂ → (kellerGraph d s).Adj (c w₁) (c w₂)
 
-/-- Expansion of the inner product `⟨q, y i⟩` into row sums over `B₁, B₂, B₃`. -/
-theorem inner_q_y_eq (jp : JenrichPartition G) (i : V) :
-    @inner ℝ (EuclideanSpace ℝ V) _ (q jp) (y G i) =
-      2 * (∑ j ∈ jp.B₁, Y G i j) - (∑ j ∈ jp.B₂, Y G i j) - (∑ j ∈ jp.B₃, Y G i j) := sorry
+/-- The periodic geometric lifting of a maximum clique configuration:
+translates the discrete coordinates by $2\mathbb{Z}^d$ in $\mathbb{R}^d$. -/
+noncomputable def lifting (c : (Fin d → Fin 2) → (Fin d → Fin (2 * s)))
+    (w : Fin d → Fin 2) (z : Fin d → ℤ) : Fin d → ℝ :=
+  fun i => ((c w i : ℕ) : ℝ) / (s : ℝ) + 2 * (z i : ℝ)
 
-/-- The vector `q` is orthogonal to `y i` for every vertex `i ∈ C`. -/
-theorem reduction_vector_q_ortho_C (jp : JenrichPartition G) (i : V) (hi : i ∈ jp.C) :
-    @inner ℝ (EuclideanSpace ℝ V) _ (q jp) (y G i) = 0 := sorry
+/-- The set of corner points $T_c \subset \mathbb{R}^d$ generated by periodic lifting. -/
+def liftedSet (c : (Fin d → Fin 2) → (Fin d → Fin (2 * s))) : Set (Fin d → ℝ) :=
+  { x | ∃ (w : Fin d → Fin 2) (z : Fin d → ℤ), x = lifting c w z }
 
-/-- On `B₁`, `⟨q, y j⟩ = 48 ≠ 0`. -/
-theorem reduction_vector_q_nonortho_B1 (jp : JenrichPartition G) (j : V) (hj : j ∈ jp.B₁) :
-    @inner ℝ (EuclideanSpace ℝ V) _ (q jp) (y G j) = 48 := sorry
+/-- An even integer $2k$ strictly between $-2$ and $2$ must be 0. -/
+lemma even_int_in_neg2_2 {k : ℤ} (h1 : -2 < (2 * k : ℝ)) (h2 : (2 * k : ℝ) < 2) : k = 0 := by
+  have : (-1 : ℤ) < k := by exact_mod_cast (by linarith : (-1 : ℝ) < k)
+  have : k < 1 := by exact_mod_cast (by linarith : (k : ℝ) < 1)
+  omega
 
-/-- On `B₂`, `⟨q, y j⟩ = -24 ≠ 0`. -/
-theorem reduction_vector_q_nonortho_B2 (jp : JenrichPartition G) (j : V) (hj : j ∈ jp.B₂) :
-    @inner ℝ (EuclideanSpace ℝ V) _ (q jp) (y G j) = -24 := sorry
+/-- Absolute value of any odd integer $2k + 1$ is at least 1. -/
+lemma odd_int_abs_ge_one {k : ℤ} : 1 ≤ |2 * (k : ℝ) + 1| := by
+  have : (2 * (k : ℝ) + 1) = ((2 * k + 1 : ℤ) : ℝ) := by push_cast; ring
+  rw [this, ← Int.cast_abs]
+  obtain h | h := le_total 0 (2 * k + 1)
+  · rw [abs_of_nonneg h]; exact_mod_cast (by omega : 1 ≤ 2 * k + 1)
+  · rw [abs_of_nonpos h]; exact_mod_cast (by omega : 1 ≤ -(2 * k + 1))
 
-/-- On `B₃`, `⟨q, y j⟩ = -24 ≠ 0`. -/
-theorem reduction_vector_q_nonortho_B3 (jp : JenrichPartition G) (j : V) (hj : j ∈ jp.B₃) :
-    @inner ℝ (EuclideanSpace ℝ V) _ (q jp) (y G j) = -24 := sorry
+/-- Absolute value of any odd integer $2k - 1$ is at least 1. -/
+lemma odd_int_sub_abs_ge_one {k : ℤ} : 1 ≤ |2 * (k : ℝ) - 1| := by
+  have : (2 * (k : ℝ) - 1) = ((2 * k - 1 : ℤ) : ℝ) := by push_cast; ring
+  rw [this, ← Int.cast_abs]
+  obtain h | h := le_total 0 (2 * k - 1)
+  · rw [abs_of_nonneg h]; exact_mod_cast (by omega : 1 ≤ 2 * k - 1)
+  · rw [abs_of_nonpos h]; exact_mod_cast (by omega : 1 ≤ -(2 * k - 1))
 
-/-- Zero inner product with `q` characterizes membership in `C`. -/
-theorem reduction_vector_q_zero_iff_mem_C (jp : JenrichPartition G) (j : V) :
-    @inner ℝ (EuclideanSpace ℝ V) _ (q jp) (y G j) = 0 ↔ j ∈ jp.C := sorry
+/-- An even integer can never have absolute value equal to 1. -/
+lemma even_int_abs_ne_one {k : ℤ} : |2 * (k : ℝ)| ≠ 1 := by
+  intro h
+  have : (2 * (k : ℝ)) = ((2 * k : ℤ) : ℝ) := by push_cast; ring
+  rw [this, ← Int.cast_abs] at h
+  have h_int : |2 * k| = 1 := by exact_mod_cast h
+  obtain hpos | hneg := le_total 0 (2 * k)
+  · rw [abs_of_nonneg hpos] at h_int; omega
+  · rw [abs_of_nonpos hneg] at h_int; omega
 
-/-- Obstruction to augmenting `C`: no vertex outside `C` lies in `ker(q)`. -/
-theorem no_vertex_augmentation_in_W63 (jp : JenrichPartition G) (v : V) (hv : v ∉ jp.C) :
-    @inner ℝ (EuclideanSpace ℝ V) _ (q jp) (y G v) ≠ 0 := sorry
+/-- Absolute value of a non-zero even integer is at least 2. -/
+lemma even_int_abs_ge_two_of_ne_zero {k : ℤ} (hk : k ≠ 0) : 2 ≤ |2 * (k : ℝ)| := by
+  have : (2 * (k : ℝ)) = ((2 * k : ℤ) : ℝ) := by push_cast; ring
+  rw [this, ← Int.cast_abs]
+  obtain hpos | hneg := le_total 0 (2 * k)
+  · rw [abs_of_nonneg hpos]; exact_mod_cast (by omega : 2 ≤ 2 * k)
+  · rw [abs_of_nonpos hneg]; exact_mod_cast (by omega : 2 ≤ -(2 * k))
 
-/-- Sum of entries of `q` is zero: `2 * 32 - 32 - 32 = 0`. -/
-theorem inner_q_ones_eq_zero (jp : JenrichPartition G) :
-    (∑ j : V, (q jp j)) = 0 := sorry
+/-- Difference of two coordinates divided by $s$ is strictly between $-2$ and $2$. -/
+lemma int_diff_div_s_bounds (hs : 1 ≤ s) {a b : ℕ} (ha : a < 2 * s) (hb : b < 2 * s) :
+    (-2 : ℝ) < (((a : ℝ) - (b : ℝ)) / (s : ℝ)) ∧ (((a : ℝ) - (b : ℝ)) / (s : ℝ)) < 2 := by
+  have hs_pos : 0 < (s : ℝ) := by positivity
+  have ha_lt : (a : ℝ) < 2 * s := by exact_mod_cast ha
+  have hb_lt : (b : ℝ) < 2 * s := by exact_mod_cast hb
+  have ha_ge : 0 ≤ (a : ℝ) := by positivity
+  have hb_ge : 0 ≤ (b : ℝ) := by positivity
+  refine ⟨by rw [lt_div_iff₀ hs_pos]; linarith, by rw [div_lt_iff₀ hs_pos]; linarith⟩
 
-/-- Inner product of `q` with the all-ones vector is 0. -/
-theorem inner_q_ones (jp : JenrichPartition G) :
-    @inner ℝ (EuclideanSpace ℝ V) _ (q jp) (ones V) = 0 := sorry
+/-- When $|a - b| = s$, the difference divided by $s$ is exactly $\pm 1$. -/
+lemma int_diff_div_s_shift (hs : 1 ≤ s) {a b : ℕ}
+    (h : Int.natAbs ((a : ℤ) - (b : ℤ)) = s) :
+    ((a : ℝ) - (b : ℝ)) / (s : ℝ) = 1 ∨ ((a : ℝ) - (b : ℝ)) / (s : ℝ) = -1 := by
+  have hs_pos : (s : ℝ) ≠ 0 := by positivity
+  obtain h | h := Int.natAbs_eq_iff.mp h
+  · left; rw [show (a : ℝ) - (b : ℝ) = (s : ℝ) by exact_mod_cast h, div_self hs_pos]
+  · right; rw [show (a : ℝ) - (b : ℝ) = -(s : ℝ) by exact_mod_cast h, neg_div, div_self hs_pos]
 
-/-- Inner product of `q` with any constant multiple of the all-ones vector is 0. -/
-theorem inner_q_smul_ones (jp : JenrichPartition G) (c : ℝ) :
-    @inner ℝ (EuclideanSpace ℝ V) _ (q jp) (c • ones V) = 0 := sorry
+/-- Coordinate-wise difference formula for lifted points. -/
+lemma diff_coord_eq (c : (Fin d → Fin 2) → (Fin d → Fin (2 * s)))
+    (w₁ w₂ : Fin d → Fin 2) (z₁ z₂ : Fin d → ℤ) (i : Fin d) :
+    lifting c w₁ z₁ i - lifting c w₂ z₂ i =
+      (((c w₁ i : ℕ) : ℝ) - ((c w₂ i : ℕ) : ℝ)) / (s : ℝ) + 2 * ((z₁ i - z₂ i : ℤ) : ℝ) := by
+  dsimp [lifting]
+  push_cast
+  ring
 
-/-- The vector `q` is orthogonal to `z i` for all `i ∈ C`. -/
-theorem inner_q_z_C (jp : JenrichPartition G) (c : ℝ) (i : V) (hi : i ∈ jp.C) :
-    @inner ℝ (EuclideanSpace ℝ V) _ (q jp) (z G (c • ones V) i) = 0 := sorry
+/-- If two lifted points agree at coordinate `j`, their underlying discrete coordinates
+`c w₁ j` and `c w₂ j` must be equal. -/
+lemma coords_eq_of_lifting_coord_eq (hs : 1 ≤ s)
+    (c : (Fin d → Fin 2) → (Fin d → Fin (2 * s)))
+    (w₁ w₂ : Fin d → Fin 2) (z₁ z₂ : Fin d → ℤ) (j : Fin d)
+    (h_eq : lifting c w₁ z₁ j = lifting c w₂ z₂ j) :
+    c w₁ j = c w₂ j := by
+  have hdiff := diff_coord_eq c w₁ w₂ z₁ z₂ j
+  rw [h_eq, sub_self] at hdiff
+  have h2k : 2 * ((z₂ j - z₁ j : ℤ) : ℝ) = (((c w₁ j : ℕ) : ℝ) - ((c w₂ j : ℕ) : ℝ)) / (s : ℝ) := by
+    linarith [show ((z₁ j - z₂ j : ℤ) : ℝ) = - ((z₂ j - z₁ j : ℤ) : ℝ) by push_cast; ring]
+  have hbounds := int_diff_div_s_bounds hs (c w₁ j).isLt (c w₂ j).isLt
+  have hk_zero : z₂ j - z₁ j = 0 :=
+    even_int_in_neg2_2 (by linarith [hbounds.1, h2k]) (by linarith [hbounds.2, h2k])
+  have hs_pos : (s : ℝ) ≠ 0 := by positivity
+  have h_num : ((c w₁ j : ℕ) : ℝ) - ((c w₂ j : ℕ) : ℝ) = 0 := by
+    have : 2 * ((z₂ j - z₁ j : ℤ) : ℝ) = 0 := by rw [hk_zero, Int.cast_zero, mul_zero]
+    rw [this] at h2k
+    exact (div_eq_zero_iff.mp h2k.symm).resolve_right hs_pos
+  exact Fin.ext (by exact_mod_cast sub_eq_zero.mp h_num)
 
-/-- The 63-dimensional almost-counterexample bound: `320 / 5 = 64 = 63 + 1`.
-The 320-point set `C` achieves the Borsuk partition number in dimension 63. -/
-theorem jenrich_bound_63 : 320 / 5 = 64 := sorry
+/-- Periodicity: the lifted set $T_c$ is invariant under $2\mathbb{Z}^d$ translations. -/
+theorem liftedSet_periodic (c : (Fin d → Fin 2) → (Fin d → Fin (2 * s))) :
+    IsPeriodic (liftedSet c) := by
+  intro z x ⟨w, z0, hx⟩
+  subst hx
+  refine ⟨w, z0 + z, ?_⟩
+  ext i
+  dsimp [lifting]
+  push_cast
+  ring
 
-theorem jenrich_achieves_63 : 64 = 63 + 1 := sorry
+/-- Disjointness: distinct corners in $T_c$ yield disjoint unit cubes (`CubesDisjoint`).
+- If $w_1 = w_2$, distinctness requires $z_1 \ne z_2$, so $|x_i - y_i| = 2|z_1 - z_2| \ge 2 \ge 1$.
+- If $w_1 \ne w_2$, adjacency in $G_{d, s}$ guarantees a coordinate $i$ where $|c_i - c_i'| = s$,
+  making the difference $2k \pm 1$ an odd integer, whose absolute value is $\ge 1$. -/
+theorem liftedSet_cubesDisjoint (hs : 1 ≤ s) (mc : MaxCliqueConfig d s) :
+    ∀ ⦃x y⦄, x ∈ liftedSet mc.c → y ∈ liftedSet mc.c → x ≠ y → CubesDisjoint x y := sorry
 
-/-- Any smaller-diameter cover of `C` requires at least 64 parts. -/
-theorem almost_counterexample_63 (jp : JenrichPartition G)
-    (C_parts : Finset (Set V)) (h_cov : (jp.C : Set V) ⊆ ⋃ c ∈ C_parts, c)
-    (h_clique : ∀ c ∈ C_parts, (jp.C.filter (· ∈ c)).card ≤ 5) :
-    64 ≤ C_parts.card := sorry
+/-- Faceshare-free: no two distinct cubes in $T_c$ share a complete $(d-1)$-dimensional face.
+- If $w_1 = w_2$, along any differing coordinate the distance is an even integer $2k \ne 1$.
+- If $w_1 \ne w_2$, adjacency guarantees they differ in at least two coordinates $j_1 \ne j_2$.
+  At least one is distinct from the face coordinate $i$, producing a contradiction. -/
+theorem liftedSet_isFaceshareFree (hs : 1 ≤ s) (mc : MaxCliqueConfig d s) :
+    IsFaceshareFree (liftedSet mc.c) := sorry
 
-end Jenrich63
+/-- The Corrádi–Szabó / Mackey Bridge Theorem:
+The existence of a maximum clique of size $2^d$ in $G_{d, s}$ disproves
+Keller's conjecture in dimension $d$. -/
+theorem keller_conjecture_false_of_max_clique (hs : 1 ≤ s)
+    (mc : MaxCliqueConfig d s) : ¬ KellerConjecture d := sorry
 
-end JenrichBorsuk64
+end BridgeTheorem
+
+/-!
+## Section 5: The 7D Resolution and 8D Disproof Bridge Theorems
+-/
+
+section ResolutionTheorems
+
+/-- The Kisielewicz (2017) discretization reduction in dimension 7:
+any counterexample to Keller's conjecture in dimension 7 discretizes to a
+maximum clique configuration of size 128 in $G_{7, s}$ for some $s \in \{3, 4, 6\}$. -/
+def KisielewiczReduction7 : Prop :=
+  ¬ KellerConjecture 7 → ∃ s ∈ ({3, 4, 6} : Finset ℕ), Nonempty (MaxCliqueConfig 7 s)
+
+/-- The SAT non-clique certificate of Brakensiek, Heule, Mackey, and Narváez (2020):
+automated SAT reasoning and DRAT-trim verification proves that no clique of size 128
+exists in $G_{7, s}$ for any $s \in \{3, 4, 6\}$. -/
+def SATCertificateBHMN7 : Prop :=
+  ∀ s ∈ ({3, 4, 6} : Finset ℕ), IsEmpty (MaxCliqueConfig 7 s)
+
+/-- Dimension 7 Keller Resolution Theorem (Brakensiek–Heule–Mackey–Narváez 2020):
+Keller's conjecture holds in dimension 7, deduced from the BHMN SAT non-clique
+certificate and the Kisielewicz discretization reduction. -/
+theorem keller_conjecture_seven_of_sat_certificate
+    (h_kis : KisielewiczReduction7) (h_sat : SATCertificateBHMN7) :
+    KellerConjecture 7 := sorry
+
+/-- Dimension 8 Keller Disproof Theorem (John Mackey 2002):
+Mackey's explicit clique of size 256 in $G_{8, 2}$ soundly disproves
+Keller's conjecture in dimension 8. -/
+theorem keller_conjecture_eight_false_of_mackey_clique
+    (mackey_clique : MaxCliqueConfig 8 2) : ¬ KellerConjecture 8 := sorry
+
+/-- Canonical embedding of $G_{d, s}$ into $G_{d+1, s}$ as an induced subgraph:
+extends each vertex by coordinate 0 at `Fin.last d`. Tactic-free term proof eliminates
+auxiliary synthesized constants (AP-31). -/
+def embed_vertex {d s : ℕ} (hs : 1 ≤ s) (u : Fin d → Fin (2 * s)) : Fin (d + 1) → Fin (2 * s) :=
+  Fin.lastCases (motive := fun _ => Fin (2 * s)) ⟨0, Nat.mul_pos Nat.zero_lt_two hs⟩ u
+
+@[simp]
+lemma embed_vertex_castSucc {d s : ℕ} (hs : 1 ≤ s) (u : Fin d → Fin (2 * s)) (i : Fin d) :
+    embed_vertex hs u i.castSucc = u i :=
+  Fin.lastCases_castSucc (motive := fun _ => Fin (2 * s)) i
+
+/-- The canonical embedding is injective. -/
+theorem embed_vertex_inj {d s : ℕ} (hs : 1 ≤ s) {u v : Fin d → Fin (2 * s)}
+    (h : embed_vertex hs u = embed_vertex hs v) : u = v := by
+  funext i
+  have := congr_fun h i.castSucc
+  rwa [embed_vertex_castSucc, embed_vertex_castSucc] at this
+
+/-- The canonical embedding preserves adjacency from $G_{d, s}$ to $G_{d+1, s}$. -/
+theorem embed_vertex_adj {d s : ℕ} (hs : 1 ≤ s) {u v : Fin d → Fin (2 * s)}
+    (h : (kellerGraph d s).Adj u v) :
+    (kellerGraph (d + 1) s).Adj (embed_vertex hs u) (embed_vertex hs v) := by
+  obtain ⟨⟨i, hi⟩, ⟨j₁, j₂, hne, hu1, hu2⟩⟩ := h
+  refine ⟨⟨i.castSucc, by rwa [embed_vertex_castSucc, embed_vertex_castSucc]⟩,
+    ⟨j₁.castSucc, j₂.castSucc, fun h => hne (Fin.castSucc_inj.mp h), ?_, ?_⟩⟩
+  · rwa [embed_vertex_castSucc, embed_vertex_castSucc]
+  · rwa [embed_vertex_castSucc, embed_vertex_castSucc]
+
+/-- Any clique in $G_{d, s}$ embeds directly into a clique of the same size in $G_{d+1, s}$. -/
+theorem embed_clique {d s : ℕ} (hs : 1 ≤ s) {K : Set (Fin d → Fin (2 * s))}
+    (hK : (kellerGraph d s).IsClique K) :
+    (kellerGraph (d + 1) s).IsClique (embed_vertex hs '' K) := sorry
+
+/-- Dimension lifting hypothesis: a maximum clique configuration in dimension `d`
+induces a maximum clique configuration in dimension `d + 1`. -/
+def DimensionLiftingLemma (d s : ℕ) : Prop :=
+  Nonempty (MaxCliqueConfig d s) → Nonempty (MaxCliqueConfig (d + 1) s)
+
+/-- Dimension lifting propagation theorem:
+If dimension `d` admits a maximum clique configuration with parameter `s`,
+and dimension lifting holds, then Keller's conjecture is disproved in dimension `d + 1`. -/
+theorem keller_conjecture_succ_false_of_lifting {d s : ℕ} (hs : 1 ≤ s)
+    (h_lift : DimensionLiftingLemma d s) (mc : MaxCliqueConfig d s) :
+    ¬ KellerConjecture (d + 1) := by
+  obtain ⟨mc_succ⟩ := h_lift ⟨mc⟩
+  exact keller_conjecture_false_of_max_clique hs mc_succ
+
+/-- Dimension 9 Disproof Theorem:
+Mackey's 2002 8D clique together with dimension lifting soundly disproves
+Keller's conjecture in dimension 9. -/
+theorem keller_conjecture_nine_false_of_mackey_and_lifting
+    (mackey_clique : MaxCliqueConfig 8 2) (h_lift : DimensionLiftingLemma 8 2) :
+    ¬ KellerConjecture 9 := sorry
+
+end ResolutionTheorems
+
+end KellerBridge

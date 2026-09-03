@@ -1,57 +1,88 @@
 version: "v0.4"
 
 project:
-  name: "Jenrich–Brouwer 64-Dimensional Counterexample to Borsuk's Conjecture"
+  name: "The 7D Keller Cube-Tiling Bridge and Corrádi–Szabó Disproofs"
   authors:
     - "Noah Cohen"
   responsible_maintainers:
     - "Noah Cohen"
   license: "CC0-1.0"
   description: >-
-    A complete machine-checked Lean 4 formalization of Thomas Jenrich and Andries E. Brouwer's
-    64-dimensional two-distance counterexample to Borsuk's conjecture (2014), building on Andriy V.
-    Bondarenko's 65-dimensional construction (2013). The formalization establishes the metric and
-    combinatorial foundations (clique-diameter lemma, pigeonhole cover bound), the Euclidean representation
-    of the Suzuki strongly regular graph G₂(4) = srg(416, 100, 36, 20) with spectrum {100, 20, -4} and
-    eigenspace dimensions {1, 65, 350}, Jenrich's reduction vector p = 1_{B₂} - 1_{B₃} yielding orthogonality
-    on the 352-vertex carrier S₆₄ = C ∪ B₁, the codimension reduction to dimension 64, and the partition
-    lower bound requiring at least 71 parts of smaller diameter, strictly exceeding 64 + 1 = 65.
-    Additionally formalizes Jenrich's secondary reduction vector q = 2 * 1_{B₁} - 1_{B₂} - 1_{B₃},
-    establishing the 63-dimensional extremal tightness on the 320-vertex carrier C (which achieves
-    the Borsuk partition number 64 = 63 + 1) and proving the vertex augmentation obstruction:
-    ⟨q, y v⟩ ≠ 0 for every v ∉ C, so no vertex outside C can be adjoined while remaining within the
-    63-dimensional hyperplane orthogonal to q.
+    A machine-checked Lean 4 formalization of the geometric-to-combinatorial bridge connecting
+    Ott-Heinrich Keller's 1930 cube-tiling conjecture to maximum cliques in the Corrádi–Szabó and
+    Mackey Keller graphs G_{d, s}. Establishes the Szabó 2Z^d-periodic cube packing framework in R^d,
+    the structural partition into 2^d coordinate blocks, the universal clique upper bound \omega(G_{d, s}) \le 2^d,
+    and the Corrádi–Szabó / Mackey bridge theorem that \omega(G_{d, s}) = 2^d implies the failure of Keller's
+    conjecture in dimension d. Incorporates the Kisielewicz (2017) discretization reduction and the
+    Brakensiek–Heule–Mackey–Narváez (2020) SAT non-clique certificates resolving Keller's conjecture affirmatively
+    in dimension 7, Mackey's (2002) explicit clique refutation in dimension 8, and dimension lifting propagation
+    to dimension 9. All declarations rely strictly on standard Lean 4 kernel axioms.
 
 classification:
   arxiv: [math.CO, math.MG]
-  msc2020: ["05C50", "05C69", "51M04", "52C10"]
+  msc2020: ["05B45", "52C22", "05C69"]
 
 sources:
-  - title: "A 64-Dimensional Counterexample to Borsuk's Conjecture"
+  - title: "The Resolution of Keller's Conjecture"
     type: paper
     authors:
-      - "Thomas Jenrich"
-      - "Andries E. Brouwer"
-    venue: "The Electronic Journal of Combinatorics"
-    year: 2014
+      - "Joshua Brakensiek"
+      - "Marijn Heule"
+      - "John Mackey"
+      - "David Narváez"
+    venue: "Journal of the ACM, Vol. 69, No. 3, Article 18, pp. 1–46"
+    year: 2022
     relationship: formalizes
-  - title: "On Borsuk's conjecture for two-distance sets"
-    type: paper
-    authors:
-      - "Andriy V. Bondarenko"
-    venue: "Discrete & Computational Geometry"
-    year: 2014
-    relationship: adapts
     note: >-
-      Formalization builds upon Bondarenko's 65-dimensional two-distance counterexample using the
-      strongly regular graph G₂(4).
-  - title: "Drei Sätze über die n-dimensionale euklidische Sphäre"
+      Formalizes the discrete Keller graph bridge and connects the BHMN 2020 SAT resolution certificate
+      and Kisielewicz reduction to prove Keller's conjecture in dimension 7.
+  - title: "A combinatorial approach for Keller's conjecture"
     type: paper
     authors:
-      - "Karol Borsuk"
-    venue: "Fundamenta Mathematicae"
-    year: 1933
+      - "Keresztély Corrádi"
+      - "Sándor Szabó"
+    venue: "Periodica Mathematica Hungarica, 21(2): 95–100"
+    year: 1990
+    relationship: formalizes
+    note: >-
+      Establishes the equivalence between 2Z^d-periodic faceshare-free cube tilings and maximum cliques of size 2^d
+      in the discrete graph G_{d, s}.
+  - title: "A cube tiling of R^8 with no facesharing"
+    type: paper
+    authors:
+      - "John Mackey"
+    venue: "Discrete & Computational Geometry, 28(4): 533–543"
+    year: 2002
+    relationship: formalizes
+    note: >-
+      Constructs an explicit clique of size 256 in G_{8, 2}, disproving Keller's conjecture in dimension 8.
+  - title: "Towards Keller's conjecture in high dimensions"
+    type: paper
+    authors:
+      - "Andrzej P. Kisielewicz"
+    venue: "Discrete & Computational Geometry, 57(3): 696–724"
+    year: 2017
+    relationship: formalizes
+    note: >-
+      Proves that any counterexample to Keller's conjecture in dimension 7 discretizes to G_{7, s} for s in {3, 4, 6}.
+  - title: "A reduction of Keller's conjecture"
+    type: paper
+    authors:
+      - "Sándor Szabó"
+    venue: "Periodica Mathematica Hungarica, 17(4): 265–277"
+    year: 1986
     relationship: background
+    note: >-
+      Reduces Keller's conjecture to periodic cube packings under 2Z^d translations.
+  - title: "Über die lückenlose Erfüllung des Raumes mit Würfeln"
+    type: paper
+    authors:
+      - "Ott-Heinrich Keller"
+    venue: "Journal für die reine und angewandte Mathematik, 163: 231–248"
+    year: 1930
+    relationship: background
+    note: >-
+      Original formulation of Keller's cube-tiling conjecture.
 
 related_formalizations: []
 
@@ -69,6 +100,5 @@ review:
   reviewers:
     - "Noah Cohen"
   notes: >-
-    Challenge contains deliberate proof holes (:= sorry) for automated benchmark evaluation, with 100%
-    type and AST parity with Solution. Solution verified with 0 errors, 0 sorries, and strictly standard
-    kernel axioms.
+    Challenge contains deliberate proof holes (:= sorry) on landmark bridge theorems with 100% AST signature
+    parity. Solution verified with 0 errors, 0 sorries, and strictly standard kernel axioms.
