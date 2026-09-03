@@ -14,7 +14,6 @@ import Mathlib.Tactic.Linarith
 open scoped Pointwise
 open scoped BigOperators Finset
 
-set_option linter.unusedSectionVars false
 
 namespace RuzsaFreiman
 
@@ -259,6 +258,7 @@ def IsFreimanHomomorphism {H : Type*} [AddCommGroup H]
   ∀ (xs ys : Fin k → G), (∀ i, xs i ∈ A) → (∀ i, ys i ∈ A) →
     (∑ i, xs i = ∑ i, ys i) → (∑ i, f (xs i) = ∑ i, f (ys i))
 
+omit [DecidableEq G] in
 /-- Identity map is always a Freiman homomorphism of any order $k$. -/
 theorem freimanHomomorphism_id (A : Finset G) (k : ℕ) :
     IsFreimanHomomorphism A id k :=

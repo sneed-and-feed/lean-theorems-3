@@ -2,8 +2,6 @@ import Mathlib.Data.Real.Basic
 import Mathlib.Data.Fin.Basic
 import Mathlib.Tactic
 
-set_option linter.unusedVariables false
-set_option linter.unusedSectionVars false
 
 namespace LonelyRunner8
 

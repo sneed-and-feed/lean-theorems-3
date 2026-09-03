@@ -9,8 +9,6 @@ import Mathlib.Tactic.Ring
 
 open scoped BigOperators Finset
 
-set_option linter.unusedSectionVars false
-
 /-!
 # 3-Term Arithmetic Progressions and Progression-Free Sets
 
@@ -56,7 +54,10 @@ For indicator functions $1_A$:
 
 namespace RothsTheorem
 
-variable {G : Type*} [DecidableEq G] [AddCommGroup G]
+variable {G : Type*}
+
+section AP
+variable [AddCommGroup G]
 
 /-- A triple $(x, y, z)$ forms a 3-term arithmetic progression if $x + z = 2 \cdot y$. -/
 def Is3AP (x y z : G) : Prop :=
@@ -85,6 +86,11 @@ theorem is3AP_def_add (x d : G) : Is3AP x (x + d) (x + (2 : ℕ) • d) := by
 theorem isThreeAPFree_iff (A : Finset G) :
     IsThreeAPFree A ↔ ∀ x ∈ A, ∀ y ∈ A, ∀ z ∈ A, ¬ IsNonTrivial3AP x y z := by
   simp [IsThreeAPFree, IsNonTrivial3AP, not_and]
+
+end AP
+
+section Indicator
+variable [DecidableEq G]
 
 /-- Indicator function $\mathbf{1}_A : G \to \mathbb{R}$. -/
 def indicator (A : Finset G) : G → ℝ :=
@@ -119,14 +125,17 @@ theorem indicator_mul_indicator (A B : Finset G) (x : G) :
     indicator A x * indicator B x = indicator (A ∩ B) x := by
   dsimp [indicator]; split_ifs <;> simp_all
 
-variable [Fintype G]
-
 /-- Sum of indicator equals cardinality of the finset. -/
-theorem sum_indicator (A : Finset G) : ∑ x : G, indicator A x = (A.card : ℝ) := by
+theorem sum_indicator [Fintype G] (A : Finset G) : ∑ x : G, indicator A x = (A.card : ℝ) := by
   simp [indicator]
 
+end Indicator
+
+section Counting
+variable [AddCommGroup G]
+
 /-- For 3-AP free set $A$, off-diagonal 3-AP product terms vanish. -/
-theorem ap3_term_of_free (A : Finset G) (hfree : IsThreeAPFree A) (x d : G) :
+theorem ap3_term_of_free [DecidableEq G] (A : Finset G) (hfree : IsThreeAPFree A) (x d : G) :
     indicator A x * indicator A (x + d) * indicator A (x + (2 : ℕ) • d) =
       if d = 0 then indicator A x else 0 := by
   by_cases hd : d = 0
@@ -135,6 +144,8 @@ theorem ap3_term_of_free (A : Finset G) (hfree : IsThreeAPFree A) (x d : G) :
     split_ifs with hx hxd hx2d
     · exact (hd (add_left_cancel (a := x) (by simpa using (hfree x hx (x + d) hxd (x + (2 : ℕ) • d) hx2d (is3AP_def_add x d)).symm))).elim
     all_goals ring
+
+variable [Fintype G]
 
 /-- The multilinear 3-AP counting functional $\Lambda(f_1, f_2, f_3) = \frac{1}{|G|^2} \sum_{x, d} f_1(x) f_2(x+d) f_3(x+2d)$. -/
 noncomputable def ap3Count (f1 f2 f3 : G → ℝ) : ℝ :=
@@ -150,6 +161,8 @@ theorem ap3Count_nonneg {f1 f2 f3 : G → ℝ}
   exact Finset.sum_nonneg fun x _ => Finset.sum_nonneg fun d _ =>
     mul_nonneg (mul_nonneg (h1 x) (h2 _)) (h3 _)
 
+variable [DecidableEq G]
+
 /-- Non-negativity of 3-AP count on indicators. -/
 theorem ap3Count_indicator_nonneg (A : Finset G) :
     0 ≤ ap3Count (indicator A) (indicator A) (indicator A) :=
@@ -164,5 +177,7 @@ theorem ap3Count_of_free (A : Finset G) (hfree : IsThreeAPFree A) :
     simp [ap3_term_of_free A hfree x, Finset.sum_ite_eq']
   simp_rw [h_inner, sum_indicator]
   ring
+
+end Counting
 
 end RothsTheorem

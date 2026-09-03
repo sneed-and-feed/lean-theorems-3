@@ -9,8 +9,6 @@ import Mathlib.Tactic.Positivity
 
 open scoped Pointwise
 
-set_option linter.unusedSectionVars false
-
 /-!
 # Freiman's Structure Theorem on Sets of Small Doubling
 

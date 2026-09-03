@@ -13,9 +13,6 @@ import Mathlib.Tactic.Linarith
 open scoped Pointwise
 open Classical
 
-set_option linter.unusedSectionVars false
-set_option linter.unusedVariables false
-
 /-!
 # The Cauchy–Davenport Theorem: Foundations and e-Transforms
 

@@ -12,10 +12,6 @@ import Mathlib.Tactic.Linarith
 open scoped Pointwise BigOperators
 open Classical
 
-set_option linter.unusedSectionVars false
-set_option linter.unusedVariables false
-set_option linter.style.haveILetI false
-
 /-!
 # Iterated Cauchy–Davenport Theorem for Multi-fold Sumsets
 
@@ -165,7 +161,7 @@ theorem iterated_sumset_eq_univ_of_card_ge {p : ℕ} (hp : Nat.Prime p) {k : ℕ
     (As : Fin k → Finset (ZMod p)) (h_nonempty : ∀ i, (As i).Nonempty)
     (h_sum : p + k - 1 ≤ ∑ i : Fin k, (As i).card) :
     (∑ i : Fin k, As i).card = p := by
-  haveI : NeZero p := ⟨hp.ne_zero⟩
+  have : NeZero p := ⟨hp.ne_zero⟩
   have h_bound := cauchy_davenport_iterated hp hk As h_nonempty
   have h_le : p ≤ (∑ i : Fin k, (As i).card) - k + 1 := by omega
   rw [min_eq_left h_le] at h_bound
@@ -184,7 +180,7 @@ $$|k A| \ge \min(p, k |A| - k + 1)$$
 -/
 theorem cauchy_davenport_self_iterated {p : ℕ} (hp : Nat.Prime p) {k : ℕ} (hk : 1 ≤ k)
     (A : Finset (ZMod p)) (hA : A.Nonempty) :
-    min p (k * A.card - k + 1) ≤ (∑ i : Fin k, A).card := by
+    min p (k * A.card - k + 1) ≤ (∑ _i : Fin k, A).card := by
   have h := cauchy_davenport_iterated hp hk (fun (_ : Fin k) => A) (fun _ => hA)
   have h_card_sum : (∑ i : Fin k, A.card) = k * A.card := by
     rw [Finset.sum_const, Finset.card_univ, Fintype.card_fin, smul_eq_mul]

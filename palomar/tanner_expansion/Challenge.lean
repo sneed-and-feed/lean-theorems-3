@@ -16,7 +16,6 @@ import Mathlib.Tactic.Positivity
 open scoped BigOperators Matrix Finset
 open Classical
 
-set_option linter.unusedSectionVars false
 
 /-!
 # Tanner's Vertex Expansion Bound for Regular Graphs

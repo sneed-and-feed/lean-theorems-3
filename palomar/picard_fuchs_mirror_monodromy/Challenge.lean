@@ -11,8 +11,6 @@ import Mathlib.Tactic.FieldSimp
 open scoped Matrix BigOperators
 open Matrix
 
-set_option linter.unusedSectionVars false
-set_option linter.unusedVariables false
 
 namespace PicardFuchsMirrorMonodromy
 

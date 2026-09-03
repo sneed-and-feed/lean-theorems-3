@@ -14,7 +14,6 @@ import Mathlib.Tactic.Linarith
 open scoped Pointwise
 open scoped BigOperators Finset
 
-set_option linter.unusedSectionVars false
 
 /-!
 # Ruzsa–Freiman Sumset Calculus and Plünnecke–Ruzsa Bounds

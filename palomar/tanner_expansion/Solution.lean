@@ -16,7 +16,6 @@ import Mathlib.Tactic.Positivity
 open scoped BigOperators Matrix Finset
 open Classical
 
-set_option linter.unusedSectionVars false
 
 variable {V : Type*} [Fintype V] [DecidableEq V]
 
@@ -30,6 +29,7 @@ def adjacencyMatrix (G : SimpleGraph V) [DecidableRel G.Adj] : Matrix V V ℝ :=
 def isRegularOfDegree (G : SimpleGraph V) (d : ℕ) [DecidableRel G.Adj] : Prop :=
   ∀ v : V, G.degree v = d
 
+omit [DecidableEq V] in
 /-- In a $d$-regular graph, the sum of any row of the adjacency matrix is $d$. -/
 theorem sum_adj_row_eq_degree (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
     (hreg : isRegularOfDegree G d) (u : V) :
@@ -43,6 +43,7 @@ theorem sum_adj_row_eq_degree (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
     simp [SimpleGraph.mem_neighborFinset]
   rw [h_deg, hreg u]
 
+omit [DecidableEq V] in
 /-- In a $d$-regular graph, the sum of any column of the adjacency matrix is $d$. -/
 theorem sum_adj_col_eq_degree (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
     (hreg : isRegularOfDegree G d) (v : V) :
@@ -188,6 +189,7 @@ theorem sum_neighborhood_adjOp_indicator_eq (G : SimpleGraph V) [DecidableRel G.
   rw [← sum_adjOp_indicator_eq G hreg S, ← Finset.sum_subset (Finset.subset_univ _)]
   exact fun u _ hu => adjOp_indicator_zero_of_not_mem_neighborhood G S u hu
 
+omit [Fintype V] [DecidableEq V] in
 /-- Cauchy-Schwarz inequality for sums of real functions over a finite set:
 $(\sum_{x \in s} f(x))^2 \le |s| \sum_{x \in s} f(x)^2$. -/
 theorem cauchy_schwarz_finset (s : Finset V) (f : V → ℝ) :
@@ -224,6 +226,7 @@ theorem adjOp_indicator_eq_add (G : SimpleGraph V) [DecidableRel G.Adj] (S : Fin
     adjOp G (indicator S) u = adjOp G (decompParallel S) u + adjOp G (decompPerp S) u := by
   simp_rw [adjOp, indicator_eq_decompParallel_add_decompPerp S, mul_add, Finset.sum_add_distrib]
 
+omit [DecidableEq V] in
 /-- The parallel component maps to the constant vector $\frac{d |S|}{n} \mathbf{1}$. -/
 theorem adjOp_decompParallel (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
     (hreg : isRegularOfDegree G d) (S : Finset V) (u : V) :
@@ -242,6 +245,7 @@ theorem adjOp_decompPerp_orthogonal (G : SimpleGraph V) [DecidableRel G.Adj] {d 
   simp_rw [← Finset.sum_mul, sum_adj_col_eq_degree G hreg, ← Finset.mul_sum]
   rw [decompPerp_orthogonal S hn, mul_zero]
 
+omit [DecidableEq V] in
 /-- The squared norm of the parallel component:
 $\|A \mathbf{1}_S^\parallel\|^2 = \frac{d^2 |S|^2}{n}$. -/
 theorem normSq_adjOp_decompParallel (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
@@ -270,6 +274,7 @@ theorem normSq_adjOp_indicator_decomp (G : SimpleGraph V) [DecidableRel G.Adj] {
     intro u; ring
   simp_rw [h_alg, Finset.sum_add_distrib, h_cross, add_zero]
 
+omit [DecidableEq V] in
 /-- Bilinear Cauchy-Schwarz bound for the adjacency operator:
 $\langle u, A v \rangle^2 \le d^2 \|u\|^2 \|v\|^2$. -/
 theorem innerProduct_adjOp_sq_le (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
@@ -303,23 +308,28 @@ theorem innerProduct_adjOp_sq_le (G : SimpleGraph V) [DecidableRel G.Adj] {d : �
       (d : ℝ) ^ 2 * (∑ x : V, (u x) ^ 2) * (∑ y : V, (v y) ^ 2) := by ring
   rwa [this] at h_cs
 
+omit [DecidableEq V] in
 /-- Squared norm is the sum of component squares. -/
 theorem normSq_eq_sum_sq (v : V → ℝ) : normSq v = ∑ u : V, (v u) ^ 2 := by
   simp only [normSq, innerProduct, sq]
 
+omit [DecidableEq V] in
 /-- Squared norm is non-negative. -/
 theorem normSq_nonneg (v : V → ℝ) : 0 ≤ normSq v := by
   rw [normSq_eq_sum_sq]
   exact Finset.sum_nonneg fun _ _ => sq_nonneg _
 
+omit [DecidableEq V] in
 /-- Squared norm is zero if and only if the vector is zero. -/
 theorem normSq_eq_zero_iff (v : V → ℝ) : normSq v = 0 ↔ v = 0 := by
   simp [normSq_eq_sum_sq, Finset.sum_eq_zero_iff_of_nonneg (fun _ _ => sq_nonneg _), funext_iff]
 
+omit [DecidableEq V] in
 /-- Squared norm is strictly positive for any non-zero vector. -/
 theorem normSq_pos_of_ne_zero {v : V → ℝ} (hne : v ≠ 0) : 0 < normSq v :=
   lt_of_le_of_ne (normSq_nonneg v) (Ne.symm (mt (normSq_eq_zero_iff v).mp hne))
 
+omit [DecidableEq V] in
 /-- If $w$ is orthogonal to $\mathbf{1}$, then $A w$ is also orthogonal to $\mathbf{1}$. -/
 theorem isOrthogonalToOnes_adjOp (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
     (hreg : isRegularOfDegree G d) (w : V → ℝ) (hw : isOrthogonalToOnes w) :
@@ -337,6 +347,7 @@ noncomputable def spectralExpansionParameter (G : SimpleGraph V) [DecidableRel G
          (u : V → ℝ) (v : V → ℝ) (_ : u ≠ 0) (_ : v ≠ 0)
          (_ : isOrthogonalToOnes u) (_ : isOrthogonalToOnes v) }
 
+omit [DecidableEq V] in
 /-- The set in the definition of $\lambda(G)$ is bounded above by $d$. -/
 theorem bddAbove_spectralExpansionParameter_set (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
     (hreg : isRegularOfDegree G d) :
@@ -361,6 +372,7 @@ theorem bddAbove_spectralExpansionParameter_set (G : SimpleGraph V) [DecidableRe
     rwa [abs_abs, abs_of_nonneg h_nonneg] at this
   exact (div_le_iff₀ h_denom_pos).mpr h_le
 
+omit [DecidableEq V] in
 /-- The spectral expansion parameter is non-negative. -/
 theorem spectralExpansionParameter_nonneg (G : SimpleGraph V) [DecidableRel G.Adj] :
     0 ≤ spectralExpansionParameter G := by
@@ -393,6 +405,7 @@ theorem spectralExpansionParameter_nonneg (G : SimpleGraph V) [DecidableRel G.Ad
       rw [this, Real.sSup_empty]
   · rw [Real.sSup_of_not_bddAbove h_bdd]
 
+omit [DecidableEq V] in
 /-- Operator norm spectral bound on the orthogonal complement $\mathbf{1}^\perp$:
 $\|A w\|^2 \le \lambda(G)^2 \|w\|^2$ for any $w \in \mathbf{1}^\perp$. -/
 theorem spectral_operator_norm_bound (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
@@ -461,6 +474,7 @@ theorem normSq_adjOp_indicator_le (G : SimpleGraph V) [DecidableRel G.Adj] {d : 
       (S.card : ℝ) * (((d : ℝ) ^ 2 - (spectralExpansionParameter G) ^ 2) / (Fintype.card V : ℝ) * (S.card : ℝ) + (spectralExpansionParameter G) ^ 2) := by ring
   linarith
 
+omit [DecidableEq V] in
 /-- Upper bound $\lambda(G) \le d$ for any $d$-regular graph $G$. -/
 theorem spectralExpansionParameter_le_d (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
     (hreg : isRegularOfDegree G d) :
@@ -489,6 +503,7 @@ theorem spectralExpansionParameter_le_d (G : SimpleGraph V) [DecidableRel G.Adj]
   · rw [Set.not_nonempty_iff_eq_empty.mp h_empty, Real.sSup_empty]
     positivity
 
+omit [DecidableEq V] in
 /-- $\lambda(G)^2 \le d^2$ for any $d$-regular graph $G$. -/
 theorem sq_spectralExpansionParameter_le_sq_d (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
     (hreg : isRegularOfDegree G d) :
@@ -497,6 +512,7 @@ theorem sq_spectralExpansionParameter_le_sq_d (G : SimpleGraph V) [DecidableRel 
   have := spectralExpansionParameter_nonneg G
   nlinarith
 
+omit [DecidableEq V] in
 /-- Positivity of the Tanner denominator for non-empty $S \subseteq V$ and $d > 0$. -/
 theorem tanner_denominator_pos (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
     (hn : Fintype.card V ≠ 0) (hd : 0 < d) (S : Finset V) (hS : 0 < S.card) :
@@ -594,6 +610,7 @@ theorem tanner_small_set_expansion (G : SimpleGraph V) [DecidableRel G.Adj] {d :
   rw [← le_div_iff₀ hs_pos]
   exact le_trans h_frac_le h_ratio
 
+omit [DecidableEq V] in
 /-- Ramanujan spectral parameter squared bound: $\lambda^2 \le 4(d-1)$. -/
 theorem ramanujan_sq_spectralExpansionParameter_le (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
     (hd : 2 ≤ d) (hRam : spectralExpansionParameter G ≤ 2 * Real.sqrt ((d : ℝ) - 1)) :
@@ -606,6 +623,7 @@ theorem ramanujan_sq_spectralExpansionParameter_le (G : SimpleGraph V) [Decidabl
     rw [mul_pow, Real.sq_sqrt hd1]; ring
   linarith
 
+omit [DecidableEq V] in
 /-- Positivity of the Ramanujan denominator for non-empty $S \subseteq V$ and $d \ge 2$. -/
 theorem tanner_ramanujan_denominator_pos (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
     (hn : Fintype.card V ≠ 0) (hd : 2 ≤ d) (S : Finset V) (hS : 0 < S.card) :

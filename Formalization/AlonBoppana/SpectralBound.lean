@@ -5,9 +5,7 @@ import Mathlib.Tactic.Linarith
 open scoped BigOperators Matrix Finset
 open Classical
 
-set_option linter.unusedSectionVars false
-
-variable {V : Type*} [Fintype V] [DecidableEq V]
+variable {V : Type*} [Fintype V]
 
 namespace AlonBoppana
 

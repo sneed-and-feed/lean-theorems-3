@@ -9,8 +9,6 @@ import Mathlib.Tactic.Ring
 
 open scoped BigOperators Finset
 
-set_option linter.unusedSectionVars false
-
 /-!
 # Discrete Fourier Analysis on Finite Abelian Groups & 3-AP Counting
 
@@ -70,7 +68,7 @@ This large Fourier coefficient reflects arithmetic bias (lack of pseudorandomnes
 
 namespace RothsTheorem
 
-variable {G : Type*} [Fintype G] [DecidableEq G] [AddCommGroup G]
+variable {G : Type*} [AddCommGroup G]
 
 /-- The type of complex additive characters on $G$. -/
 structure AddChar (G : Type*) [AddCommGroup G] where
@@ -134,6 +132,8 @@ theorem mulChar_apply (χ ψ : AddChar G) (x : G) : mulChar χ ψ x = χ x * ψ 
 
 open scoped Classical
 
+variable [Fintype G]
+
 /--
 **Orthogonality of Additive Characters**:
 The sum of values of a character $\chi$ over $G$ is $|G|$ if $\chi = \chi_0$ and $0$ otherwise.
@@ -154,6 +154,8 @@ theorem fourierTransform_add (f g : G → ℂ) (χ : AddChar G) :
 theorem fourierTransform_trivial (f : G → ℂ) :
     fourierTransform f (trivialChar G) = ∑ x : G, f x := by
   simp [fourierTransform]
+
+variable [DecidableEq G]
 
 /-- Fourier transform of the indicator function of $A$ at $\chi_0$ is $|A|$. -/
 theorem fourierTransform_indicator_trivial (A : Finset G) :

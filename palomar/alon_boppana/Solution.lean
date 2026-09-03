@@ -14,9 +14,8 @@ import Mathlib.Tactic.Positivity
 open scoped BigOperators Matrix Finset
 open Classical
 
-set_option linter.unusedSectionVars false
 
-variable {V : Type*} [Fintype V] [DecidableEq V]
+variable {V : Type*} [Fintype V]
 
 namespace AlonBoppana
 
@@ -229,6 +228,7 @@ noncomputable def radialTestVector (G : SimpleGraph V) (x_0 : V) (g : ℕ → �
 noncomputable def nilliTestVector (G : SimpleGraph V) (d : ℕ) (x_0 : V) (r : ℕ) : V → ℝ :=
   radialTestVector G x_0 (nilliProfile d) r
 
+omit [Fintype V] in
 /-- Test vector evaluated at the center vertex $x_0$ equals 1. -/
 theorem nilliTestVector_center (G : SimpleGraph V) (d : ℕ) (x_0 : V) (r : ℕ) :
     nilliTestVector G d x_0 r x_0 = 1 := by
@@ -245,6 +245,7 @@ theorem nilliProfile_pos (d : ℕ) (hd : 2 ≤ d) (k : ℕ) : 0 < nilliProfile d
 theorem nilliProfile_nonneg (d : ℕ) (hd : 2 ≤ d) (k : ℕ) : 0 ≤ nilliProfile d k :=
   le_of_lt (nilliProfile_pos d hd k)
 
+omit [Fintype V] in
 /-- Nilli test vector is point-wise non-negative. -/
 theorem nilliTestVector_nonneg (G : SimpleGraph V) (d : ℕ) (hd : 2 ≤ d) (x_0 : V) (r : ℕ) (v : V) :
     0 ≤ nilliTestVector G d x_0 r v := by
@@ -281,6 +282,7 @@ radial test vectors centered at distant vertices $x_0$ and $y_0$. -/
 noncomputable def nilliSignedTestVector (G : SimpleGraph V) (d : ℕ) (x_0 y_0 : V) (r : ℕ) : V → ℝ :=
   orthogonalLinearCombination (nilliTestVector G d x_0 r) (nilliTestVector G d y_0 r)
 
+omit [Fintype V] in
 /-- Test vector evaluates to zero outside the support ball. -/
 theorem nilliTestVector_apply_of_gt (G : SimpleGraph V) (d : ℕ) (x_0 : V) (r : ℕ) {v : V}
     (h : r < G.dist x_0 v) :

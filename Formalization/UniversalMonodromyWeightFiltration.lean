@@ -13,8 +13,6 @@ import Mathlib.Tactic.FinCases
 
 open scoped Matrix
 
-set_option linter.unusedSectionVars false
-set_option linter.unusedVariables false
 
 
 /-!

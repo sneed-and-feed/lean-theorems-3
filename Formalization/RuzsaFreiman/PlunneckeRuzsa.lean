@@ -9,8 +9,6 @@ import Mathlib.Tactic.Linarith
 
 open scoped Pointwise
 
-set_option linter.unusedSectionVars false
-
 /-!
 # The Plünnecke–Ruzsa Inequality
 

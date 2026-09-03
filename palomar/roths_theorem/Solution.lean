@@ -12,9 +12,6 @@ import Mathlib.Tactic.LinearCombination
 open scoped BigOperators Finset
 open Classical
 
-set_option linter.unusedSectionVars false
-set_option linter.unusedVariables false
-
 namespace RothsTheorem
 
 variable {G : Type*} [DecidableEq G] [AddCommGroup G]
@@ -31,13 +28,16 @@ def IsNonTrivial3AP (x y z : G) : Prop :=
 def IsThreeAPFree (A : Finset G) : Prop :=
   ∀ x ∈ A, ∀ y ∈ A, ∀ z ∈ A, Is3AP x y z → x = y
 
+omit [DecidableEq G] in
 /-- Trivial 3-APs: $(x, x, x)$ is always a 3-AP. -/
 theorem is3AP_refl (x : G) : Is3AP x x x := (two_nsmul x).symm
 
+omit [DecidableEq G] in
 /-- Reflection symmetry: $(x, y, z)$ is a 3-AP iff $(z, y, x)$ is a 3-AP. -/
 theorem is3AP_symm (x y z : G) : Is3AP x y z ↔ Is3AP z y x := by
   simp [Is3AP, add_comm]
 
+omit [DecidableEq G] in
 /-- Standard 3-AP parameterization: $(x, x+d, x+2d)$ is always a 3-AP. -/
 theorem is3AP_def_add (x d : G) : Is3AP x (x + d) (x + (2 : ℕ) • d) := by
   simp [Is3AP, two_nsmul, add_assoc, add_left_comm]
@@ -53,10 +53,12 @@ def indicator (A : Finset G) : G → ℝ :=
 
 variable [Fintype G]
 
+omit [AddCommGroup G] in
 /-- Sum of indicator equals cardinality of the finset. -/
 theorem sum_indicator (A : Finset G) : ∑ x : G, indicator A x = (A.card : ℝ) := by
   simp [indicator]
 
+omit [Fintype G] in
 /-- For 3-AP free set $A$, off-diagonal 3-AP product terms vanish. -/
 theorem ap3_term_of_free (A : Finset G) (hfree : IsThreeAPFree A) (x d : G) :
     indicator A x * indicator A (x + d) * indicator A (x + (2 : ℕ) • d) =
@@ -118,7 +120,7 @@ theorem progression_is3AP (P : Progression) (k1 k2 k3 : ℤ) :
 If density increases by at least $\alpha_0^2 / 16$ at each step, after $k$ steps
 the density has grown by at least $k \alpha_0^2 / 16$.
 -/
-theorem density_boost_bound (α₀ : ℝ) (hα₀ : 0 < α₀) (α : ℕ → ℝ) (h0 : α 0 = α₀)
+theorem density_boost_bound (α₀ : ℝ) (_hα₀ : 0 < α₀) (α : ℕ → ℝ) (h0 : α 0 = α₀)
     (h_step : ∀ k, α (k + 1) ≥ α k + (α₀ ^ 2) / 16) :
     ∀ k : ℕ, α k ≥ α₀ + (k : ℝ) * ((α₀ ^ 2) / 16) := by
   intro k

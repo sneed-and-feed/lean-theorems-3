@@ -22,9 +22,6 @@ import Mathlib.Tactic.GCongr
 open scoped BigOperators Finset
 open Classical
 
-set_option linter.unusedSectionVars false
-set_option linter.unusedVariables false
-
 /-!
 # Szemerédi's Regularity Lemma & The Triangle Removal Lemma
 
@@ -90,9 +87,9 @@ namespace SzemerediRegularity
 /-- Convert a Mathlib `Finpartition (univ : Finset V)` into a `GraphPartition V`. -/
 def _root_.Finpartition.toGraphPartition (P : Finpartition (Finset.univ : Finset V)) : GraphPartition V where
   parts := P.parts
-  disjoint := fun A hA B hB => P.disjoint hA hB
+  disjoint := fun _ hA _ hB => P.disjoint hA hB
   cover := P.biUnion_parts
-  nonempty_parts := fun A => P.nonempty_of_mem_parts
+  nonempty_parts := fun _ => P.nonempty_of_mem_parts
 
 @[simp]
 theorem toGraphPartition_parts (P : Finpartition (Finset.univ : Finset V)) :
@@ -190,7 +187,7 @@ Roth's theorem on 3-term arithmetic progressions follows from the Triangle Remov
 applied to the 3-partite progression incidence graph.
 -/
 axiom ruzsa_szemeredi_roth_deduction (δ : ℝ) (hδ : 0 < δ) :
-    ∃ N_0 : ℕ, ∀ (N : ℕ) (hN : N_0 ≤ N) (A : Finset ℕ),
+    ∃ N_0 : ℕ, ∀ (N : ℕ) (_hN : N_0 ≤ N) (A : Finset ℕ),
       A ⊆ Finset.range N →
       (∀ x ∈ A, ∀ y ∈ A, ∀ z ∈ A, x + z = 2 * y → x = y) →
       (A.card : ℝ) ≤ δ * (N : ℝ)

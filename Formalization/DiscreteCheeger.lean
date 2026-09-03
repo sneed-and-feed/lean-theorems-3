@@ -14,11 +14,9 @@ import Mathlib.Tactic.Positivity
 open scoped BigOperators Matrix Finset
 open Classical
 
-set_option linter.unusedSectionVars false
-
 namespace DiscreteCheeger
 
-variable {V : Type*} [Fintype V] [DecidableEq V]
+variable {V : Type*} [Fintype V]
 
 /-!
 # The Discrete Cheeger Lower Bound and Optimal Isoperimetric Inequalities for Regular Graphs
@@ -232,6 +230,8 @@ theorem rayleighQuotient_le_secondEigenvalue (G : SimpleGraph V) [DecidableRel G
 
 /-! ### Part 3: Cuts, Boundaries, and the Cheeger Isoperimetric Constant -/
 
+variable [DecidableEq V]
+
 /-- The number of edges across the cut boundary $e(S, S^c) = \sum_{u \in S, v \in S^c} A_{u, v}$. -/
 def edgeBoundary (G : SimpleGraph V) [DecidableRel G.Adj] (S : Finset V) : ℝ :=
   ∑ u ∈ S, ∑ v ∈ Sᶜ, adjacencyMatrix G u v
@@ -364,6 +364,7 @@ theorem sum_ite_and_mem (S T : Finset V) (f : V → V → ℝ) :
     intro u; split_ifs with hu <;> simp [hu, Finset.sum_ite_mem]
   simp_rw [this, Finset.sum_ite_mem, Finset.univ_inter]
 
+omit [Fintype V] in
 /-- Indicator squared difference identity. -/
 theorem indicator_sub_sq (S : Finset V) (u w : V) :
     (indicator S u - indicator S w) ^ 2 =
@@ -640,6 +641,7 @@ theorem vertex_expansion_spectral_bound (G : SimpleGraph V) [DecidableRel G.Adj]
     normalizedSpectralGap G d / 2 ≤ ((vertexBoundary G S).card : ℝ) / (S.card : ℝ) :=
   le_trans (cheeger_lower_bound_normalized G hreg hd hn) (vertex_expansion_cheeger_bound G hreg hd S hvalid)
 
+omit [DecidableEq V] in
 /--
 **Mixing Time Spectral Decay Parameter**:
 For a random walk on a $d$-regular graph, the second eigenvalue of the transition matrix

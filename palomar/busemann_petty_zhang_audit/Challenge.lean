@@ -5,8 +5,6 @@ import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Positivity
 
-set_option linter.unusedVariables false
-set_option linter.unusedSectionVars false
 
 namespace BusemannPettyZhang
 

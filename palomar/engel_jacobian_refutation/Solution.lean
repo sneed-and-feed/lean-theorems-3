@@ -6,8 +6,6 @@ import Mathlib.Tactic.Ring
 
 open MvPolynomial
 
-set_option linter.unusedSectionVars false
-
 /-!
 # Vitushkin's Refutation of Engel's 1955 Jacobian Paper
 

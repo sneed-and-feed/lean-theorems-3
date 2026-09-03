@@ -13,9 +13,6 @@ import Mathlib.Tactic.FieldSimp
 
 open scoped BigOperators Finset
 
-set_option linter.unusedSectionVars false
-set_option linter.unusedVariables false
-
 /-!
 # Pair Edge Density and $\varepsilon$-Regular Pairs
 
@@ -65,7 +62,7 @@ with edge probability $p = d(X, Y)$ at all scales larger than $\varepsilon$.
 - Komlós, J., & Simonovits, M. (1996). *Szemerédi's Regularity Lemma and its applications in graph theory*. Combinatorics, Paul Erdős is Eighty, 2, 295–352.
 -/
 
-variable {V : Type*} [Fintype V] [DecidableEq V]
+variable {V : Type*}
 
 namespace SzemerediRegularity
 
@@ -131,7 +128,7 @@ theorem bipartiteEdgeCount_le_mul (G : SimpleGraph V) [DecidableRel G.Adj] (X Y 
 
 /-- The edge density is bounded in $[0, 1]$ for non-empty sets. -/
 theorem pairDensity_le_one (G : SimpleGraph V) [DecidableRel G.Adj] (X Y : Finset V)
-    (hX : X.Nonempty) (hY : Y.Nonempty) :
+    (_hX : X.Nonempty) (_hY : Y.Nonempty) :
     pairDensity G X Y ≤ 1 := by
   rw [pairDensity_eq_edgeDensity]
   exact_mod_cast G.edgeDensity_le_one X Y
@@ -171,14 +168,14 @@ theorem pairDensity_bot (X Y : Finset V) :
   simp [pairDensity]
 
 /-- Bipartite edge count between disjoint sets in the complete graph $\top$ equals $|X| |Y|$. -/
-theorem bipartiteEdgeCount_top {X Y : Finset V} (hdisj : Disjoint X Y) :
+theorem bipartiteEdgeCount_top [DecidableEq V] {X Y : Finset V} (hdisj : Disjoint X Y) :
     bipartiteEdgeCount (⊤ : SimpleGraph V) X Y = X.card * Y.card := by
   rw [bipartiteEdgeCount, Finset.filter_true_of_mem, Finset.card_product]
   rintro ⟨u, v⟩ huv (rfl : u = v)
   exact Finset.disjoint_left.1 hdisj (Finset.mem_product.1 huv).1 (Finset.mem_product.1 huv).2
 
 /-- Pair density between non-empty disjoint sets in the complete graph $\top$ equals $1$. -/
-theorem pairDensity_top {X Y : Finset V} (hdisj : Disjoint X Y)
+theorem pairDensity_top [DecidableEq V] {X Y : Finset V} (hdisj : Disjoint X Y)
     (hX : X.Nonempty) (hY : Y.Nonempty) :
     pairDensity (⊤ : SimpleGraph V) X Y = 1 := by
   rw [pairDensity, bipartiteEdgeCount_top hdisj, Nat.cast_mul]
@@ -219,7 +216,9 @@ theorem pairDensity_eq_one_of_all_edges (G : SimpleGraph V) [DecidableRel G.Adj]
   have : 0 < (Y.card : ℝ) := Nat.cast_pos.mpr hY.card_pos
   exact div_self (by positivity)
 
-/-! ### Disjoint Additivity -/
+section Disjoint
+
+variable [DecidableEq V]
 
 /-- Bipartite edge count is additive on disjoint unions on the left. -/
 theorem bipartiteEdgeCount_union_left (G : SimpleGraph V) [DecidableRel G.Adj] {X₁ X₂ Y : Finset V}
@@ -258,6 +257,8 @@ theorem pairDensity_weighted_split (G : SimpleGraph V) [DecidableRel G.Adj] {X�
   rw [bipartiteEdgeCount_union_left G hdisj]
   push_cast
   field_simp
+
+end Disjoint
 
 /-! ### $\varepsilon$-Regular Pairs -/
 

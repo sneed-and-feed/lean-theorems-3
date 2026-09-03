@@ -9,8 +9,6 @@ import Mathlib.Tactic.Linarith
 
 open scoped Pointwise
 
-set_option linter.unusedSectionVars false
-
 /-!
 # Ruzsa Distance and the Ruzsa Triangle Inequality
 

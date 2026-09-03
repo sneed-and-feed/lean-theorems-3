@@ -15,9 +15,6 @@ import Mathlib.Tactic.Linarith
 open scoped Pointwise BigOperators
 open Classical
 
-set_option linter.unusedSectionVars false
-set_option linter.unusedVariables false
-set_option linter.style.haveILetI false
 
 namespace CauchyDavenport
 
@@ -165,7 +162,7 @@ theorem iterated_sumset_eq_univ_of_card_ge {p : ℕ} (hp : Nat.Prime p) {k : ℕ
     (As : Fin k → Finset (ZMod p)) (h_nonempty : ∀ i, (As i).Nonempty)
     (h_sum : p + k - 1 ≤ ∑ i : Fin k, (As i).card) :
     (∑ i : Fin k, As i).card = p := by
-  haveI : NeZero p := ⟨hp.ne_zero⟩
+  have : NeZero p := ⟨hp.ne_zero⟩
   have h_bound := cauchy_davenport_iterated hp hk As h_nonempty
   have h_le : p ≤ (∑ i : Fin k, (As i).card) - k + 1 := by omega
   rw [min_eq_left h_le] at h_bound
@@ -184,7 +181,7 @@ $$|k A| \ge \min(p, k |A| - k + 1)$$
 -/
 theorem cauchy_davenport_self_iterated {p : ℕ} (hp : Nat.Prime p) {k : ℕ} (hk : 1 ≤ k)
     (A : Finset (ZMod p)) (hA : A.Nonempty) :
-    min p (k * A.card - k + 1) ≤ (∑ i : Fin k, A).card := by
+    min p (k * A.card - k + 1) ≤ (∑ _i : Fin k, A).card := by
   have h := cauchy_davenport_iterated hp hk (fun (_ : Fin k) => A) (fun _ => hA)
   have h_card_sum : (∑ i : Fin k, A.card) = k * A.card := by
     rw [Finset.sum_const, Finset.card_univ, Fintype.card_fin, smul_eq_mul]
@@ -198,7 +195,7 @@ the sum of the 2-element sets $A_i = \{0, d_i\}$ spans the whole of $\mathbb{Z}/
 theorem egz_cauchy_davenport_span {p : ℕ} (hp : Nat.Prime p)
     (d : Fin (p - 1) → ZMod p) (hd : ∀ i, d i ≠ 0) :
     (∑ i : Fin (p - 1), ({0, d i} : Finset (ZMod p))).card = p := by
-  haveI : NeZero p := ⟨hp.ne_zero⟩
+  have : NeZero p := ⟨hp.ne_zero⟩
   have hp2 : 2 ≤ p := hp.two_le
   have hk : 1 ≤ p - 1 := by omega
   have h_ne : ∀ i : Fin (p - 1), ({0, d i} : Finset (ZMod p)).Nonempty := by
@@ -223,8 +220,8 @@ theorem egz_cauchy_davenport_span {p : ℕ} (hp : Nat.Prime p)
 **Identical Elements Case**:
 $p$ copies of any element $x \in \mathbb{Z}/p\mathbb{Z}$ sum to $0$.
 -/
-theorem egz_identical_sum_zero {p : ℕ} (hp : Nat.Prime p) (x : ZMod p) :
-    (∑ i : Fin p, x) = 0 := by
+theorem egz_identical_sum_zero {p : ℕ} (_hp : Nat.Prime p) (x : ZMod p) :
+    (∑ _i : Fin p, x) = 0 := by
   simp only [Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul]
   have : (p : ZMod p) = 0 := ZMod.natCast_self p
   rw [this, zero_mul]

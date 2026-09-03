@@ -6,8 +6,6 @@ import Formalization.AlonBoppana.SpectralBound
 open scoped BigOperators Matrix Finset
 open Classical
 
-set_option linter.unusedSectionVars false
-
 /-!
 # The Alon–Boppana Spectral Lower Bound for Regular Graphs
 

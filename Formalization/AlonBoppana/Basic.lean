@@ -11,9 +11,7 @@ import Mathlib.Tactic.Positivity
 open scoped BigOperators Matrix Finset
 open Classical
 
-set_option linter.unusedSectionVars false
-
-variable {V : Type*} [Fintype V] [DecidableEq V]
+variable {V : Type*} [Fintype V]
 
 namespace AlonBoppana
 
@@ -51,6 +49,7 @@ noncomputable def rayleighQuotient (G : SimpleGraph V) [DecidableRel G.Adj] (v :
 def isOrthogonalToOnes (v : V → ℝ) : Prop :=
   ∑ x : V, v x = 0
 
+omit [Fintype V] in
 /-- Adjacency matrix is symmetric for any simple graph. -/
 theorem adjacencyMatrix_symmetric (G : SimpleGraph V) [DecidableRel G.Adj] :
     (adjacencyMatrix G)ᵀ = adjacencyMatrix G := by

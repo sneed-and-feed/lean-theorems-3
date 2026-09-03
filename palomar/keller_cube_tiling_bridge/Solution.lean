@@ -5,8 +5,6 @@ import Mathlib.Data.Fintype.Card
 import Mathlib.Data.Real.Basic
 import Mathlib.Tactic
 
-set_option linter.unusedVariables false
-set_option linter.unusedSectionVars false
 
 /-!
 # Frontier 4: The 7D Keller Cube-Tiling Bridge

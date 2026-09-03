@@ -15,7 +15,6 @@ import Mathlib.Tactic.Ring
 import Mathlib.Tactic.NormNum
 import Mathlib.Tactic.Positivity
 
-set_option linter.unusedSectionVars false
 
 namespace JenrichBorsuk64
 

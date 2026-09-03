@@ -7,8 +7,6 @@ import Mathlib.Tactic.Ring
 
 open scoped Pointwise
 
-set_option linter.unusedSectionVars false
-
 /-!
 # Foundational Sumset Operations & Doubling Constants
 

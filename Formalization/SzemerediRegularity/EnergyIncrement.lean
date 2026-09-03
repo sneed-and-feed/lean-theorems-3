@@ -15,9 +15,6 @@ import Mathlib.Tactic.GCongr
 open scoped BigOperators Finset
 open Classical
 
-set_option linter.unusedSectionVars false
-set_option linter.unusedVariables false
-
 /-!
 # Energy of a Graph Partition and the Energy Increment Lemma
 
@@ -164,7 +161,7 @@ at each step can make at most $\lfloor 1 / \Delta \rfloor$ steps.
 theorem energy_exhaustion_bound (energy_seq : ℕ → ℝ)
     (h_nonneg : ∀ (i : ℕ), 0 ≤ energy_seq i)
     (h_le_one : ∀ (i : ℕ), energy_seq i ≤ 1)
-    (Δ : ℝ) (hΔ : 0 < Δ)
+    (Δ : ℝ) (_hΔ : 0 < Δ)
     (h_inc : ∀ (i : ℕ), energy_seq i + Δ ≤ energy_seq (i + 1)) (k : ℕ) :
     (k : ℝ) * Δ ≤ 1 := by
   have h_step (i : ℕ) : (i : ℝ) * Δ ≤ energy_seq i := by

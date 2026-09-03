@@ -15,7 +15,6 @@ import Mathlib.Tactic.Ring
 import Mathlib.Tactic.NormNum
 import Mathlib.Tactic.Positivity
 
-set_option linter.unusedSectionVars false
 
 namespace JenrichBorsuk64
 
@@ -156,18 +155,22 @@ variable {V : Type*} [Fintype V] [DecidableEq V]
 def Y (G : SimpleGraph V) [DecidableRel G.Adj] (i j : V) : ℝ :=
   (if G.Adj i j then 1 else 0) + (if i = j then 4 else 0)
 
+omit [Fintype V] in
 theorem Y_diag (G : SimpleGraph V) [DecidableRel G.Adj] (i : V) :
     Y G i i = 4 := by
   simp [Y]
 
+omit [Fintype V] in
 theorem Y_of_adj (G : SimpleGraph V) [DecidableRel G.Adj] {i j : V} (h : G.Adj i j) :
     Y G i j = 1 := by
   simp [Y, h, G.ne_of_adj h]
 
+omit [Fintype V] in
 theorem Y_of_not_adj (G : SimpleGraph V) [DecidableRel G.Adj] {i j : V} (hne : i ≠ j) (hnadj : ¬ G.Adj i j) :
     Y G i j = 0 := by
   simp [Y, hne, hnadj]
 
+omit [Fintype V] in
 theorem Y_symm (G : SimpleGraph V) [DecidableRel G.Adj] (i j : V) :
     Y G i j = Y G j i := by
   simp [Y, G.adj_comm i j, eq_comm]
@@ -186,6 +189,7 @@ theorem sum_Y_eq_neighbors_add (G : SimpleGraph V) [DecidableRel G.Adj] (B : Fin
     simp [SimpleGraph.mem_neighborFinset, and_comm]
   rw [h1, Finset.sum_ite_eq]
 
+omit [DecidableEq V] in
 theorem dist_sq_eq_inner_sub_two_mul_add (u v : EuclideanSpace ℝ V) :
     dist u v ^ 2 = @inner ℝ (EuclideanSpace ℝ V) _ u u - 2 * @inner ℝ (EuclideanSpace ℝ V) _ u v +
       @inner ℝ (EuclideanSpace ℝ V) _ v v := by

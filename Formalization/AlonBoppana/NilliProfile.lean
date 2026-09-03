@@ -7,9 +7,7 @@ import Mathlib.Tactic.Positivity
 open scoped BigOperators Matrix Finset
 open Classical
 
-set_option linter.unusedSectionVars false
-
-variable {V : Type*} [Fintype V] [DecidableEq V]
+variable {V : Type*} [Fintype V]
 
 namespace AlonBoppana
 
@@ -121,23 +119,27 @@ theorem sum_radialTestVector (G : SimpleGraph V) (x_0 : V) (g : ℕ → ℝ) (r 
     fun v hv => by rw [(sphericalShell_mem_iff G x_0 j v).mp hv]
   rw [Finset.sum_congr rfl h_shell, Finset.sum_const, nsmul_eq_mul, mul_comm]
 
+omit [Fintype V] in
 /-- Test vector evaluated inside the support ball. -/
 theorem nilliTestVector_apply_of_le (G : SimpleGraph V) (d : ℕ) (x_0 : V) (r : ℕ) {v : V}
     (h : G.dist x_0 v ≤ r) :
     nilliTestVector G d x_0 r v = nilliProfile d (G.dist x_0 v) := by
   simp [nilliTestVector, radialTestVector, h]
 
+omit [Fintype V] in
 /-- Test vector evaluates to zero outside the support ball. -/
 theorem nilliTestVector_apply_of_gt (G : SimpleGraph V) (d : ℕ) (x_0 : V) (r : ℕ) {v : V}
     (h : r < G.dist x_0 v) :
     nilliTestVector G d x_0 r v = 0 := by
   simp [nilliTestVector, radialTestVector, not_le.mpr h]
 
+omit [Fintype V] in
 /-- Test vector evaluated at the center vertex $x_0$ equals 1. -/
 theorem nilliTestVector_center (G : SimpleGraph V) (d : ℕ) (x_0 : V) (r : ℕ) :
     nilliTestVector G d x_0 r x_0 = 1 := by
   simp [nilliTestVector, radialTestVector, SimpleGraph.dist_self, nilliProfile]
 
+omit [Fintype V] in
 /-- Nilli test vector is point-wise non-negative. -/
 theorem nilliTestVector_nonneg (G : SimpleGraph V) (d : ℕ) (hd : 2 ≤ d) (x_0 : V) (r : ℕ) (v : V) :
     0 ≤ nilliTestVector G d x_0 r v := by
@@ -279,6 +281,7 @@ theorem rayleighQuotient_orthogonalCombination (G : SimpleGraph V) [DecidableRel
   rw [h_scale₁, h_scale₂] at h_ratio
   exact h_ratio
 
+omit [Fintype V] in
 /-- Disjoint support of localized test vectors centered at distant points ($d(x_0, y_0) \ge 2r + 1$). -/
 theorem nilliTestVector_disjoint_support (G : SimpleGraph V) (hconn : G.Connected) (d : ℕ)
     {x_0 y_0 : V} {r : ℕ} (h_sep : 2 * r + 1 ≤ G.dist x_0 y_0) (v : V) :
@@ -293,6 +296,7 @@ theorem nilliTestVector_disjoint_support (G : SimpleGraph V) (hconn : G.Connecte
   · ring
   · ring
 
+omit [Fintype V] in
 /-- Absence of edge cross-terms between test vectors centered at distant points ($d(x_0, y_0) \ge 2r + 2$). -/
 theorem nilliTestVector_disjoint_adj (G : SimpleGraph V) (hconn : G.Connected) (d : ℕ)
     {x_0 y_0 : V} {r : ℕ} (h_sep : 2 * r + 2 ≤ G.dist x_0 y_0) {u w : V} (hadj : G.Adj u w) :

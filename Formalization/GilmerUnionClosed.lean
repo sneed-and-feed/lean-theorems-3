@@ -13,8 +13,6 @@ import Mathlib.Tactic.NormNum
 open scoped BigOperators
 open Classical
 
-set_option linter.unusedSectionVars false
-set_option linter.unusedVariables false
 
 namespace GilmerUnionClosed
 
@@ -194,7 +192,7 @@ theorem union_prob_pos {p : ℝ} (h0 : 0 < p) (h1 : p < 1) : 0 < union_prob p :=
   dsimp [union_prob]; nlinarith
 
 /-- For $p \in (0, 1)$, the union probability $2p - p^2$ is strictly less than 1. -/
-theorem union_prob_lt_one {p : ℝ} (h0 : 0 < p) (h1 : p < 1) : union_prob p < 1 := by
+theorem union_prob_lt_one {p : ℝ} (_h0 : 0 < p) (h1 : p < 1) : union_prob p < 1 := by
   dsimp [union_prob]; nlinarith
 
 /-- For $p \in (0, 1)$, the union probability is strictly greater than $p$. -/
@@ -202,7 +200,7 @@ theorem union_prob_gt_self {p : ℝ} (h0 : 0 < p) (h1 : p < 1) : p < union_prob 
   dsimp [union_prob]; nlinarith
 
 /-- For $p \in [0, c_0]$, $2p - p^2 \le 1 - p$. -/
-theorem union_prob_le_complement_of_le_gilmer {p : ℝ} (h0 : 0 ≤ p) (hp : p ≤ c₀) :
+theorem union_prob_le_complement_of_le_gilmer {p : ℝ} (_h0 : 0 ≤ p) (hp : p ≤ c₀) :
     union_prob p ≤ 1 - p := by
   dsimp [union_prob]
   have : 0 ≤ (c₀ - p) * (3 - c₀ - p) := mul_nonneg (by linarith) (by linarith [gilmerConstant_lt_half])

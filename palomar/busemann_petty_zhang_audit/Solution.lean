@@ -5,8 +5,6 @@ import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.Positivity
 
-set_option linter.unusedVariables false
-set_option linter.unusedSectionVars false
 
 namespace BusemannPettyZhang
 
@@ -142,7 +140,7 @@ $\operatorname{vol}_3(K_1 \cap \xi^\perp) \le \operatorname{vol}_3(K_2 \cap \xi^
 then $\operatorname{vol}_4(K_1) \le \operatorname{vol}_4(K_2)$. -/
 theorem busemann_petty_dim_4 (S : BusemannPettySpace 4) (ρ₁ ρ₂ : UnitSphere 4 → ℝ)
     (h₁_symm : IsSymmetric ρ₁) (h₁_cvx : IsConvexRadial ρ₁)
-    (h₂_symm : IsSymmetric ρ₂) (h₂_cvx : IsConvexRadial ρ₂)
+    (_h₂_symm : IsSymmetric ρ₂) (h₂_cvx : IsConvexRadial ρ₂)
     (h_sec : ∀ ξ : UnitSphere 4, sectionVol S.toSphericalRadonSpace 3 ρ₁ ξ ≤ sectionVol S.toSphericalRadonSpace 3 ρ₂ ξ) :
     volume S.toSphericalRadonSpace ρ₁ ≤ volume S.toSphericalRadonSpace ρ₂ := by
   have h_int : IsIntersectionBody S.toSphericalRadonSpace ρ₁ :=
@@ -193,7 +191,7 @@ $\operatorname{vol}_2(K_1 \cap \xi^\perp) \le \operatorname{vol}_2(K_2 \cap \xi^
 then $\operatorname{vol}_3(K_1) \le \operatorname{vol}_3(K_2)$. -/
 theorem busemann_petty_dim_3 (S : BusemannPettySpace 3) (ρ₁ ρ₂ : UnitSphere 3 → ℝ)
     (h₁_symm : IsSymmetric ρ₁) (h₁_cvx : IsConvexRadial ρ₁)
-    (h₂_symm : IsSymmetric ρ₂) (h₂_cvx : IsConvexRadial ρ₂)
+    (_h₂_symm : IsSymmetric ρ₂) (h₂_cvx : IsConvexRadial ρ₂)
     (h_sec : ∀ ξ : UnitSphere 3, sectionVol S.toSphericalRadonSpace 2 ρ₁ ξ ≤ sectionVol S.toSphericalRadonSpace 2 ρ₂ ξ) :
     volume S.toSphericalRadonSpace ρ₁ ≤ volume S.toSphericalRadonSpace ρ₂ := by
   have h_int : IsIntersectionBody S.toSphericalRadonSpace ρ₁ :=

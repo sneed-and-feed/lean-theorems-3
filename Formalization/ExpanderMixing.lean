@@ -15,7 +15,6 @@ import Mathlib.Tactic.Positivity
 open scoped BigOperators Matrix Finset
 open Classical
 
-set_option linter.unusedSectionVars false
 
 /-!
 # The Expander Mixing Lemma
@@ -91,6 +90,7 @@ def adjacencyMatrix (G : SimpleGraph V) [DecidableRel G.Adj] : Matrix V V ℝ :=
 def isRegularOfDegree (G : SimpleGraph V) (d : ℕ) [DecidableRel G.Adj] : Prop :=
   ∀ v : V, G.degree v = d
 
+omit [DecidableEq V] in
 /-- In a $d$-regular graph, the sum of any row of the adjacency matrix is $d$. -/
 theorem sum_adj_row_eq_degree (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
     (hreg : isRegularOfDegree G d) (u : V) :
@@ -99,6 +99,7 @@ theorem sum_adj_row_eq_degree (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
     ext; simp [SimpleGraph.mem_neighborFinset]
   simp [adjacencyMatrix, Finset.sum_boole, this, SimpleGraph.card_neighborFinset_eq_degree, hreg u]
 
+omit [DecidableEq V] in
 /-- In a $d$-regular graph, the sum of any column of the adjacency matrix is $d$. -/
 theorem sum_adj_col_eq_degree (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
     (hreg : isRegularOfDegree G d) (v : V) :
@@ -106,6 +107,7 @@ theorem sum_adj_col_eq_degree (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
   simp_rw [adjacencyMatrix, G.adj_comm]
   exact sum_adj_row_eq_degree G hreg v
 
+omit [DecidableEq V] in
 /-- In a $d$-regular graph on $n$ vertices, the total sum of all adjacency matrix entries is $d \cdot n$. -/
 theorem sum_adj_all_eq (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
     (hreg : isRegularOfDegree G d) :
@@ -240,23 +242,28 @@ theorem innerProduct_decompPerp_eq_edgeCountBetween_sub
   rw [h_T1, h_T2, h_T3, h_T4]
   ring
 
+omit [DecidableEq V] in
 /-- Squared norm is the sum of component squares. -/
 theorem normSq_eq_sum_sq (v : V → ℝ) : normSq v = ∑ u : V, (v u) ^ 2 := by
   simp only [normSq, innerProduct, sq]
 
+omit [DecidableEq V] in
 /-- Squared norm is non-negative. -/
 theorem normSq_nonneg (v : V → ℝ) : 0 ≤ normSq v := by
   rw [normSq_eq_sum_sq]
   exact Finset.sum_nonneg fun _ _ => sq_nonneg _
 
+omit [DecidableEq V] in
 /-- Squared norm is zero if and only if the vector is zero. -/
 theorem normSq_eq_zero_iff (v : V → ℝ) : normSq v = 0 ↔ v = 0 := by
   simp [normSq_eq_sum_sq, Finset.sum_eq_zero_iff_of_nonneg (fun _ _ => sq_nonneg _), funext_iff]
 
+omit [DecidableEq V] in
 /-- Squared norm is strictly positive for any non-zero vector. -/
 theorem normSq_pos_of_ne_zero {v : V → ℝ} (hne : v ≠ 0) : 0 < normSq v :=
   lt_of_le_of_ne (normSq_nonneg v) (Ne.symm (mt (normSq_eq_zero_iff v).mp hne))
 
+omit [DecidableEq V] in
 /-- Bilinear Cauchy-Schwarz bound for the adjacency operator:
 $\langle u, A v \rangle^2 \le d^2 \|u\|^2 \|v\|^2$. -/
 theorem innerProduct_adjOp_sq_le (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
@@ -287,6 +294,7 @@ theorem innerProduct_adjOp_sq_le (G : SimpleGraph V) [DecidableRel G.Adj] {d : �
     _ ≤ ((d : ℝ) * normSq u) * ((d : ℝ) * normSq v) := h_cs
     _ = (d : ℝ) ^ 2 * normSq u * normSq v := by ring
 
+omit [DecidableEq V] in
 /-- The set in the definition of $\lambda(G)$ is bounded above by $d$. -/
 theorem bddAbove_spectralExpansionParameter_set (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
     (hreg : isRegularOfDegree G d) :
@@ -319,6 +327,7 @@ noncomputable def spectralExpansionParameter (G : SimpleGraph V) [DecidableRel G
          (u : V → ℝ) (v : V → ℝ) (_ : u ≠ 0) (_ : v ≠ 0)
          (_ : isOrthogonalToOnes u) (_ : isOrthogonalToOnes v) }
 
+omit [DecidableEq V] in
 /-- The spectral expansion parameter is non-negative. -/
 theorem spectralExpansionParameter_nonneg (G : SimpleGraph V) [DecidableRel G.Adj] :
     0 ≤ spectralExpansionParameter G := by
@@ -394,6 +403,7 @@ theorem expander_mixing_lemma (G : SimpleGraph V) [DecidableRel G.Adj] {d : ℕ}
     rw [← Real.sqrt_mul h1, this]
   rwa [h_sqrt_mul] at h_mul_le
 
+omit [DecidableEq V] in
 /-- Bounding the normalized product in the Expander Mixing Lemma by $\sqrt{|S| |T|}$. -/
 theorem sqrt_card_sub_le (S T : Finset V) (hn : Fintype.card V ≠ 0) :
     Real.sqrt ((S.card : ℝ) * (1 - (S.card : ℝ) / (Fintype.card V : ℝ)) *

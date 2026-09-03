@@ -20,9 +20,6 @@ import Mathlib.Tactic.FieldSimp
 open scoped BigOperators Finset
 open Classical
 
-set_option linter.unusedSectionVars false
-set_option linter.unusedVariables false
-
 variable {V : Type*} [Fintype V] [DecidableEq V]
 
 namespace SzemerediRegularity
@@ -35,6 +32,7 @@ def bipartiteEdgeCount (G : SimpleGraph V) [DecidableRel G.Adj] (X Y : Finset V)
 noncomputable def pairDensity (G : SimpleGraph V) [DecidableRel G.Adj] (X Y : Finset V) : ℝ :=
   (bipartiteEdgeCount G X Y : ℝ) / ((X.card : ℝ) * (Y.card : ℝ))
 
+omit [Fintype V] [DecidableEq V] in
 /-- Bridge: `pairDensity` coincides with the real coercion of Mathlib's `SimpleGraph.edgeDensity`. -/
 theorem pairDensity_eq_edgeDensity (G : SimpleGraph V) [DecidableRel G.Adj] (X Y : Finset V) :
     pairDensity G X Y = (G.edgeDensity X Y : ℝ) := by
@@ -42,37 +40,43 @@ theorem pairDensity_eq_edgeDensity (G : SimpleGraph V) [DecidableRel G.Adj] (X Y
   push_cast
   rfl
 
+omit [Fintype V] [DecidableEq V] in
 /-- Symmetry of bipartite edge count: $e(X, Y) = e(Y, X)$. -/
 theorem bipartiteEdgeCount_symm (G : SimpleGraph V) [DecidableRel G.Adj] (X Y : Finset V) :
     bipartiteEdgeCount G X Y = bipartiteEdgeCount G Y X := by
   have : Std.Symm G.Adj := ⟨fun _ _ => G.adj_symm⟩
   exact Rel.card_interedges_comm X Y
 
+omit [Fintype V] [DecidableEq V] in
 /-- Symmetry of pair density: $d(X, Y) = d(Y, X)$. -/
 theorem pairDensity_symm (G : SimpleGraph V) [DecidableRel G.Adj] (X Y : Finset V) :
     pairDensity G X Y = pairDensity G Y X := by
   dsimp [pairDensity]
   rw [bipartiteEdgeCount_symm G X Y, mul_comm (X.card : ℝ)]
 
+omit [Fintype V] [DecidableEq V] in
 /-- The edge density is non-negative. -/
 theorem pairDensity_nonneg (G : SimpleGraph V) [DecidableRel G.Adj] (X Y : Finset V) :
     0 ≤ pairDensity G X Y := by
   rw [pairDensity_eq_edgeDensity]
   exact_mod_cast G.edgeDensity_nonneg X Y
 
+omit [Fintype V] [DecidableEq V] in
 /-- The edge density is bounded in $[0, 1]$ for non-empty sets. -/
 theorem pairDensity_le_one (G : SimpleGraph V) [DecidableRel G.Adj] (X Y : Finset V)
-    (hX : X.Nonempty) (hY : Y.Nonempty) :
+    (_hX : X.Nonempty) (_hY : Y.Nonempty) :
     pairDensity G X Y ≤ 1 := by
   rw [pairDensity_eq_edgeDensity]
   exact_mod_cast G.edgeDensity_le_one X Y
 
+omit [Fintype V] [DecidableEq V] in
 /-- The edge density is unconditionally bounded by 1 for any pair of sets. -/
 theorem pairDensity_le_one' (G : SimpleGraph V) [DecidableRel G.Adj] (X Y : Finset V) :
     pairDensity G X Y ≤ 1 := by
   rw [pairDensity_eq_edgeDensity]
   exact_mod_cast G.edgeDensity_le_one X Y
 
+omit [Fintype V] in
 /-- Bipartite edge count is additive on disjoint unions on the left. -/
 theorem bipartiteEdgeCount_union_left (G : SimpleGraph V) [DecidableRel G.Adj] {X₁ X₂ Y : Finset V}
     (hdisj : Disjoint X₁ X₂) :
@@ -81,10 +85,12 @@ theorem bipartiteEdgeCount_union_left (G : SimpleGraph V) [DecidableRel G.Adj] {
   rw [SimpleGraph.interedges, Rel.interedges, Finset.union_product, Finset.filter_union]
   exact Finset.card_union_of_disjoint (SimpleGraph.interedges_disjoint_left G hdisj Y)
 
+omit [Fintype V] [DecidableEq V] in
 @[simp]
 theorem pairDensity_empty_left (G : SimpleGraph V) [DecidableRel G.Adj] (Y : Finset V) :
     pairDensity G ∅ Y = 0 := by simp [pairDensity]
 
+omit [Fintype V] in
 /-- Weighted average split for pair density under partitioning the left set. -/
 theorem pairDensity_weighted_split (G : SimpleGraph V) [DecidableRel G.Adj] {X₁ X₂ Y : Finset V}
     (hdisj : Disjoint X₁ X₂) (hU : (X₁ ∪ X₂).Nonempty) (hY : Y.Nonempty) :
@@ -121,6 +127,7 @@ def IsEpsilonRegularPair (G : SimpleGraph V) [DecidableRel G.Adj] (ε : ℝ) (X 
     ε * (Y.card : ℝ) ≤ (B.card : ℝ) →
     |pairDensity G A B - pairDensity G X Y| ≤ ε
 
+omit [Fintype V] [DecidableEq V] in
 /-- Symmetry of the $\varepsilon$-regular pair predicate: $(X, Y)$ is $\varepsilon$-regular iff $(Y, X)$ is. -/
 theorem isEpsilonRegularPair_symm (G : SimpleGraph V) [DecidableRel G.Adj] (ε : ℝ) (X Y : Finset V) :
     IsEpsilonRegularPair G ε X Y ↔ IsEpsilonRegularPair G ε Y X :=
@@ -175,7 +182,7 @@ at each step can make at most $\lfloor 1 / \Delta \rfloor$ steps.
 theorem energy_exhaustion_bound (energy_seq : ℕ → ℝ)
     (h_nonneg : ∀ (i : ℕ), 0 ≤ energy_seq i)
     (h_le_one : ∀ (i : ℕ), energy_seq i ≤ 1)
-    (Δ : ℝ) (hΔ : 0 < Δ)
+    (Δ : ℝ) (_hΔ : 0 < Δ)
     (h_inc : ∀ (i : ℕ), energy_seq i + Δ ≤ energy_seq (i + 1)) (k : ℕ) :
     (k : ℝ) * Δ ≤ 1 := by
   have h_step (i : ℕ) : (i : ℝ) * Δ ≤ energy_seq i := by

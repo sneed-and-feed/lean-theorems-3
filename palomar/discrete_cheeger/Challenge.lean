@@ -14,11 +14,9 @@ import Mathlib.Tactic.Positivity
 open scoped BigOperators Matrix Finset
 open Classical
 
-set_option linter.unusedSectionVars false
-
 namespace DiscreteCheeger
 
-variable {V : Type*} [Fintype V] [DecidableEq V]
+variable {V : Type*} [Fintype V]
 
 /-!
 # The Discrete Cheeger Lower Bound and Optimal Isoperimetric Inequalities for Regular Graphs
@@ -88,6 +86,8 @@ noncomputable def spectralGap (G : SimpleGraph V) [DecidableRel G.Adj] (d : ℕ)
 /-- The normalized spectral gap $\gamma = 1 - \frac{\lambda_2(G)}{d}$. -/
 noncomputable def normalizedSpectralGap (G : SimpleGraph V) [DecidableRel G.Adj] (d : ℕ) : ℝ :=
   1 - secondEigenvalue G / (d : ℝ)
+
+variable [DecidableEq V]
 
 /-- The number of edges across the cut boundary $e(S, S^c) = \sum_{u \in S, v \in S^c} A_{u, v}$. -/
 def edgeBoundary (G : SimpleGraph V) [DecidableRel G.Adj] (S : Finset V) : ℝ :=

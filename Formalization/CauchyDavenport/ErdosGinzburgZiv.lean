@@ -13,10 +13,6 @@ import Mathlib.Tactic.Linarith
 open scoped Pointwise BigOperators
 open Classical
 
-set_option linter.unusedSectionVars false
-set_option linter.unusedVariables false
-set_option linter.style.haveILetI false
-
 /-!
 # The Erdős–Ginzburg–Ziv (EGZ) Theorem via Cauchy–Davenport
 
@@ -74,7 +70,7 @@ the sum of the 2-element sets $A_i = \{0, d_i\}$ spans the whole of $\mathbb{Z}/
 theorem egz_cauchy_davenport_span (hp : Nat.Prime p)
     (d : Fin (p - 1) → ZMod p) (hd : ∀ i, d i ≠ 0) :
     (∑ i : Fin (p - 1), ({0, d i} : Finset (ZMod p))).card = p := by
-  haveI : NeZero p := ⟨hp.ne_zero⟩
+  have : NeZero p := ⟨hp.ne_zero⟩
   have hp2 : 2 ≤ p := hp.two_le
   have hk : 1 ≤ p - 1 := by omega
   have h_ne : ∀ i : Fin (p - 1), ({0, d i} : Finset (ZMod p)).Nonempty := by
@@ -99,8 +95,8 @@ theorem egz_cauchy_davenport_span (hp : Nat.Prime p)
 **Identical Elements Case**:
 $p$ copies of any element $x \in \mathbb{Z}/p\mathbb{Z}$ sum to $0$.
 -/
-theorem egz_identical_sum_zero (hp : Nat.Prime p) (x : ZMod p) :
-    (∑ i : Fin p, x) = 0 := by
+theorem egz_identical_sum_zero (_hp : Nat.Prime p) (x : ZMod p) :
+    (∑ _i : Fin p, x) = 0 := by
   simp only [Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul]
   have : (p : ZMod p) = 0 := ZMod.natCast_self p
   rw [this, zero_mul]

@@ -13,8 +13,6 @@ import Mathlib.Tactic.NormNum
 open scoped BigOperators
 open Classical
 
-set_option linter.unusedSectionVars false
-set_option linter.unusedVariables false
 
 namespace GilmerUnionClosed
 

@@ -11,9 +11,6 @@ import Mathlib.Tactic.Linarith
 open scoped Pointwise
 open Classical
 
-set_option linter.unusedSectionVars false
-set_option linter.unusedVariables false
-set_option linter.style.haveILetI false
 
 /-!
 # Vosper's Critical Pairs Theorem
@@ -90,7 +87,7 @@ For prime $p$, if $n \le p$ and $d \ne 0$, then the arithmetic progression has e
 theorem card_arithmeticProgression (hp : Nat.Prime p) (x0 d : ZMod p) (hd : d ≠ 0)
     {n : ℕ} (hn : n ≤ p) :
     (arithmeticProgression x0 d n).card = n := by
-  haveI : Fact (Nat.Prime p) := ⟨hp⟩
+  have : Fact (Nat.Prime p) := ⟨hp⟩
   rw [arithmeticProgression]
   rw [Finset.card_image_of_injOn]
   · exact Finset.card_range n
@@ -104,7 +101,7 @@ theorem card_arithmeticProgression (hp : Nat.Prime p) (x0 d : ZMod p) (hd : d �
     rwa [ZMod.val_natCast_of_lt hi_p, ZMod.val_natCast_of_lt hj_p] at h_val
 
 /-- Any singleton is trivially an arithmetic progression of length 1 with any step $d \ne 0$. -/
-theorem singleton_isAP (hp : Nat.Prime p) (a : ZMod p) {d : ZMod p} (hd : d ≠ 0) :
+theorem singleton_isAP (_hp : Nat.Prime p) (a : ZMod p) {d : ZMod p} (hd : d ≠ 0) :
     IsAPWith {a} d := by
   refine ⟨hd, a, ?_⟩
   ext x
@@ -138,8 +135,8 @@ variable {p : ℕ}
 **Left Singleton Trivial Critical Case**:
 If $|A| = 1$, then $|A + B| = |A| + |B| - 1$ holds for every non-empty set $B$.
 -/
-theorem singleton_critical_left (hp : Nat.Prime p) (A B : Finset (ZMod p))
-    (hA : A.card = 1) (hB : B.Nonempty) :
+theorem singleton_critical_left (_hp : Nat.Prime p) (A B : Finset (ZMod p))
+    (hA : A.card = 1) (_hB : B.Nonempty) :
     (A + B).card = A.card + B.card - 1 := by
   obtain ⟨a, rfl⟩ := Finset.card_eq_one.mp hA
   rw [card_singleton_add a B]
@@ -149,8 +146,8 @@ theorem singleton_critical_left (hp : Nat.Prime p) (A B : Finset (ZMod p))
 **Right Singleton Trivial Critical Case**:
 If $|B| = 1$, then $|A + B| = |A| + |B| - 1$ holds for every non-empty set $A$.
 -/
-theorem singleton_critical_right (hp : Nat.Prime p) (A B : Finset (ZMod p))
-    (hA : A.Nonempty) (hB : B.card = 1) :
+theorem singleton_critical_right (_hp : Nat.Prime p) (A B : Finset (ZMod p))
+    (_hA : A.Nonempty) (hB : B.card = 1) :
     (A + B).card = A.card + B.card - 1 := by
   obtain ⟨b, rfl⟩ := Finset.card_eq_one.mp hB
   rw [card_add_singleton A b]
@@ -177,7 +174,7 @@ theorem vosper_theorem_explicit (hp : Nat.Prime p)
     (A B : Finset (ZMod p)) (hA2 : 2 ≤ A.card) (hB2 : 2 ≤ B.card)
     (h_crit : (A + B).card = A.card + B.card - 1)
     (h_bound : (A + B).card ≤ p - 2) :
-    ∃ (d : ZMod p) (hd : d ≠ 0) (startA startB : ZMod p),
+    ∃ (d : ZMod p) (_hd : d ≠ 0) (startA startB : ZMod p),
       A = arithmeticProgression startA d A.card ∧
       B = arithmeticProgression startB d B.card := by
   obtain ⟨d, ⟨hd, startA, hA_eq⟩, ⟨_, startB, hB_eq⟩⟩ :=
@@ -192,10 +189,10 @@ satisfies $|C| = p - (|A| + |B| - 1)$.
 theorem vosper_duality_card (hp : Nat.Prime p)
     (A B : Finset (ZMod p))
     (h_crit : (A + B).card = A.card + B.card - 1)
-    (h_bound : (A + B).card ≤ p - 2) :
+    (_h_bound : (A + B).card ≤ p - 2) :
     haveI : NeZero p := ⟨hp.ne_zero⟩
     ((Finset.univ : Finset (ZMod p)) \ (A + B)).card = p - (A.card + B.card - 1) := by
-  haveI : NeZero p := ⟨hp.ne_zero⟩
+  have : NeZero p := ⟨hp.ne_zero⟩
   have h_sub : A + B ⊆ Finset.univ := Finset.subset_univ _
   have h_card_sdiff := Finset.card_sdiff_of_subset h_sub
   have h_univ : (Finset.univ : Finset (ZMod p)).card = p := ZMod.card p

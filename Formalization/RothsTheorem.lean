@@ -4,8 +4,6 @@ import Formalization.RothsTheorem.DensityIncrement
 
 open scoped BigOperators Finset
 
-set_option linter.unusedSectionVars false
-set_option linter.unusedVariables false
 
 /-!
 # Roth's Theorem on 3-Term Arithmetic Progressions
@@ -75,7 +73,7 @@ every subset $A \subseteq \{0, \dots, N-1\}$ with $|A| \ge \delta N$ contains a 
 arithmetic progression.
 -/
 axiom roths_theorem (δ : ℝ) (hδ : 0 < δ) :
-    ∃ N_0 : ℕ, ∀ (N : ℕ) (hN : N_0 ≤ N) (A : Finset ℤ),
+    ∃ N_0 : ℕ, ∀ (N : ℕ) (_hN : N_0 ≤ N) (A : Finset ℤ),
       A ⊆ intRange N →
       δ * (N : ℝ) ≤ (A.card : ℝ) →
       ∃ (x y z : ℤ), x ∈ A ∧ y ∈ A ∧ z ∈ A ∧ x + z = 2 * y ∧ x ≠ y
@@ -86,7 +84,7 @@ For any $\delta > 0$ and sufficiently large odd $N$, any subset $A \subseteq \ma
 with $|A| \ge \delta N$ contains a non-trivial 3-term AP.
 -/
 axiom roths_theorem_zmod (δ : ℝ) (hδ : 0 < δ) :
-    ∃ N_0 : ℕ, ∀ (N : ℕ) (hN : N_0 ≤ N) [NeZero N] (A : Finset (ZMod N)),
+    ∃ N_0 : ℕ, ∀ (N : ℕ) (_hN : N_0 ≤ N) [NeZero N] (A : Finset (ZMod N)),
       δ * (N : ℝ) ≤ (A.card : ℝ) →
       ∃ (x y z : ZMod N), x ∈ A ∧ y ∈ A ∧ z ∈ A ∧ x + z = (2 : ℕ) • y ∧ x ≠ y
 

@@ -12,8 +12,6 @@ import Mathlib.Tactic.Linarith
 
 open scoped BigOperators Finset
 
-set_option linter.unusedSectionVars false
-
 /-!
 # The Density Increment Strategy and Roth's Upper Bound
 
@@ -86,8 +84,6 @@ structure Progression where
 def Progression.elements (P : Progression) : Finset ℤ :=
   (Finset.range P.length).image (fun (k : ℕ) => P.start + (k : ℤ) * P.step)
 
-set_option linter.unusedVariables false
-
 /-- The length of a progression is its cardinality. -/
 theorem progression_card (P : Progression) :
     P.elements.card = P.length := by
@@ -150,7 +146,7 @@ theorem intRange_mem (N : ℕ) (k : ℕ) (hk : k < N) : (k : ℤ) ∈ intRange N
 If density increases by at least $\alpha_0^2 / 16$ at each step, after $k$ steps
 the density has grown by at least $k \alpha_0^2 / 16$.
 -/
-theorem density_boost_bound (α₀ : ℝ) (hα₀ : 0 < α₀) (α : ℕ → ℝ) (h0 : α 0 = α₀)
+theorem density_boost_bound (α₀ : ℝ) (_hα₀ : 0 < α₀) (α : ℕ → ℝ) (h0 : α 0 = α₀)
     (h_step : ∀ k, α (k + 1) ≥ α k + (α₀ ^ 2) / 16) :
     ∀ k : ℕ, α k ≥ α₀ + (k : ℝ) * ((α₀ ^ 2) / 16) := by
   intro k
@@ -195,7 +191,7 @@ $$|A| \le C \frac{N}{\log \log N}$$
 -/
 axiom roth_three_ap_bound :
     ∃ C : ℝ, 0 < C ∧
-      ∀ (N : ℕ) (hN : 4 ≤ N) (A : Finset ℤ),
+      ∀ (N : ℕ) (_hN : 4 ≤ N) (A : Finset ℤ),
         A ⊆ intRange N →
         (∀ x ∈ A, ∀ y ∈ A, ∀ z ∈ A, x + z = 2 * y → x = y) →
         (A.card : ℝ) ≤ C * (N : ℝ) / Real.log (Real.log (N : ℝ))
@@ -208,7 +204,7 @@ $$|A| \le C N \exp\left(-c (\log N)^{1/12}\right)$$
 -/
 axiom kelley_meka_bound :
     ∃ (c C : ℝ), 0 < c ∧ 0 < C ∧
-      ∀ (N : ℕ) (hN : 2 ≤ N) (A : Finset ℤ),
+      ∀ (N : ℕ) (_hN : 2 ≤ N) (A : Finset ℤ),
         A ⊆ intRange N →
         (∀ x ∈ A, ∀ y ∈ A, ∀ z ∈ A, x + z = 2 * y → x = y) →
         (A.card : ℝ) ≤ C * (N : ℝ) * Real.exp (-c * (Real.log (N : ℝ)) ^ ((1 : ℝ) / 12))

@@ -10,10 +10,6 @@ import Mathlib.Tactic.Linarith
 open scoped Pointwise
 open Classical
 
-set_option linter.unusedSectionVars false
-set_option linter.unusedVariables false
-set_option linter.style.haveILetI false
-
 /-!
 # Chowla's Generalization to Composite Moduli
 
@@ -78,7 +74,7 @@ axiom chowla_theorem (n : ℕ) (hn : 2 ≤ n) [NeZero n]
 When $B = \{0\}$, the Chowla bound $|A + \{0\}| \ge \min(n, |A| + 1 - 1) = |A|$ holds with equality.
 -/
 theorem chowla_singleton (n : ℕ) [NeZero n]
-    (A : Finset (ZMod n)) (hA : A.Nonempty) :
+    (A : Finset (ZMod n)) (_hA : A.Nonempty) :
     min n (A.card + 1 - 1) ≤ (A + {0}).card := by
   have : (A + {0}).card = A.card := card_add_singleton A 0
   rw [this, Nat.add_sub_cancel]
@@ -117,7 +113,7 @@ so Chowla's theorem applies to all sets containing $0$.
 theorem chowla_of_prime {p : ℕ} (hp : Nat.Prime p)
     (A B : Finset (ZMod p)) (hA : A.Nonempty) (hB0 : (0 : ZMod p) ∈ B) :
     min p (A.card + B.card - 1) ≤ (A + B).card := by
-  haveI : NeZero p := ⟨hp.ne_zero⟩
+  have : NeZero p := ⟨hp.ne_zero⟩
   apply chowla_theorem p hp.two_le A B hA hB0
   intro b hb hb_ne
   have hb_val_pos : 0 < b.val := by

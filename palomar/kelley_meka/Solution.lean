@@ -16,8 +16,6 @@ import Mathlib.Tactic.NormNum
 open scoped BigOperators Finset
 open Classical
 
-set_option linter.unusedSectionVars false
-set_option linter.unusedVariables false
 
 namespace KelleyMeka
 
@@ -81,7 +79,7 @@ if $x + z = 2y \implies x = y = z$ for all $x, y, z \in A$.
 
 section ThreeAPDefinitions
 
-variable {G : Type*} [DecidableEq G] [AddCommGroup G]
+variable {G : Type*} [AddCommGroup G]
 
 /-- A triple $(x, y, z)$ is a 3-term arithmetic progression if $x + z = 2 \cdot y$. -/
 def Is3AP (x y z : G) : Prop :=
@@ -119,6 +117,12 @@ theorem isThreeAPFree_subset {A B : Finset G} (hAB : A ⊆ B) (hB : IsThreeAPFre
     IsThreeAPFree A :=
   fun x hx y hy z hz => hB x (hAB hx) y (hAB hy) z (hAB hz)
 
+end ThreeAPDefinitions
+
+section Density
+
+variable {G : Type*}
+
 /-- The density of a finset $A \subseteq G$ in a finite group $G$: $\alpha = |A| / |G|$. -/
 noncomputable def density [Fintype G] (A : Finset G) : ℝ :=
   (A.card : ℝ) / (Fintype.card G : ℝ)
@@ -143,7 +147,7 @@ theorem density_empty [Fintype G] : density (∅ : Finset G) = 0 := by
 theorem density_mono [Fintype G] {A B : Finset G} (h : A ⊆ B) : density A ≤ density B :=
   div_le_div_of_nonneg_right (Nat.cast_le.mpr (Finset.card_le_card h)) (Nat.cast_nonneg _)
 
-end ThreeAPDefinitions
+end Density
 
 section BohrSetStructure
 
@@ -281,7 +285,7 @@ theorem iteration_bound_multiplicative (α₀ c₀ : ℝ) (hα₀ : 0 < α₀) (
 In the Kelley–Meka iteration, if the rank increases by at most $\Delta \operatorname{rk}_i \le C_{\text{rk}}$
 at each step $i < K$, the total accumulated rank is bounded by $K \cdot C_{\text{rk}}$.
 -/
-theorem cumulative_rank_bound (C_rk : ℝ) (hC : 0 ≤ C_rk) (K : ℕ) (rk_inc : ℕ → ℝ)
+theorem cumulative_rank_bound (C_rk : ℝ) (_hC : 0 ≤ C_rk) (K : ℕ) (rk_inc : ℕ → ℝ)
     (h_inc : ∀ i, rk_inc i ≤ C_rk) :
     (∑ i ∈ Finset.range K, rk_inc i) ≤ (K : ℝ) * C_rk := by
   have h_sum : (∑ i ∈ Finset.range K, rk_inc i) ≤ ∑ _i ∈ Finset.range K, C_rk :=
@@ -449,7 +453,7 @@ The exponential decay factor $\exp(-c (\log N)^{1/12})$ decays faster than any i
 For any target threshold $\varepsilon > 0$, whenever $c (\log N)^{1/12} \ge \log(C / \varepsilon)$,
 we have $\mathrm{KM\_Rate}(C, c, N) \le \varepsilon$.
 -/
-theorem kelley_meka_rate_le_of_log_growth (C c : ℝ) (hC : 0 < C) (hc : 0 < c)
+theorem kelley_meka_rate_le_of_log_growth (C c : ℝ) (hC : 0 < C) (_hc : 0 < c)
     (N : ℝ) (ε : ℝ) (hε : 0 < ε)
     (h_thresh : Real.log (C / ε) ≤ c * (Real.log N) ^ ((1 : ℝ) / 12)) :
     kelleyMekaRate C c N ≤ ε := by

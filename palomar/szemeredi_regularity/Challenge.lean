@@ -20,9 +20,6 @@ import Mathlib.Tactic.FieldSimp
 open scoped BigOperators Finset
 open Classical
 
-set_option linter.unusedSectionVars false
-set_option linter.unusedVariables false
-
 /-!
 # Szemerédi's Regularity Lemma and Partition Energy Dynamics
 
