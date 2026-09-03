@@ -437,6 +437,50 @@ theorem reduction_vector_q_ortho_C (jp : JenrichPartition G) (i : V) (hi : i ∈
     row_sum_C jp i (Finset.disjoint_right.mp jp.disj_3C hi) (jp.deg_B3_C i hi)]
   ring
 
+/-- On `B₁`, `⟨q, y j⟩ = 48 ≠ 0`. -/
+theorem reduction_vector_q_nonortho_B1 (jp : JenrichPartition G) (j : V) (hj : j ∈ jp.B₁) :
+    @inner ℝ (EuclideanSpace ℝ V) _ (q jp) (y G j) = 48 := by
+  rw [inner_q_y_eq,
+    row_sum_self jp j hj (jp.deg_B1_self j hj),
+    row_sum_zero jp j (Finset.disjoint_left.mp jp.disj_12 hj) (jp.deg_B2_of_B1 j hj),
+    row_sum_zero jp j (Finset.disjoint_left.mp jp.disj_13 hj) (jp.deg_B3_of_B1 j hj)]
+  ring
+
+/-- On `B₂`, `⟨q, y j⟩ = -24 ≠ 0`. -/
+theorem reduction_vector_q_nonortho_B2 (jp : JenrichPartition G) (j : V) (hj : j ∈ jp.B₂) :
+    @inner ℝ (EuclideanSpace ℝ V) _ (q jp) (y G j) = -24 := by
+  rw [inner_q_y_eq,
+    row_sum_zero jp j (Finset.disjoint_right.mp jp.disj_12 hj) (jp.deg_B1_of_B2 j hj),
+    row_sum_self jp j hj (jp.deg_B2_self j hj),
+    row_sum_zero jp j (Finset.disjoint_left.mp jp.disj_23 hj) (jp.deg_B3_of_B2 j hj)]
+  ring
+
+/-- On `B₃`, `⟨q, y j⟩ = -24 ≠ 0`. -/
+theorem reduction_vector_q_nonortho_B3 (jp : JenrichPartition G) (j : V) (hj : j ∈ jp.B₃) :
+    @inner ℝ (EuclideanSpace ℝ V) _ (q jp) (y G j) = -24 := by
+  rw [inner_q_y_eq,
+    row_sum_zero jp j (Finset.disjoint_right.mp jp.disj_13 hj) (jp.deg_B1_of_B3 j hj),
+    row_sum_zero jp j (Finset.disjoint_right.mp jp.disj_23 hj) (jp.deg_B2_of_B3 j hj),
+    row_sum_self jp j hj (jp.deg_B3_self j hj)]
+  ring
+
+/-- Zero inner product with `q` characterizes membership in `C`. -/
+theorem reduction_vector_q_zero_iff_mem_C (jp : JenrichPartition G) (j : V) :
+    @inner ℝ (EuclideanSpace ℝ V) _ (q jp) (y G j) = 0 ↔ j ∈ jp.C := by
+  refine ⟨fun h0 => ?_, reduction_vector_q_ortho_C jp j⟩
+  have h_univ : j ∈ jp.B₁ ∪ jp.B₂ ∪ jp.B₃ ∪ jp.C := jp.union_eq.symm ▸ Finset.mem_univ j
+  simp only [Finset.mem_union] at h_univ
+  rcases h_univ with ((h1 | h2) | h3) | hc
+  · linarith [reduction_vector_q_nonortho_B1 jp j h1]
+  · linarith [reduction_vector_q_nonortho_B2 jp j h2]
+  · linarith [reduction_vector_q_nonortho_B3 jp j h3]
+  · exact hc
+
+/-- Obstruction to augmenting `C`: no vertex outside `C` lies in `ker(q)`. -/
+theorem no_vertex_augmentation_in_W63 (jp : JenrichPartition G) (v : V) (hv : v ∉ jp.C) :
+    @inner ℝ (EuclideanSpace ℝ V) _ (q jp) (y G v) ≠ 0 :=
+  fun h => hv ((reduction_vector_q_zero_iff_mem_C jp v).mp h)
+
 /-- Sum of entries of `q` is zero: `2 * 32 - 32 - 32 = 0`. -/
 theorem inner_q_ones_eq_zero (jp : JenrichPartition G) :
     (∑ j : V, (q jp j)) = 0 := by

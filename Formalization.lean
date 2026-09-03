@@ -14,6 +14,7 @@ import Formalization.OrbifoldSpectralZeta
 import Formalization.PicardFuchsMirrorMonodromy
 import Formalization.UniversalMonodromyWeightFiltration
 import Formalization.JenrichBorsuk64
+import Formalization.ErdosGyarfas
 
 /-!
 # Lean Theorems 3: Advanced Formalization Suite
@@ -76,5 +77,8 @@ and discrete metric geometry in the Lean 4 / Mathlib ecosystem.
     - `Formalization.UniversalMonodromyWeightFiltration`: Deligne's universal canonical subspace formula $W_l(N, k) = \bigcup_{j=0}^k (\ker(N^{j+1}) \cap \operatorname{im}(N^{j - l + k}))$, shift theorem $N(W_l) \subseteq W_{l-2}$, monotonicity $W_{l-1} \subseteq W_l$, explicit weight filtrations on $\mathbb{Z}^4$ (2-step Type II and 4-step Type III MUM), and Hodge–Riemann symplectic polarizations $Q_N(v, w) = \langle v, N w \rangle_J$ with strict positivity on primitive generators.
 
 12. **Discrete Geometry & Metric Counterexamples**:
-    - `Formalization.JenrichBorsuk64`: Thomas Jenrich and Andries E. Brouwer's (2014) 64-dimensional two-distance counterexample to Borsuk's conjecture (based on Bondarenko 2013). Proves that subsets of smaller diameter in two-distance sets are graph cliques, Euclidean representation of $G_2(4) = \operatorname{srg}(416, 100, 36, 20)$ with clique bound $\omega \le 5$, Jenrich's reduction vector $p \in \mathbb{R}^{416}$ orthogonal to 352 vertices of $S_{64} = C \cup B_1$, codimension drop to $\le 64$ dimensions, and refutation $\lceil 352 / 5 \rceil = 71 > 65 \implies \neg \operatorname{BorsukConjecture}(64)$, along with the 63D almost-counterexample on $C$.
+    - `Formalization.JenrichBorsuk64`: Thomas Jenrich and Andries E. Brouwer's (2014) 64-dimensional two-distance counterexample to Borsuk's conjecture (based on Bondarenko 2013). Proves that subsets of smaller diameter in two-distance sets are graph cliques, Euclidean representation of $G_2(4) = \operatorname{srg}(416, 100, 36, 20)$ with clique bound $\omega \le 5$, Jenrich's reduction vector $p \in \mathbb{R}^{416}$ orthogonal to 352 vertices of $S_{64} = C \cup B_1$, codimension drop to $\le 64$ dimensions, and refutation $\lceil 352 / 5 \rceil = 71 > 65 \implies \neg \operatorname{BorsukConjecture}(64)$, along with the 63D almost-counterexample on $C$ ($64 = 63 + 1$) and the complete 63D vertex-augmentation obstruction theorem $\ker(q) \cap V = C$.
+
+13. **Extremal Graph Theory & Cycle Spectra**:
+    - `Formalization.ErdosGyarfas`: The Erdős–Gyárfás conjecture (1975), power-of-two cycle predicates, constructive counterexample certificate infrastructure, soundness meta-theorem, and $K_{3,3}$ cycle spectrum obstruction certifying 4-cycle containment.
 -/

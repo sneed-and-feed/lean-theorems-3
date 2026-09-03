@@ -2,14 +2,20 @@
   "challenge_module": "Challenge",
   "solution_module": "Solution",
   "theorem_names": [
-    "BusemannPettyZhang.lutwak_intersection_body_comparison",
-    "BusemannPettyZhang.intersection_body_4d_universal",
-    "BusemannPettyZhang.busemann_petty_dim_4",
-    "BusemannPettyZhang.zhang_1994_counterexample_refuted",
-    "BusemannPettyZhang.busemann_petty_dim_4_contrapositive",
-    "BusemannPettyZhang.busemann_petty_dim_3",
-    "BusemannPettyZhang.busemann_petty_dim_3_contrapositive",
-    "BusemannPettyZhang.busemann_petty_counterexample_dim_ge_5"
+    "JenrichBorsuk64.dist_eq_d1_of_diam_lt",
+    "JenrichBorsuk64.isClique_of_diam_lt",
+    "JenrichBorsuk64.card_le_mul_card_cover",
+    "JenrichBorsuk64.dist_sq_of_adj",
+    "JenrichBorsuk64.dist_sq_of_not_adj",
+    "JenrichBorsuk64.carrier_card_eq",
+    "JenrichBorsuk64.reduction_vector_ortho_carrier",
+    "JenrichBorsuk64.reduction_vector_nonortho_B2",
+    "JenrichBorsuk64.jenrich_partition_lower_bound",
+    "JenrichBorsuk64.not_borsuk_conjecture_64",
+    "JenrichBorsuk64.reduction_vector_q_ortho_C",
+    "JenrichBorsuk64.reduction_vector_q_zero_iff_mem_C",
+    "JenrichBorsuk64.no_vertex_augmentation_in_W63",
+    "JenrichBorsuk64.almost_counterexample_63"
   ],
   "permitted_axioms": [
     "propext",

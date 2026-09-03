@@ -358,6 +358,26 @@ theorem inner_q_y_eq (jp : JenrichPartition G) (i : V) :
 theorem reduction_vector_q_ortho_C (jp : JenrichPartition G) (i : V) (hi : i ∈ jp.C) :
     @inner ℝ (EuclideanSpace ℝ V) _ (q jp) (y G i) = 0 := sorry
 
+/-- On `B₁`, `⟨q, y j⟩ = 48 ≠ 0`. -/
+theorem reduction_vector_q_nonortho_B1 (jp : JenrichPartition G) (j : V) (hj : j ∈ jp.B₁) :
+    @inner ℝ (EuclideanSpace ℝ V) _ (q jp) (y G j) = 48 := sorry
+
+/-- On `B₂`, `⟨q, y j⟩ = -24 ≠ 0`. -/
+theorem reduction_vector_q_nonortho_B2 (jp : JenrichPartition G) (j : V) (hj : j ∈ jp.B₂) :
+    @inner ℝ (EuclideanSpace ℝ V) _ (q jp) (y G j) = -24 := sorry
+
+/-- On `B₃`, `⟨q, y j⟩ = -24 ≠ 0`. -/
+theorem reduction_vector_q_nonortho_B3 (jp : JenrichPartition G) (j : V) (hj : j ∈ jp.B₃) :
+    @inner ℝ (EuclideanSpace ℝ V) _ (q jp) (y G j) = -24 := sorry
+
+/-- Zero inner product with `q` characterizes membership in `C`. -/
+theorem reduction_vector_q_zero_iff_mem_C (jp : JenrichPartition G) (j : V) :
+    @inner ℝ (EuclideanSpace ℝ V) _ (q jp) (y G j) = 0 ↔ j ∈ jp.C := sorry
+
+/-- Obstruction to augmenting `C`: no vertex outside `C` lies in `ker(q)`. -/
+theorem no_vertex_augmentation_in_W63 (jp : JenrichPartition G) (v : V) (hv : v ∉ jp.C) :
+    @inner ℝ (EuclideanSpace ℝ V) _ (q jp) (y G v) ≠ 0 := sorry
+
 /-- Sum of entries of `q` is zero: `2 * 32 - 32 - 32 = 0`. -/
 theorem inner_q_ones_eq_zero (jp : JenrichPartition G) :
     (∑ j : V, (q jp j)) = 0 := sorry

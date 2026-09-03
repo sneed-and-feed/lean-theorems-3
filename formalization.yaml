@@ -1,60 +1,57 @@
 version: "v0.4"
 
 project:
-  name: "Gaoyong Zhang's 1994/1999 Busemann–Petty R^4 Resolution & Audit"
+  name: "Jenrich–Brouwer 64-Dimensional Counterexample to Borsuk's Conjecture"
   authors:
     - "Noah Cohen"
   responsible_maintainers:
     - "Noah Cohen"
   license: "CC0-1.0"
   description: >-
-    Complete machine-checked Lean 4 formalization of Gaoyong Zhang's 1999 Annals affirmative resolution
-    of the Busemann–Petty problem in dimension 4, Erwin Lutwak's 1988 intersection body comparison theorem,
-    Richard J. Gardner's 1994 Annals affirmative resolution in dimension 3, refutation of Zhang's 1994 candidate
-    counterexample in R^4, geometric contrapositive theorems detecting hyperplane section volume inequality reversals,
-    and the existence of counterexamples for all n >= 5 via the Lutwak non-intersection body criterion.
+    A complete machine-checked Lean 4 formalization of Thomas Jenrich and Andries E. Brouwer's
+    64-dimensional two-distance counterexample to Borsuk's conjecture (2014), building on Andriy V.
+    Bondarenko's 65-dimensional construction (2013). The formalization establishes the metric and
+    combinatorial foundations (clique-diameter lemma, pigeonhole cover bound), the Euclidean representation
+    of the Suzuki strongly regular graph G₂(4) = srg(416, 100, 36, 20) with spectrum {100, 20, -4} and
+    eigenspace dimensions {1, 65, 350}, Jenrich's reduction vector p = 1_{B₂} - 1_{B₃} yielding orthogonality
+    on the 352-vertex carrier S₆₄ = C ∪ B₁, the codimension reduction to dimension 64, and the partition
+    lower bound requiring at least 71 parts of smaller diameter, strictly exceeding 64 + 1 = 65.
+    Additionally formalizes Jenrich's secondary reduction vector q = 2 * 1_{B₁} - 1_{B₂} - 1_{B₃},
+    establishing the 63-dimensional extremal tightness on the 320-vertex carrier C (which achieves
+    the Borsuk partition number 64 = 63 + 1) and proving the vertex augmentation obstruction:
+    ⟨q, y v⟩ ≠ 0 for every v ∉ C, so no vertex outside C can be adjoined while remaining within the
+    63-dimensional hyperplane orthogonal to q.
 
 classification:
-  arxiv: [math.MG, math.FA]
-  msc2020: ["52A20", "52A38", "52A40", "44A12"]
+  arxiv: [math.CO, math.MG]
+  msc2020: ["05C50", "05C69", "51M04", "52C10"]
 
 sources:
-  - title: "A positive answer to the Busemann-Petty problem in R^4"
+  - title: "A 64-Dimensional Counterexample to Borsuk's Conjecture"
     type: paper
     authors:
-      - "Gaoyong Zhang"
-    year: 1999
-    venue: "Annals of Mathematics, 149(2), 535-543"
+      - "Thomas Jenrich"
+      - "Andries E. Brouwer"
+    venue: "The Electronic Journal of Combinatorics"
+    year: 2014
     relationship: formalizes
-    note: >-
-      Formalizes Zhang's 1999 theorem establishing that all origin-symmetric convex bodies in R^4
-      are intersection bodies, leading to the affirmative resolution of Busemann–Petty in dimension 4.
-  - title: "Intersection bodies and dual mixed volumes"
+  - title: "On Borsuk's conjecture for two-distance sets"
     type: paper
     authors:
-      - "Erwin Lutwak"
-    year: 1988
-    venue: "Advances in Mathematics, 71(2), 149-161"
+      - "Andriy V. Bondarenko"
+    venue: "Discrete & Computational Geometry"
+    year: 2014
     relationship: adapts
     note: >-
-      Formalizes Lutwak's duality theorem relating intersection body representation to the comparison
-      of hyperplane section volumes and total body volumes.
-  - title: "A positive answer to the Busemann-Petty problem in R^3"
+      Formalization builds upon Bondarenko's 65-dimensional two-distance counterexample using the
+      strongly regular graph G₂(4).
+  - title: "Drei Sätze über die n-dimensionale euklidische Sphäre"
     type: paper
     authors:
-      - "Richard J. Gardner"
-    year: 1994
-    venue: "Annals of Mathematics, 140(2), 435-445"
+      - "Karol Borsuk"
+    venue: "Fundamenta Mathematicae"
+    year: 1933
     relationship: background
-  - title: "Intersection bodies and the Busemann-Petty problem"
-    type: paper
-    authors:
-      - "Gaoyong Zhang"
-    year: 1994
-    venue: "Annals of Mathematics, 140(2), 331-346"
-    relationship: background
-    note: >-
-      Historical reference to Zhang's 1994 claimed counterexample in R^4, which is formally refuted.
 
 related_formalizations: []
 
@@ -72,6 +69,6 @@ review:
   reviewers:
     - "Noah Cohen"
   notes: >-
-    Challenge contains deliberate proof holes (:= sorry for automated benchmark evaluation),
-    while all definitions and theorem statements are completely specified. Solution verified through
-    maintainer audit with 0 errors, 0 sorries, and strictly standard kernel axioms.
+    Challenge contains deliberate proof holes (:= sorry) for automated benchmark evaluation, with 100%
+    type and AST parity with Solution. Solution verified with 0 errors, 0 sorries, and strictly standard
+    kernel axioms.

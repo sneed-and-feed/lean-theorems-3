@@ -13,6 +13,8 @@
     "JenrichBorsuk64.jenrich_partition_lower_bound",
     "JenrichBorsuk64.not_borsuk_conjecture_64",
     "JenrichBorsuk64.reduction_vector_q_ortho_C",
+    "JenrichBorsuk64.reduction_vector_q_zero_iff_mem_C",
+    "JenrichBorsuk64.no_vertex_augmentation_in_W63",
     "JenrichBorsuk64.almost_counterexample_63"
   ],
   "permitted_axioms": [

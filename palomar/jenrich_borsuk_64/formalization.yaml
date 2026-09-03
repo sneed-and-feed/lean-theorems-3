@@ -16,8 +16,11 @@ project:
     eigenspace dimensions {1, 65, 350}, Jenrich's reduction vector p = 1_{B₂} - 1_{B₃} yielding orthogonality
     on the 352-vertex carrier S₆₄ = C ∪ B₁, the codimension reduction to dimension 64, and the partition
     lower bound requiring at least 71 parts of smaller diameter, strictly exceeding 64 + 1 = 65.
-    Additionally formalizes Jenrich's secondary reduction vector q = 2 * 1_{B₁} - 1_{B₂} - 1_{B₃}
-    yielding the 63-dimensional almost-counterexample on the 320-vertex carrier C requiring 64 = 63 + 1 parts.
+    Additionally formalizes Jenrich's secondary reduction vector q = 2 * 1_{B₁} - 1_{B₂} - 1_{B₃},
+    establishing the 63-dimensional extremal tightness on the 320-vertex carrier C (which achieves
+    the Borsuk partition number 64 = 63 + 1) and proving the vertex augmentation obstruction:
+    ⟨q, y v⟩ ≠ 0 for every v ∉ C, so no vertex outside C can be adjoined while remaining within the
+    63-dimensional hyperplane orthogonal to q.
 
 classification:
   arxiv: [math.CO, math.MG]
