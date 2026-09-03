@@ -1,0 +1,66 @@
+version: "v0.4"
+
+project:
+  name: "The Lonely Runner Conjecture at k = 8 and Loud Fail Obstruction Analysis"
+  authors:
+    - "Noah Cohen"
+  responsible_maintainers:
+    - "Noah Cohen"
+  license: "CC0-1.0"
+  description: >-
+    A complete machine-checked Lean 4 formalization of the Lonely Runner Conjecture framework at k = 8
+    runners and Loud Fail obstruction analysis. Formalizes real integer distance, runner loneliness,
+    the canonical threshold 1 / (k + 1) (evaluating to 1/9 at k = 8), general and specialized conjecture
+    statements, constructive counterexample certificate infrastructure, the sound refutation meta-theorem,
+    and the canonical consecutive speed assignment (1, ..., 8) certifying simultaneous loneliness at t = 1/9
+    and Loud Fail rejection of standard arithmetic progression candidates.
+
+classification:
+  arxiv: [math.NT, math.CO]
+  msc2020: ["11J13", "11J71", "05A05"]
+
+sources:
+  - title: "Zwei Sätze über inhomogene diophantische Approximationen von Irrationalzahlen"
+    type: paper
+    authors:
+      - "Jörg M. Wills"
+    venue: "Monatshefte für Mathematik 71(3), 263–269"
+    year: 1967
+    relationship: formalizes
+  - title: "View-obstruction problems in n-dimensional geometry"
+    type: paper
+    authors:
+      - "Thomas W. Cusick"
+    venue: "Journal of Combinatorial Theory, Series A 16(1), 1–11"
+    year: 1974
+    relationship: adapts
+    note: >-
+      Formulates the lonely runner problem as a view-obstruction problem in the geometry of numbers.
+  - title: "The lonely runner conjecture holds for eight runners"
+    type: paper
+    authors:
+      - "Matthieu Rosenfeld"
+    venue: "arXiv:2509.14111"
+    year: 2025
+    relationship: adapts
+    note: >-
+      Proves that the lonely runner conjecture holds for eight runners via speed constraint analysis, precluding existence of counterexamples.
+
+related_formalizations: []
+
+automation:
+  methods:
+    - method: agent
+      tool_setup: >-
+        Formalized using an agentic Lean 4 workflow powered by Google DeepMind Gemini models (Gemini Flash
+        agent pipeline via the Antigravity system) paired with Lean LSP MCP interactive tooling for proof
+        tactic exploration, AST comparison, and verification under maintainer direction and human oversight.
+        All declarations rely strictly on standard Lean 4 kernel axioms (propext, Quot.sound, Classical.choice).
+
+review:
+  status: self-assessed
+  reviewers:
+    - "Noah Cohen"
+  notes: >-
+    Challenge contains deliberate proof holes (:= sorry) with synchronized AST signatures.
+    Solution verified with 0 sorries, 0 custom axioms, and 0 warnings.

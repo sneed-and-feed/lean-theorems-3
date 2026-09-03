@@ -1,0 +1,16 @@
+{
+  "challenge_module": "Challenge",
+  "solution_module": "Solution",
+  "theorem_names": [
+    "ErdosGyarfas.disprove_erdos_gyarfas",
+    "ErdosGyarfas.K33_minDeg",
+    "ErdosGyarfas.K33_hasPowerOfTwoCycle",
+    "ErdosGyarfas.K33_fails_counterexample_condition",
+    "ErdosGyarfas.K33_cannot_be_counterexample"
+  ],
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound",
+    "Classical.choice"
+  ]
+}

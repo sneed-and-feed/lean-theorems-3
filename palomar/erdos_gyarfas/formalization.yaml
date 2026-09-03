@@ -1,0 +1,57 @@
+version: "v0.4"
+
+project:
+  name: "The Erdős–Gyárfás Conjecture and Girth Hunter Scaffold"
+  authors:
+    - "Noah Cohen"
+  responsible_maintainers:
+    - "Noah Cohen"
+  license: "CC0-1.0"
+  description: >-
+    A complete machine-checked Lean 4 formalization of the Erdős–Gyárfás conjecture framework (1975)
+    and girth hunter obstruction analysis. Formalizes power-of-two cycle length predicates, simple graph cycle
+    containment, universal conjecture formulation, non-vacuous constructive counterexample certificate infrastructure,
+    the sound refutation meta-theorem, and the canonical cubic obstruction witness on K_{3,3} certifying 4-cycle
+    containment and Loud Fail rejection of standard small cubic candidates.
+
+classification:
+  arxiv: [math.CO]
+  msc2020: ["05C38", "05C75"]
+
+sources:
+  - title: "Problems and results on finite and infinite graphs"
+    type: paper
+    authors:
+      - "Paul Erdős"
+    venue: "Recent Advances in Graph Theory (Proc. Second Czechoslovak Sympos., Prague), Academia, Prague (1975), 183–192"
+    year: 1975
+    relationship: formalizes
+  - title: "The Erdős-Gyárfás conjecture for cubic graphs"
+    type: paper
+    authors:
+      - "Gordon Royle"
+      - "Manuel Kauers"
+    venue: "ArXiv preprint arXiv:1106.3150"
+    year: 2011
+    relationship: adapts
+    note: >-
+      Computational census confirming absence of counterexamples among cubic graphs up to 34 vertices.
+
+related_formalizations: []
+
+automation:
+  methods:
+    - method: agent
+      tool_setup: >-
+        Formalized using an agentic Lean 4 workflow powered by Google DeepMind Gemini models (Gemini Flash
+        agent pipeline via the Antigravity system) paired with Lean LSP MCP interactive tooling for proof
+        tactic exploration, AST comparison, and verification under maintainer direction and human oversight.
+        All declarations rely strictly on standard Lean 4 kernel axioms (propext, Quot.sound, Classical.choice).
+
+review:
+  status: self-assessed
+  reviewers:
+    - "Noah Cohen"
+  notes: >-
+    Challenge contains deliberate proof holes (:= sorry) with synchronized AST signatures.
+    Solution verified with 0 sorries, 0 custom axioms, and 0 warnings.

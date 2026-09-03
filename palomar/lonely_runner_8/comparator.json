@@ -1,0 +1,15 @@
+{
+  "challenge_module": "Challenge",
+  "solution_module": "Solution",
+  "theorem_names": [
+    "LonelyRunner8.disprove_lonely_runner_8",
+    "LonelyRunner8.canonicalSpeeds8_lonely_at_one_ninth",
+    "LonelyRunner8.canonicalSpeeds8_fails_counterexample_condition",
+    "LonelyRunner8.canonicalSpeeds8_cannot_be_counterexample"
+  ],
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound",
+    "Classical.choice"
+  ]
+}
