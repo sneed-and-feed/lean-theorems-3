@@ -1,0 +1,104 @@
+version: "v0.4"
+
+project:
+  name: "The 7D Keller Cube-Tiling Bridge and Corrádi–Szabó Disproofs"
+  authors:
+    - "Noah Cohen"
+  responsible_maintainers:
+    - "Noah Cohen"
+  license: "CC0-1.0"
+  description: >-
+    A machine-checked Lean 4 formalization of the geometric-to-combinatorial bridge connecting
+    Ott-Heinrich Keller's 1930 cube-tiling conjecture to maximum cliques in the Corrádi–Szabó and
+    Mackey Keller graphs G_{d, s}. Establishes the Szabó 2Z^d-periodic cube packing framework in R^d,
+    the structural partition into 2^d coordinate blocks, the universal clique upper bound \omega(G_{d, s}) \le 2^d,
+    and the Corrádi–Szabó / Mackey bridge theorem that \omega(G_{d, s}) = 2^d implies the failure of Keller's
+    conjecture in dimension d. Incorporates the Kisielewicz (2017) discretization reduction and the
+    Brakensiek–Heule–Mackey–Narváez (2020) SAT non-clique certificates resolving Keller's conjecture affirmatively
+    in dimension 7, Mackey's (2002) explicit clique refutation in dimension 8, and dimension lifting propagation
+    to dimension 9. All declarations rely strictly on standard Lean 4 kernel axioms.
+
+classification:
+  arxiv: [math.CO, math.MG]
+  msc2020: ["05B45", "52C22", "05C69"]
+
+sources:
+  - title: "The Resolution of Keller's Conjecture"
+    type: paper
+    authors:
+      - "Joshua Brakensiek"
+      - "Marijn Heule"
+      - "John Mackey"
+      - "David Narváez"
+    venue: "Journal of the ACM, Vol. 69, No. 3, Article 18, pp. 1–46"
+    year: 2022
+    relationship: formalizes
+    note: >-
+      Formalizes the discrete Keller graph bridge and connects the BHMN 2020 SAT resolution certificate
+      and Kisielewicz reduction to prove Keller's conjecture in dimension 7.
+  - title: "A combinatorial approach for Keller's conjecture"
+    type: paper
+    authors:
+      - "Keresztély Corrádi"
+      - "Sándor Szabó"
+    venue: "Periodica Mathematica Hungarica, 21(2): 95–100"
+    year: 1990
+    relationship: formalizes
+    note: >-
+      Establishes the equivalence between 2Z^d-periodic faceshare-free cube tilings and maximum cliques of size 2^d
+      in the discrete graph G_{d, s}.
+  - title: "A cube tiling of R^8 with no facesharing"
+    type: paper
+    authors:
+      - "John Mackey"
+    venue: "Discrete & Computational Geometry, 28(4): 533–543"
+    year: 2002
+    relationship: formalizes
+    note: >-
+      Constructs an explicit clique of size 256 in G_{8, 2}, disproving Keller's conjecture in dimension 8.
+  - title: "Towards Keller's conjecture in high dimensions"
+    type: paper
+    authors:
+      - "Andrzej P. Kisielewicz"
+    venue: "Discrete & Computational Geometry, 57(3): 696–724"
+    year: 2017
+    relationship: formalizes
+    note: >-
+      Proves that any counterexample to Keller's conjecture in dimension 7 discretizes to G_{7, s} for s in {3, 4, 6}.
+  - title: "A reduction of Keller's conjecture"
+    type: paper
+    authors:
+      - "Sándor Szabó"
+    venue: "Periodica Mathematica Hungarica, 17(4): 265–277"
+    year: 1986
+    relationship: background
+    note: >-
+      Reduces Keller's conjecture to periodic cube packings under 2Z^d translations.
+  - title: "Über die lückenlose Erfüllung des Raumes mit Würfeln"
+    type: paper
+    authors:
+      - "Ott-Heinrich Keller"
+    venue: "Journal für die reine und angewandte Mathematik, 163: 231–248"
+    year: 1930
+    relationship: background
+    note: >-
+      Original formulation of Keller's cube-tiling conjecture.
+
+related_formalizations: []
+
+automation:
+  methods:
+    - method: agent
+      tool_setup: >-
+        Formalized using an agentic Lean 4 workflow powered by Google DeepMind Gemini models (Gemini Flash
+        agent pipeline via the Antigravity system) paired with Lean LSP MCP interactive tooling for proof
+        tactic exploration, AST comparison, and verification under maintainer direction and human oversight.
+        All declarations rely strictly on standard Lean 4 kernel axioms (propext, Quot.sound, Classical.choice).
+
+review:
+  status: self-assessed
+  reviewers:
+    - "Noah Cohen"
+  notes: >-
+    Challenge contains deliberate proof holes (:= sorry) on landmark bridge theorems with 100% AST signature
+    parity. Solution verified with 0 errors, 0 sorries, and strictly standard kernel axioms.

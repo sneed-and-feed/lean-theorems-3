@@ -1,0 +1,21 @@
+{
+  "challenge_module": "Challenge",
+  "solution_module": "Solution",
+  "theorem_names": [
+    "KellerBridge.coordinateBlock_independent",
+    "KellerBridge.clique_inter_block_subsingleton",
+    "KellerBridge.keller_clique_card_le",
+    "KellerBridge.liftedSet_cubesDisjoint",
+    "KellerBridge.liftedSet_isFaceshareFree",
+    "KellerBridge.keller_conjecture_false_of_max_clique",
+    "KellerBridge.keller_conjecture_seven_of_sat_certificate",
+    "KellerBridge.keller_conjecture_eight_false_of_mackey_clique",
+    "KellerBridge.embed_clique",
+    "KellerBridge.keller_conjecture_nine_false_of_mackey_and_lifting"
+  ],
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound",
+    "Classical.choice"
+  ]
+}

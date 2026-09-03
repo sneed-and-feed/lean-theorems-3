@@ -15,6 +15,8 @@ import Formalization.PicardFuchsMirrorMonodromy
 import Formalization.UniversalMonodromyWeightFiltration
 import Formalization.JenrichBorsuk64
 import Formalization.ErdosGyarfas
+import Formalization.LonelyRunner8
+import Formalization.KellerCubeTilingBridge
 
 /-!
 # Lean Theorems 3: Advanced Formalization Suite
@@ -81,4 +83,10 @@ and discrete metric geometry in the Lean 4 / Mathlib ecosystem.
 
 13. **Extremal Graph Theory & Cycle Spectra**:
     - `Formalization.ErdosGyarfas`: The Erdős–Gyárfás conjecture (1975), power-of-two cycle predicates, constructive counterexample certificate infrastructure, soundness meta-theorem, and $K_{3,3}$ cycle spectrum obstruction certifying 4-cycle containment.
+
+14. **Diophantine Approximation & View-Obstruction**:
+    - `Formalization.LonelyRunner8`: The Lonely Runner Conjecture at $k=8$ (Wills 1967, Cusick 1974, Rosenfeld 2025). Formalizes real integer distance, runner isolation, canonical threshold $\frac{1}{k+1}$ ($1/9$ at $k=8$), general and specialized conjectures, constructive counterexample certificate infrastructure, soundness meta-theorem, canonical consecutive speeds $(1, \dots, 8)$, and Loud Fail obstruction certifying simultaneous loneliness at $t = 1/9$.
+
+15. **Discrete Geometry & Cube Tilings**:
+    - `Formalization.KellerCubeTilingBridge`: Frontier 4: The 7D Keller Cube-Tiling Bridge (Keller 1930, Perron 1940, Szabó 1986, Corrádi–Szabó 1990, Lagarias–Shor 1992, Mackey 2002, Kisielewicz 2017, Brakensiek–Heule–Mackey–Narváez 2020). Formalizes geometric cube tilings in $\mathbb{R}^d$, discrete Keller graphs $G_{d, s}$, the $2^d$ coordinate block partition and universal clique upper bound $\omega(G_{d, s}) \le 2^d$, the Corrádi–Szabó / Mackey bridge theorem, Mackey's 8D disproof $\neg \operatorname{KellerConjecture}(8)$, the 7D affirmative resolution theorem from BHMN SAT certificates and Kisielewicz reductions, induced subgraph clique dimension embeddings, and dimension lifting propagation.
 -/
