@@ -60,10 +60,9 @@ structure CounterexampleCertificate (V : Type u) [Fintype V] [DecidableEq V] whe
 /-- Soundness Meta-Theorem:
     Any valid `CounterexampleCertificate` soundly disproves the Erdős–Gyárfás conjecture. -/
 theorem disprove_erdos_gyarfas {V : Type u} [Fintype V] [DecidableEq V]
-    (cert : CounterexampleCertificate V) : ¬ ErdosGyarfasConjecture.{u} := by
-  intro h
-  obtain ⟨u, p, hCycle, hPow⟩ := @h V _ _ cert.G cert.decAdj cert.minDeg
-  exact cert.noPowerOfTwoCycle u p hCycle hPow
+    (cert : CounterexampleCertificate V) : ¬ ErdosGyarfasConjecture.{u} := fun h =>
+  let ⟨u, p, hCycle, hPow⟩ := @h V _ _ cert.G cert.decAdj cert.minDeg
+  cert.noPowerOfTwoCycle u p hCycle hPow
 
 /-!
 ### Canonical Cubic Obstruction Witness: $K_{3,3}$
@@ -78,10 +77,10 @@ def K33Adj (u v : Fin 6) : Prop :=
   (u.val < 3 ∧ 3 ≤ v.val) ∨ (v.val < 3 ∧ 3 ≤ u.val)
 
 theorem K33Adj.symm {u v : Fin 6} (h : K33Adj u v) : K33Adj v u :=
-  h.elim Or.inr Or.inl
+  Or.symm h
 
 theorem K33Adj.loopless (u : Fin 6) (h : K33Adj u u) : False := by
-  rcases h with ⟨h1, h2⟩ | ⟨h1, h2⟩ <;> omega
+  dsimp [K33Adj] at h; omega
 
 /-- The complete bipartite cubic graph $K_{3,3}$ on `Fin 6`. -/
 def K33 : SimpleGraph (Fin 6) where
@@ -93,6 +92,7 @@ instance : DecidableRel K33.Adj := fun _ _ => by
   dsimp [K33, K33Adj]
   infer_instance
 
+/-- Every vertex in $K_{3,3}$ has degree at least 3 (in fact, exactly 3). -/
 theorem K33_minDeg : ∀ v : Fin 6, K33.degree v ≥ 3 := by
   decide
 
@@ -108,19 +108,16 @@ def K33_cycle : K33.Walk (0 : Fin 6) (0 : Fin 6) :=
       SimpleGraph.Walk.cons K33_h23 (
         SimpleGraph.Walk.cons K33_h30 SimpleGraph.Walk.nil)))
 
+/-- The walk `K33_cycle` has length 4. -/
 theorem K33_cycle_length : K33_cycle.length = 4 := rfl
 
-theorem K33_cycle_isCycle : K33_cycle.IsCycle := by
-  rw [SimpleGraph.Walk.isCycle_def]
-  refine ⟨⟨?_⟩, ?_, ?_⟩
-  · decide
-  · intro h
-    contradiction
-  · decide
+/-- The walk `K33_cycle` is a simple cycle. -/
+theorem K33_cycle_isCycle : K33_cycle.IsCycle :=
+  ⟨⟨⟨by decide⟩, fun h => nomatch h⟩, by decide⟩
 
 /-- The length of `K33_cycle` is $4 = 2^2$, a power of two with exponent $\ge 2$. -/
-theorem K33_cycle_power_of_two : IsPowerOfTwoCycleLength K33_cycle.length := by
-  refine ⟨2, by omega, rfl⟩
+theorem K33_cycle_power_of_two : IsPowerOfTwoCycleLength K33_cycle.length :=
+  ⟨2, le_rfl, rfl⟩
 
 /-- $K_{3,3}$ contains a power-of-two cycle. -/
 theorem K33_hasPowerOfTwoCycle : HasPowerOfTwoCycle K33 :=
@@ -130,17 +127,14 @@ theorem K33_hasPowerOfTwoCycle : HasPowerOfTwoCycle K33 :=
     $K_{3,3}$ satisfies the premise $\forall v, \text{degree } v \ge 3$ but fails the
     counterexample condition because it contains an explicit 4-cycle ($4 = 2^2$). -/
 theorem K33_fails_counterexample_condition :
-    ¬ (∀ (u : Fin 6) (p : K33.Walk u u), p.IsCycle → ¬ IsPowerOfTwoCycleLength p.length) := by
-  intro h
-  exact h 0 K33_cycle K33_cycle_isCycle K33_cycle_power_of_two
+    ¬ (∀ (u : Fin 6) (p : K33.Walk u u), p.IsCycle → ¬ IsPowerOfTwoCycleLength p.length) :=
+  fun h => h 0 K33_cycle K33_cycle_isCycle K33_cycle_power_of_two
 
 /-- Loud Fail Obstruction Theorem:
     No counterexample certificate can have underlying graph equal to $K_{3,3}$. -/
 theorem K33_cannot_be_counterexample (cert : CounterexampleCertificate (Fin 6))
     (hG : cert.G = K33) : False := by
-  rcases cert with ⟨G, _decAdj, _minDeg, noPow⟩
-  dsimp at hG
-  subst hG
+  obtain ⟨_, _, _, noPow⟩ := cert; subst hG
   exact noPow 0 K33_cycle K33_cycle_isCycle K33_cycle_power_of_two
 
 end ErdosGyarfas
